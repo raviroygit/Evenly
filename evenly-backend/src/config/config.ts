@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -37,6 +37,7 @@ export const config = {
       user: process.env.EMAIL_USER || 'no-reply@nxtgenaidev.com',
       pass: process.env.EMAIL_PASS || 'a3A3CDqpuBhf',
     },
+    supportEmail: process.env.SUPPORT_EMAIL || 'support@evenly.com',
   },
   app: {
     baseUrl: process.env.APP_BASE_URL || 'https://b98351f842e5.ngrok-free.app',

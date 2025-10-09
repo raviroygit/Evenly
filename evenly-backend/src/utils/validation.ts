@@ -166,3 +166,17 @@ export const declineInvitationSchema = z.object({
 export type SendInvitationInput = z.infer<typeof sendInvitationSchema>;
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
 export type DeclineInvitationInput = z.infer<typeof declineInvitationSchema>;
+
+// Validation helper function
+export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; errors: string[] } {
+  try {
+    const validatedData = schema.parse(data);
+    return { success: true, data: validatedData };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+      return { success: false, errors };
+    }
+    return { success: false, errors: ['Validation failed'] };
+  }
+}

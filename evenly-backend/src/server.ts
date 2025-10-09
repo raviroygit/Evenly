@@ -13,6 +13,7 @@ import { balanceRoutes } from './routes/balanceRoutes';
 import { paymentRoutes } from './routes/paymentRoutes';
 import { groupInvitationRoutes } from './routes/groupInvitationRoutes';
 import { authRoutes } from './routes/authRoutes';
+import supportRoutes from './routes/supportRoutes';
 import { handleError } from './utils/errors';
 
 // Create Fastify instance
@@ -126,6 +127,7 @@ async function registerRoutes() {
   await fastify.register(balanceRoutes, { prefix: '/api/balances' });
   await fastify.register(paymentRoutes, { prefix: '/api/payments' });
   await fastify.register(groupInvitationRoutes, { prefix: '/api/invitations' });
+  await fastify.register(supportRoutes, { prefix: '/api/support' });
 }
 
 // Error handler

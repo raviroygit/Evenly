@@ -1,6 +1,6 @@
-import nodemailer from 'nodemailer';
-import ejs from 'ejs';
-import path from 'path';
+import * as nodemailer from 'nodemailer';
+import * as ejs from 'ejs';
+import * as path from 'path';
 import { config } from '../config/config';
 
 // Create a transporter object using SMTP settings
@@ -147,6 +147,110 @@ export async function sendExpenseNotificationEmail(
     console.log('Email sent successfully to:', email);
   } catch (error) {
     console.error('Error in sendExpenseNotificationEmail:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send support email from user to support team.
+ * @param userEmail - User's email address
+ * @param userName - User's name
+ * @param subject - Support request subject
+ * @param message - Support request message
+ * @param priority - Priority level (low, medium, high)
+ * @param category - Support category (technical, billing, feature, other)
+ */
+export async function sendSupportEmail(
+  userEmail: string,
+  userName: string,
+  subject: string,
+  message: string,
+  priority: 'low' | 'medium' | 'high' = 'medium',
+  category: 'technical' | 'billing' | 'feature' | 'other' = 'other'
+): Promise<void> {
+  console.log('sendSupportEmail called with:', {
+    from: userEmail,
+    userName,
+    subject,
+    priority,
+    category
+  });
+
+  try {
+    // Create HTML body for support email
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Support Request - ${subject}</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+          .info-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          .info-table th, .info-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          .info-table th { background-color: #f5f5f5; font-weight: bold; }
+          .message-box { background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; margin: 15px 0; }
+          .priority-high { color: #e74c3c; font-weight: bold; }
+          .priority-medium { color: #f39c12; font-weight: bold; }
+          .priority-low { color: #27ae60; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>🔧 Support Request</h2>
+          <p>New support request received from Evenly app</p>
+        </div>
+        
+        <div class="content">
+          <h3>Request Details</h3>
+          <table class="info-table">
+            <tr>
+              <th>From:</th>
+              <td>${userName} (${userEmail})</td>
+            </tr>
+            <tr>
+              <th>Subject:</th>
+              <td>${subject}</td>
+            </tr>
+            <tr>
+              <th>Priority:</th>
+              <td><span class="priority-${priority}">${priority.toUpperCase()}</span></td>
+            </tr>
+            <tr>
+              <th>Category:</th>
+              <td>${category.charAt(0).toUpperCase() + category.slice(1)}</td>
+            </tr>
+            <tr>
+              <th>Date:</th>
+              <td>${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+          
+          <h3>Message</h3>
+          <div class="message-box">
+            ${message.replace(/\n/g, '<br>')}
+          </div>
+          
+          <div class="footer">
+            <p>This email was sent from the Evenly app support system.</p>
+            <p>Please respond directly to ${userEmail} to provide support.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const emailSubject = `[${priority.toUpperCase()}] Support Request: ${subject}`;
+    
+    console.log('Sending support email with subject:', emailSubject);
+    await sendEmail(config.email.supportEmail || 'support@evenly.com', emailSubject, htmlBody);
+    console.log('Support email sent successfully');
+  } catch (error) {
+    console.error('Error in sendSupportEmail:', error);
     throw error;
   }
 }
