@@ -27,7 +27,7 @@ export class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000,
+        timeout: 30000, // Increased timeout to 30 seconds
       });
 
       return {
@@ -55,7 +55,7 @@ export class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000,
+        timeout: 30000, // Increased timeout to 30 seconds
       });
 
       return {
@@ -84,7 +84,7 @@ export class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000,
+        timeout: 30000, // Increased timeout to 30 seconds
       });
 
       if (response.data.user && response.data.accessToken) {
@@ -149,7 +149,7 @@ export class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 10000,
+        timeout: 30000, // Increased timeout to 30 seconds
       });
 
       if (response.data.accessToken) {
@@ -193,7 +193,7 @@ export class AuthService {
           'Accept': 'application/json',
           'Cookie': `sso_token=${ssoToken}`,
         },
-        timeout: 10000,
+        timeout: 30000, // Increased timeout to 30 seconds
       });
 
       if (response.data.user) {
@@ -244,7 +244,7 @@ export class AuthService {
             'Accept': 'application/json',
             'Cookie': `sso_token=${ssoToken}`,
           },
-          timeout: 10000,
+          timeout: 30000, // Increased timeout to 30 seconds
         });
       }
 

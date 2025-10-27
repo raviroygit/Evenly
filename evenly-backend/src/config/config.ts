@@ -13,7 +13,7 @@ export const config = {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   },
   auth: {
-    serviceUrl: process.env.AUTH_SERVICE_URL || 'https://nxgenaidev-auth-api-541410644975.us-central1.run.app/api/v1/auth',
+    serviceUrl: process.env.AUTH_SERVICE_URL || 'https://nxtgenaidev-auth-2.onrender.com/api/v1/auth',
     apiKey: process.env.AUTH_SERVICE_API_KEY || '',
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
