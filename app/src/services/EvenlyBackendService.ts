@@ -143,7 +143,6 @@ export class EvenlyBackendService {
         },
       });
       
-      console.log('Backend health check response:', response.status);
       return response.data.status === 'ok';
     } catch (error) {
       console.error('Backend connection test failed:', error);
@@ -193,7 +192,6 @@ export class EvenlyBackendService {
     description?: string;
     defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
   }): Promise<Group> {
-    console.log('Creating group with data:', groupData);
     
     const response = await this.makeRequest<GroupResponse>('/groups', {
       method: 'POST',
@@ -280,9 +278,6 @@ export class EvenlyBackendService {
     const endpoint = `/expenses/user${queryString ? `?${queryString}` : ''}`;
     
     const response = await this.makeRequest<EnhancedExpense[]>(endpoint);
-    console.log('[EvenlyBackendService] getAllExpenses response:', response);
-    console.log('[EvenlyBackendService] Response data:', response.data);
-    console.log('[EvenlyBackendService] Response data length:', response.data?.length);
     return {
       expenses: response.data,
       pagination: response.pagination,

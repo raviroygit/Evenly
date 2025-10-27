@@ -45,7 +45,9 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
       'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Account deletion requested') }
+        { text: 'Delete', style: 'destructive', onPress: () => {
+          // Handle account deletion
+        }}
       ]
     );
   };
@@ -133,7 +135,9 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
             
             <TouchableOpacity 
               style={[styles.controlItem, { borderBottomColor: colors.border }]}
-              onPress={() => console.log('Manage notifications')}
+              onPress={() => {
+                // Handle notifications
+              }}
             >
               <Ionicons name="notifications" size={20} color={colors.primary} />
               <View style={styles.controlText}>
@@ -149,7 +153,9 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
             
             <TouchableOpacity 
               style={[styles.controlItem, { borderBottomColor: colors.border }]}
-              onPress={() => console.log('Manage visibility')}
+              onPress={() => {
+                // Handle visibility
+              }}
             >
               <Ionicons name="eye" size={20} color={colors.primary} />
               <View style={styles.controlText}>

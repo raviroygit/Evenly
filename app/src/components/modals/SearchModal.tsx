@@ -47,9 +47,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const slideAnim = useRef(new Animated.Value(50)).current;
 
   useEffect(() => {
-    console.log('SearchModal useEffect - visible:', visible);
     if (visible) {
-      console.log('SearchModal opening...');
       // Set initial values immediately
       fadeAnim.setValue(1);
       slideAnim.setValue(0);
@@ -59,7 +57,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         searchInputRef.current?.focus();
       }, 100);
     } else {
-      console.log('SearchModal closing...');
       // Reset animations
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
@@ -170,8 +167,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     </TouchableOpacity>
   );
 
-  console.log('SearchModal render - visible:', visible, 'searchItems:', searchItems.length);
-  
   return (
     <Modal
       visible={visible}
@@ -190,7 +185,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         activeOpacity={1}
         onPress={handleClose}
       >
-        {console.log('Modal overlay rendering with opacity:', fadeAnim._value)}
         <View style={styles.modalWrapper}>
           <TouchableOpacity
             style={[
@@ -202,7 +196,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             activeOpacity={1}
             onPress={() => {}} // Prevent touch from bubbling to overlay
           >
-            {console.log('Modal container rendering with translateY:', slideAnim._value)}
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>

@@ -28,8 +28,6 @@ export const ResponsiveButtonRow: React.FC<ResponsiveButtonRowProps> = ({
   const buttonCount = buttons.length;
   
   // Debug logging
-  console.log('ResponsiveButtonRow - Screen width:', width, 'Button count:', buttonCount);
-  console.log('ResponsiveButtonRow - isSmallScreen:', isSmallScreen, 'isVerySmallScreen:', isVerySmallScreen, 'isExtraSmallScreen:', isExtraSmallScreen);
   
   // Force vertical layout for small screens to ensure buttons are always visible
   // Use vertical layout for:
@@ -42,8 +40,6 @@ export const ResponsiveButtonRow: React.FC<ResponsiveButtonRowProps> = ({
     isVerySmallScreen || 
     isSmallScreen ||
     buttonCount >= 3;
-  
-  console.log('ResponsiveButtonRow - useVerticalLayout:', useVerticalLayout);
   
   // For larger screens with only 2 buttons, use horizontal layout
   const useHorizontalLayout = !useVerticalLayout;

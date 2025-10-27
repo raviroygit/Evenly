@@ -53,87 +53,8 @@ export const useActivitiesInfinite = () => {
         });
       });
 
-      // Add mock activities for better testing
-      const mockActivities: ActivityItem[] = [
-        {
-          id: 'mock-activity-1',
-          type: 'expense',
-          title: '🍽️ Dinner at Restaurant (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹1,250.00',
-          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-2',
-          type: 'group',
-          title: '🎯 Weekend Trip (TEST)',
-          description: 'Mock group activity for testing',
-          memberCount: 4,
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-3',
-          type: 'expense',
-          title: '🎬 Movie Tickets (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹800.00',
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-4',
-          type: 'payment',
-          title: '💰 Payment received (TEST)',
-          description: 'Mock payment activity for testing',
-          amount: '₹500.00',
-          date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-5',
-          type: 'invitation',
-          title: '📧 Group invitation (TEST)',
-          description: 'Mock invitation activity for testing',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'pending',
-        },
-        {
-          id: 'mock-activity-6',
-          type: 'expense',
-          title: '🛒 Grocery Shopping (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹2,100.00',
-          date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-7',
-          type: 'group',
-          title: '🍽️ Office Lunch (TEST)',
-          description: 'Mock group activity for testing',
-          memberCount: 6,
-          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-8',
-          type: 'expense',
-          title: '🎂 Birthday Cake (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹1,500.00',
-          date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-      ];
-
-      // Combine real and mock activities
-      const combinedActivities = [...generatedActivities, ...mockActivities];
-
-      console.log('[useActivitiesInfinite] Real activities:', generatedActivities.length);
-      console.log('[useActivitiesInfinite] Mock activities:', mockActivities.length);
-      console.log('[useActivitiesInfinite] Combined activities:', combinedActivities.length);
+      // Use only real activities
+      const combinedActivities = [...generatedActivities];
 
       // Sort by date (newest first)
       combinedActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -143,9 +64,6 @@ export const useActivitiesInfinite = () => {
       const startIndex = 0; // Always start from beginning for initial load
       const endIndex = startIndex + pageSize;
       const paginatedActivities = combinedActivities.slice(startIndex, endIndex);
-      
-      console.log('[useActivitiesInfinite] Paginated activities:', paginatedActivities.length);
-      console.log('[useActivitiesInfinite] Activity titles:', paginatedActivities.map(a => a.title));
       
       setActivities(paginatedActivities);
       setPage(1);
@@ -205,83 +123,8 @@ export const useActivitiesInfinite = () => {
         });
       });
 
-      // Add mock activities for better testing
-      const mockActivities: ActivityItem[] = [
-        {
-          id: 'mock-activity-1',
-          type: 'expense',
-          title: '🍽️ Dinner at Restaurant (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹1,250.00',
-          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-2',
-          type: 'group',
-          title: '🎯 Weekend Trip (TEST)',
-          description: 'Mock group activity for testing',
-          memberCount: 4,
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-3',
-          type: 'expense',
-          title: '🎬 Movie Tickets (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹800.00',
-          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-4',
-          type: 'payment',
-          title: '💰 Payment received (TEST)',
-          description: 'Mock payment activity for testing',
-          amount: '₹500.00',
-          date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-5',
-          type: 'invitation',
-          title: '📧 Group invitation (TEST)',
-          description: 'Mock invitation activity for testing',
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'pending',
-        },
-        {
-          id: 'mock-activity-6',
-          type: 'expense',
-          title: '🛒 Grocery Shopping (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹2,100.00',
-          date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-7',
-          type: 'group',
-          title: '🍽️ Office Lunch (TEST)',
-          description: 'Mock group activity for testing',
-          memberCount: 6,
-          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-        {
-          id: 'mock-activity-8',
-          type: 'expense',
-          title: '🎂 Birthday Cake (TEST)',
-          description: 'Mock expense activity for testing',
-          amount: '₹1,500.00',
-          date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'completed',
-        },
-      ];
-
-      // Combine real and mock activities
-      const combinedActivities = [...generatedActivities, ...mockActivities];
+      // Use only real activities
+      const combinedActivities = [...generatedActivities];
 
       // Sort by date (newest first)
       combinedActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

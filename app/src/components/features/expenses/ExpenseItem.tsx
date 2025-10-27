@@ -13,15 +13,6 @@ interface ExpenseItemProps {
 export const ExpenseItem: React.FC<ExpenseItemProps> = ({ item, groupName, onPress }) => {
   const { colors,theme } = useTheme();
   
-  // Debug: Log the expense data
-  console.log('ExpenseItem received data:', {
-    id: item.id,
-    title: item.title,
-    paidByDisplay: item.paidByDisplay,
-    netBalance: item.netBalance,
-    paidByUser: item.paidByUser
-  });
-
   return (
     <ResponsiveLiquidGlassCard
       padding={{

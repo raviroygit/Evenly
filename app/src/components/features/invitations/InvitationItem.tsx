@@ -45,16 +45,6 @@ export const InvitationItem: React.FC<InvitationItemProps> = ({
 }) => {
   const { colors, theme } = useTheme();
 
-  // Debug logging
-  console.log('[InvitationItem] Rendering invitation:', {
-    id: invitation.id,
-    groupName: invitation.group?.name,
-    inviterName: invitation.inviter?.name,
-    status: invitation.status,
-    hasGroup: !!invitation.group,
-    hasInviter: !!invitation.inviter
-  });
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -79,22 +69,6 @@ export const InvitationItem: React.FC<InvitationItemProps> = ({
 
   return (
     <View style={[styles.invitationCard, cardStyle]}>
-      {/* Debug: Simple test text */}
-      <Text style={{ color: 'red', fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>
-        DEBUG: Invitation {invitation.id} - {invitation.group?.name || 'No Group Name'}
-      </Text>
-      
-      {/* Simple test content */}
-      <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: 'bold' }}>
-        {invitation.group?.name || 'Unknown Group'}
-      </Text>
-      <Text style={{ color: colors.mutedForeground, fontSize: 14 }}>
-        Invited by {invitation.inviter?.name || 'Unknown User'}
-      </Text>
-      <Text style={{ color: colors.primary, fontSize: 12 }}>
-        Status: {invitation.status}
-      </Text>
-      
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.groupInfo}>

@@ -16,15 +16,14 @@ interface PullToRefreshHandlers {
 export const createPullToRefreshHandlers = ({ onRefresh, refreshing }: PullToRefreshHandlers) => {
   const handleScroll = (event: ScrollEvent) => {
     // Just pass through for any custom scroll handling
-    console.log('Scroll event:', Platform.OS);
   };
 
   const handleScrollBeginDrag = (event: ScrollEvent) => {
-    console.log('Scroll begin drag:', Platform.OS);
+    // Handle scroll begin drag
   };
 
   const handleScrollEndDrag = (event: ScrollEvent) => {
-    console.log('Scroll end drag:', Platform.OS);
+    // Handle scroll end drag
   };
 
   return {

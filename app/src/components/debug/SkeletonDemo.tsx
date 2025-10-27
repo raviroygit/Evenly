@@ -28,43 +28,43 @@ export const SkeletonDemo: React.FC = () => {
   const { colors, theme } = useTheme();
   const [showSkeletons, setShowSkeletons] = useState(true);
 
-  const mockStats = [
+  const sampleStats = [
     { label: 'Total Expenses', value: '$1,234.56', color: '#ef4444' },
     { label: 'Total Income', value: '$2,500.00', color: '#10b981' },
     { label: 'Net Balance', value: '$1,265.44', color: '#3b82f6' },
     { label: 'Groups', value: '3', color: '#8b5cf6' },
   ];
 
-  const mockGlassStats = [
+  const sampleGlassStats = [
     { label: 'This Month', value: '$1,234' },
     { label: 'Last Month', value: '$987' },
     { label: 'Average', value: '$1,110' },
   ];
 
-  const mockInfoItems = [
+  const sampleInfoItems = [
     { label: 'Total Groups', value: '3' },
     { label: 'Active Members', value: '12' },
     { label: 'Pending Invites', value: '2' },
     { label: 'Settled Debts', value: '8' },
   ];
 
-  const mockMenuItems = [
+  const sampleMenuItems = [
     { title: 'Profile Settings', subtitle: 'Manage your account' },
     { title: 'Notification Preferences', subtitle: 'Customize alerts' },
     { title: 'Privacy & Security', subtitle: 'Control your data' },
     { title: 'Help & Support', subtitle: 'Get assistance' },
   ];
 
-  const mockActionButtons = [
+  const sampleActionButtons = [
     { title: 'Add Expense', onPress: () => {}, variant: 'primary' as const },
     { title: 'Create Group', onPress: () => {}, variant: 'secondary' as const },
   ];
 
-  const mockActivities = [
+  const sampleActivities = [
     {
       id: '1',
       type: 'group',
-      title: 'Test Groups',
+      title: 'Sample Group',
       description: '2 members',
       amount: undefined,
       date: '10/8/2025',
@@ -72,7 +72,7 @@ export const SkeletonDemo: React.FC = () => {
     },
   ];
 
-  const mockExpenses = [
+  const sampleExpenses = [
     {
       id: '1',
       title: 'Coffee Shop',
@@ -84,13 +84,13 @@ export const SkeletonDemo: React.FC = () => {
     },
   ];
 
-  const mockGroups = [
+  const sampleGroups = [
     {
       id: '1',
-      name: 'Test Group',
+      name: 'Sample Group',
       memberCount: 2,
       currency: 'USD',
-      description: 'Test group description',
+      description: 'Sample group description',
       defaultSplitType: 'Equal',
     },
   ];
@@ -122,7 +122,7 @@ export const SkeletonDemo: React.FC = () => {
         {showSkeletons ? (
           <SkeletonDashboardStats />
         ) : (
-          <DashboardStats stats={mockStats} loading={false} />
+          <DashboardStats stats={sampleStats} loading={false} />
         )}
       </View>
 
@@ -156,7 +156,7 @@ export const SkeletonDemo: React.FC = () => {
           <GlassStatCard
             title="Monthly Overview"
             subtitle="Your spending summary"
-            stats={mockGlassStats}
+            stats={sampleGlassStats}
           />
         )}
       </View>
@@ -174,7 +174,7 @@ export const SkeletonDemo: React.FC = () => {
         ) : (
           <GlassInfoCard
             title="Group Statistics"
-            items={mockInfoItems}
+            items={sampleInfoItems}
           />
         )}
       </View>
@@ -214,7 +214,7 @@ export const SkeletonDemo: React.FC = () => {
         ) : (
           <GlassActionCard
             title="Quick Actions"
-            buttons={mockActionButtons}
+            buttons={sampleActionButtons}
           />
         )}
       </View>
@@ -232,7 +232,7 @@ export const SkeletonDemo: React.FC = () => {
         ) : (
           <GlassMenuCard
             title="Settings"
-            items={mockMenuItems}
+            items={sampleMenuItems}
           />
         )}
       </View>
@@ -245,7 +245,7 @@ export const SkeletonDemo: React.FC = () => {
           <SkeletonRecentActivity />
         ) : (
           <RecentActivity
-            activities={mockActivities}
+            activities={sampleActivities}
             loading={false}
           />
         )}
@@ -259,7 +259,7 @@ export const SkeletonDemo: React.FC = () => {
           <SkeletonExpenseList count={3} />
         ) : (
           <View>
-            {mockExpenses.map((expense) => (
+            {sampleExpenses.map((expense) => (
               <ExpenseItem key={expense.id} item={expense} groupName="Test Group" />
             ))}
           </View>
@@ -274,7 +274,7 @@ export const SkeletonDemo: React.FC = () => {
           <SkeletonGroupList count={2} />
         ) : (
           <View>
-            {mockGroups.map((group) => (
+            {sampleGroups.map((group) => (
               <GroupItem key={group.id} group={group} />
             ))}
           </View>

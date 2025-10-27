@@ -68,37 +68,18 @@ export const AuthStorage = {
       timestamp: Date.now(),
     };
     
-    console.log('[AuthStorage] Saving auth data:', { 
-      hasUser: !!user, 
-      hasAccessToken: !!accessToken, 
-      hasRefreshToken: !!refreshToken,
-      hasSsoToken: !!ssoToken,
-      ssoToken: ssoToken 
-    });
-    
     await storage.setItem(STORAGE_KEY, JSON.stringify(data));
-    console.log('[AuthStorage] Auth data saved successfully');
   },
 
   async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; ssoToken?: string; timestamp?: number } | null> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
-      console.log('[AuthStorage] Retrieved data string:', dataString ? 'exists' : 'null');
       
       if (!dataString) {
-        console.log('[AuthStorage] No stored data found');
         return null;
       }
 
       const data: StorageData = JSON.parse(dataString);
-      console.log('[AuthStorage] Parsed data:', { 
-        hasUser: !!data.user, 
-        hasAccessToken: !!data.accessToken, 
-        hasRefreshToken: !!data.refreshToken,
-        hasSsoToken: !!data.ssoToken,
-        ssoToken: data.ssoToken,
-        timestamp: data.timestamp 
-      });
       
       // Handle backward compatibility - if no timestamp, assume it's old
       const timestamp = data.timestamp || 0;
@@ -109,19 +90,16 @@ export const AuthStorage = {
       const maxAge = TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000; // 7 days in milliseconds
       
       if (tokenAge > maxAge) {
-        console.log('[AuthStorage] Token expired, clearing auth data');
         await this.clearAuthData();
         return null;
       }
 
       // Check if ssoToken is present (required for backend authentication)
       if (!data.ssoToken) {
-        console.log('[AuthStorage] No ssoToken found, clearing auth data');
         await this.clearAuthData();
         return null;
       }
 
-      console.log('[AuthStorage] Auth data retrieved successfully');
       return {
         user: data.user,
         accessToken: data.accessToken,
@@ -137,7 +115,6 @@ export const AuthStorage = {
 
   async clearAuthData(): Promise<void> {
     await storage.removeItem(STORAGE_KEY);
-    console.log('[AuthStorage] Auth data cleared');
   },
 
   async hasValidAuth(): Promise<boolean> {
@@ -148,7 +125,6 @@ export const AuthStorage = {
   async debugAuthData(): Promise<void> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
-      console.log('[AuthStorage] DEBUG - Raw stored data:', dataString);
       
       if (dataString) {
         const data = JSON.parse(dataString);

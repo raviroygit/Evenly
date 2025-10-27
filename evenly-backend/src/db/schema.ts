@@ -108,6 +108,25 @@ export const userBalances = pgTable('user_balances', {
   userIdIdx: index('user_balances_user_id_idx').on(table.userId),
 }));
 
+// Payments table
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  groupId: uuid('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' }),
+  fromUserId: uuid('from_user_id').notNull().references(() => users.id),
+  toUserId: uuid('to_user_id').notNull().references(() => users.id),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  currency: text('currency').notNull().default('USD'),
+  description: text('description'),
+  paymentMethod: text('payment_method'), // 'cash', 'bank_transfer', 'card', etc.
+  status: text('status').notNull().default('pending'), // 'pending', 'completed', 'cancelled'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  groupIdIdx: index('payments_group_id_idx').on(table.groupId),
+  fromUserIdIdx: index('payments_from_user_id_idx').on(table.fromUserId),
+  toUserIdIdx: index('payments_to_user_id_idx').on(table.toUserId),
+}));
+
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -130,6 +149,9 @@ export type NewExpenseSplit = typeof expenseSplits.$inferInsert;
 
 export type UserBalance = typeof userBalances.$inferSelect;
 export type NewUserBalance = typeof userBalances.$inferInsert;
+
+export type Payment = typeof payments.$inferSelect;
+export type NewPayment = typeof payments.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

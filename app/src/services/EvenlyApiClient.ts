@@ -11,7 +11,6 @@ class EvenlyApiClient {
   private client: AxiosInstance;
 
   constructor() {
-    console.log('[EvenlyApiClient] Initializing with baseURL:', ENV.EVENLY_BACKEND_URL);
     this.client = axios.create({
       baseURL: ENV.EVENLY_BACKEND_URL,
       timeout: 30000, // Increased from 10000 to 30000ms (30 seconds)
@@ -30,13 +29,9 @@ class EvenlyApiClient {
     this.client.interceptors.request.use(
       async (config) => {
         try {
-          console.log('[EvenlyApiClient] Interceptor called for:', config.method?.toUpperCase(), config.url);
-          
           // Get auth data from storage
           const authData = await AuthStorage.getAuthData();
           const ssoToken = authData?.ssoToken;
-          
-          console.log('[EvenlyApiClient] Retrieved ssoToken from storage:', ssoToken ? 'exists' : 'null');
 
           if (ssoToken) {
             // Add sso_token to cookies (ensure it's properly decoded)
@@ -46,8 +41,6 @@ class EvenlyApiClient {
             // Handle existing cookies properly
             const existingCookie = config.headers['Cookie'] || config.headers['cookie'];
             if (existingCookie) {
-              console.log('[EvenlyApiClient] Original cookie:', existingCookie);
-              
               // Split by semicolon (standard cookie separator), filter out sso_token entries, then rejoin
               const cookieParts = existingCookie
                 .split(';')
@@ -55,22 +48,16 @@ class EvenlyApiClient {
                 .filter((part: string) => !part.startsWith('sso_token='))
                 .filter((part: string) => part.length > 0); // Remove empty parts
               
-              console.log('[EvenlyApiClient] Cleaned cookie parts:', cookieParts);
-              
               // Add the new sso_token
               cookieParts.push(`sso_token=${decodedToken}`);
               
               const finalCookie = cookieParts.join('; ');
-              console.log('[EvenlyApiClient] Final cookie:', finalCookie);
               
               config.headers['Cookie'] = finalCookie;
             } else {
               config.headers['Cookie'] = `sso_token=${decodedToken}`;
             }
           }
-
-          console.log('[EvenlyApiClient] Request:', config.method?.toUpperCase(), config.url);
-          console.log('[EvenlyApiClient] Full URL:', config.baseURL + (config.url || ''));
           return config;
         } catch (error) {
           console.error('[EvenlyApiClient] Request interceptor error:', error);
@@ -86,7 +73,6 @@ class EvenlyApiClient {
     // Response interceptor to handle errors and token refresh
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
-        console.log('[EvenlyApiClient] Response:', response.status, response.config.url);
         return response;
       },
       async (error) => {
@@ -95,8 +81,6 @@ class EvenlyApiClient {
         
         // Handle 401 Unauthorized - token might be expired
         if (error.response?.status === 401) {
-          console.log('[EvenlyApiClient] 401 Unauthorized - attempting token refresh');
-          
           try {
             // Try to refresh the token
             const authData = await AuthStorage.getAuthData();

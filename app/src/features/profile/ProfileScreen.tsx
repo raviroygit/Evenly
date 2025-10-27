@@ -74,7 +74,7 @@ export const ProfileScreen: React.FC = () => {
               await logout();
               router.replace('/auth/login');
             } catch (error) {
-              console.log('Logout error:', error);
+              // Handle logout error silently
             }
           },
         },
@@ -176,17 +176,23 @@ export const ProfileScreen: React.FC = () => {
           {
             title: "Personal Information",
             subtitle: "Update your details",
-            onPress: () => console.log('Personal info pressed'),
+            onPress: () => {
+              // Handle personal info
+            },
           },
           {
             title: "Payment Methods",
             subtitle: "Manage cards and accounts",
-            onPress: () => console.log('Payment methods pressed'),
+            onPress: () => {
+              // Handle payment methods
+            },
           },
           {
             title: "Notifications",
             subtitle: "Configure alerts",
-            onPress: () => console.log('Notifications pressed'),
+            onPress: () => {
+              // Handle notifications
+            },
           },
           {
             title: "Privacy & Security",

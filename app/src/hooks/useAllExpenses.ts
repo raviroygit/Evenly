@@ -23,7 +23,6 @@ export const useAllExpenses = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('[useAllExpenses] Loading all expenses from groups:', groups.length);
       
       // Fetch expenses from all groups
       const allExpensesPromises = groups.map(group => 
@@ -35,8 +34,6 @@ export const useAllExpenses = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
-      console.log('[useAllExpenses] Received expenses:', allExpenses);
-      console.log('[useAllExpenses] Number of expenses:', allExpenses.length);
       setExpenses(allExpenses);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
@@ -44,7 +41,6 @@ export const useAllExpenses = () => {
       setError(errorMessage);
     } finally {
       setLoading(false);
-      console.log('[useAllExpenses] Loading completed');
     }
   };
 

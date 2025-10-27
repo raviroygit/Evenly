@@ -244,7 +244,6 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             onRefresh={onRefresh}
             onEndReached={() => {
               if (hasMore && !loadingMore) {
-                console.log('[RecentActivity] Loading more activities...');
                 loadMore();
               }
             }}

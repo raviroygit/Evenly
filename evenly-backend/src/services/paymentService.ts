@@ -150,9 +150,10 @@ export class PaymentService {
           amount: payments.amount,
           currency: payments.currency,
           description: payments.description,
+          paymentMethod: payments.paymentMethod,
           status: payments.status,
           createdAt: payments.createdAt,
-          completedAt: payments.completedAt,
+          updatedAt: payments.updatedAt,
           fromUser: {
             id: fromUser.id,
             email: fromUser.email,
@@ -247,9 +248,10 @@ export class PaymentService {
           amount: payments.amount,
           currency: payments.currency,
           description: payments.description,
+          paymentMethod: payments.paymentMethod,
           status: payments.status,
           createdAt: payments.createdAt,
-          completedAt: payments.completedAt,
+          updatedAt: payments.updatedAt,
           fromUser: {
             id: fromUser.id,
             email: fromUser.email,
@@ -411,7 +413,7 @@ export class PaymentService {
         .update(userBalances)
         .set({
           balance: newFromUserBalance.toString(),
-          lastUpdated: new Date(),
+          updatedAt: new Date(),
         })
         .where(and(eq(userBalances.userId, fromUserId), eq(userBalances.groupId, groupId)));
 
@@ -423,7 +425,7 @@ export class PaymentService {
         .update(userBalances)
         .set({
           balance: newToUserBalance.toString(),
-          lastUpdated: new Date(),
+          updatedAt: new Date(),
         })
         .where(and(eq(userBalances.userId, toUserId), eq(userBalances.groupId, groupId)));
     } catch (error) {

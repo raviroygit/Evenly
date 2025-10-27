@@ -83,7 +83,6 @@ export const SearchFloatingButton: React.FC<SearchFloatingButtonProps> = ({
           style,
         ]}
         onPress={() => {
-          console.log('SearchFloatingButton onPress called');
           onPress();
         }}
         activeOpacity={0.8}

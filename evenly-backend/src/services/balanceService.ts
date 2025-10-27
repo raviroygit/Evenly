@@ -24,7 +24,7 @@ export class BalanceService {
           userId: userBalances.userId,
           groupId: userBalances.groupId,
           balance: userBalances.balance,
-          lastUpdated: userBalances.updatedAt,
+          updatedAt: userBalances.updatedAt,
           user: {
             id: users.id,
             email: users.email,
@@ -58,7 +58,7 @@ export class BalanceService {
           userId: userBalances.userId,
           groupId: userBalances.groupId,
           balance: userBalances.balance,
-          lastUpdated: userBalances.updatedAt,
+          updatedAt: userBalances.updatedAt,
         })
         .from(userBalances)
         .where(eq(userBalances.userId, userId));

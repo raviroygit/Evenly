@@ -30,20 +30,15 @@ export class ChatService {
   static async getAgentInfo(): Promise<AgentInfo> {
     try {
       const url = `${this.baseUrl}/agents/${this.agentId}`;
-      console.log('ChatService: Fetching agent info from:', url);
       
       const response = await fetch(url);
       
-      console.log('ChatService: Agent info response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('ChatService: Agent info error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('ChatService: Agent info data received:', data);
       return data;
     } catch (error) {
       console.error('Error fetching agent info:', error);
@@ -97,8 +92,6 @@ export class ChatService {
           }
         }
       }
-      
-      console.log('ChatService: Parsed chunks count:', chunks.length);
       
       // Create a mock stream that simulates streaming
       const mockStream = new ReadableStream({

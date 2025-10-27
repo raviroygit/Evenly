@@ -17,11 +17,9 @@ interface SimpleModalProps {
 export const SimpleModal: React.FC<SimpleModalProps> = ({
   visible,
   onClose,
-  title = 'Test Modal',
+  title = 'Modal',
 }) => {
   const { colors } = useTheme();
-
-  console.log('SimpleModal render - visible:', visible);
 
   return (
     <RNModal
@@ -40,7 +38,7 @@ export const SimpleModal: React.FC<SimpleModalProps> = ({
           </View>
           <View style={styles.content}>
             <Text style={[styles.contentText, { color: colors.foreground }]}>
-              This is a test modal to check if modals work at all.
+              This is a simple modal component.
             </Text>
             <TouchableOpacity 
               onPress={onClose} 

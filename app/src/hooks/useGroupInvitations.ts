@@ -43,9 +43,7 @@ export const useGroupInvitations = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Loading pending invitations...');
       const invitationsData = await GroupInvitationService.getPendingInvitations();
-      console.log('Pending invitations loaded successfully:', invitationsData);
       setInvitations(invitationsData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load invitations';
@@ -59,12 +57,10 @@ export const useGroupInvitations = () => {
   const sendInvitation = async (groupId: string, invitedEmail: string) => {
     try {
       setError(null);
-      console.log('Sending invitation to:', invitedEmail);
       const newInvitation = await GroupInvitationService.sendInvitation({
         groupId,
         invitedEmail,
       });
-      console.log('Invitation sent successfully:', newInvitation);
       return newInvitation;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send invitation';
@@ -77,9 +73,7 @@ export const useGroupInvitations = () => {
   const acceptInvitation = async (token: string) => {
     try {
       setError(null);
-      console.log('Accepting invitation with token:', token);
       await GroupInvitationService.acceptInvitation({ token });
-      console.log('Invitation accepted successfully');
       
       // Remove the accepted invitation from the list
       setInvitations(prev => prev.filter(inv => inv.token !== token));
@@ -94,9 +88,7 @@ export const useGroupInvitations = () => {
   const declineInvitation = async (token: string) => {
     try {
       setError(null);
-      console.log('Declining invitation with token:', token);
       await GroupInvitationService.declineInvitation({ token });
-      console.log('Invitation declined successfully');
       
       // Remove the declined invitation from the list
       setInvitations(prev => prev.filter(inv => inv.token !== token));

@@ -116,7 +116,6 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
     
     try {
       const agentInfo: AgentInfo = await ChatService.getAgentInfo();
-      console.log('Agent info received:', agentInfo);
       
       // Set the real agent name
       if (agentInfo.agent_config?.agent_name) {
@@ -197,7 +196,6 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
   // Auto-scroll to bottom (inverted FlatList handles this automatically)
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current && messages.length > 0) {
-      console.log('Attempting to scroll to bottom with inverted FlatList');
       // With inverted FlatList, new items automatically appear at bottom
       // We can scroll to offset 0 to ensure we're at the "bottom"
       setTimeout(() => {
@@ -345,7 +343,6 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
             bounces={true}
             inverted={true} // This makes new messages appear at bottom
             onContentSizeChange={(contentWidth, contentHeight) => {
-              console.log('FlatList content size changed:', { contentWidth, contentHeight });
               // With inverted FlatList, we don't need to manually scroll
             }}
             onScroll={(event) => {

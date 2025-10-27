@@ -17,16 +17,7 @@ export const useExpenses = (groupId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Loading expenses for group:', groupId);
       const { expenses: expensesData } = await EvenlyBackendService.getGroupExpenses(groupId);
-      console.log('Expenses loaded successfully:', expensesData);
-      console.log('First expense details:', expensesData[0] ? {
-        id: expensesData[0].id,
-        title: expensesData[0].title,
-        totalAmount: expensesData[0].totalAmount,
-        paidByDisplay: expensesData[0].paidByDisplay,
-        netBalance: expensesData[0].netBalance
-      } : 'No expenses');
       setExpenses(expensesData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';

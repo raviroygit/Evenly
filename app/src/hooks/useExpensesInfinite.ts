@@ -16,8 +16,6 @@ export const useExpensesInfinite = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('[useExpensesInfinite] Loading all expenses from groups:', groups.length);
-      
       // Fetch expenses from all groups
       const allExpensesPromises = groups.map(group => 
         EvenlyBackendService.getGroupExpenses(group.id)
@@ -28,110 +26,15 @@ export const useExpensesInfinite = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
-      console.log('[useExpensesInfinite] Received expenses:', allExpenses);
-      console.log('[useExpensesInfinite] Number of expenses:', allExpenses.length);
-      
-      // Add mock data for better testing
-      const mockExpenses: EnhancedExpense[] = [
-        {
-          id: 'mock-expense-1',
-          title: '🍽️ Dinner at Restaurant (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1250.00,
-          groupId: 'mock-1',
-          groupName: 'Weekend Trip',
-          paidBy: 'user1',
-          paidByName: 'John Doe',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-2',
-          title: '🎬 Movie Tickets (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 800.00,
-          groupId: 'mock-2',
-          groupName: 'Movie Night',
-          paidBy: 'user2',
-          paidByName: 'Jane Smith',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-3',
-          title: '🛒 Grocery Shopping (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 2100.00,
-          groupId: 'mock-3',
-          groupName: 'Grocery Shopping',
-          paidBy: 'user3',
-          paidByName: 'Bob Wilson',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-4',
-          title: '🎂 Birthday Cake (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1500.00,
-          groupId: 'mock-4',
-          groupName: 'Birthday Party',
-          paidBy: 'user4',
-          paidByName: 'Alice Brown',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-5',
-          title: '🍽️ Office Lunch (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1800.00,
-          groupId: 'mock-5',
-          groupName: 'Office Lunch',
-          paidBy: 'user5',
-          paidByName: 'Charlie Davis',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-6',
-          title: '🚕 Taxi Ride (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 450.00,
-          groupId: 'mock-1',
-          groupName: 'Weekend Trip',
-          paidBy: 'user1',
-          paidByName: 'John Doe',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-
-      // Combine real and mock data
-      const combinedExpenses = [...allExpenses, ...mockExpenses];
-      
-      console.log('[useExpensesInfinite] Real expenses:', allExpenses.length);
-      console.log('[useExpensesInfinite] Mock expenses:', mockExpenses.length);
-      console.log('[useExpensesInfinite] Combined expenses:', combinedExpenses.length);
-      
       // Simulate pagination
       const pageSize = 3;
       const startIndex = 0; // Always start from beginning for initial load
       const endIndex = startIndex + pageSize;
-      const paginatedExpenses = combinedExpenses.slice(startIndex, endIndex);
-      
-      console.log('[useExpensesInfinite] Paginated expenses:', paginatedExpenses.length);
-      console.log('[useExpensesInfinite] Expense titles:', paginatedExpenses.map(e => e.title));
+      const paginatedExpenses = allExpenses.slice(startIndex, endIndex);
       
       setExpenses(paginatedExpenses);
       setPage(1);
-      setHasMore(endIndex < combinedExpenses.length);
+      setHasMore(endIndex < allExpenses.length);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
       setError(errorMessage);
@@ -161,8 +64,6 @@ export const useExpensesInfinite = () => {
 
   const loadAllExpensesForPage = useCallback(async (pageNum: number) => {
     try {
-      console.log('[useExpensesInfinite] Loading page:', pageNum);
-      
       // Fetch expenses from all groups
       const allExpensesPromises = groups.map(group => 
         EvenlyBackendService.getGroupExpenses(group.id)
@@ -173,99 +74,14 @@ export const useExpensesInfinite = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
-      // Add mock data for better testing
-      const mockExpenses: EnhancedExpense[] = [
-        {
-          id: 'mock-expense-1',
-          title: '🍽️ Dinner at Restaurant (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1250.00,
-          groupId: 'mock-1',
-          groupName: 'Weekend Trip',
-          paidBy: 'user1',
-          paidByName: 'John Doe',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-2',
-          title: '🎬 Movie Tickets (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 800.00,
-          groupId: 'mock-2',
-          groupName: 'Movie Night',
-          paidBy: 'user2',
-          paidByName: 'Jane Smith',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-3',
-          title: '🛒 Grocery Shopping (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 2100.00,
-          groupId: 'mock-3',
-          groupName: 'Grocery Shopping',
-          paidBy: 'user3',
-          paidByName: 'Bob Wilson',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-4',
-          title: '🎂 Birthday Cake (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1500.00,
-          groupId: 'mock-4',
-          groupName: 'Birthday Party',
-          paidBy: 'user4',
-          paidByName: 'Alice Brown',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-5',
-          title: '🍽️ Office Lunch (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 1800.00,
-          groupId: 'mock-5',
-          groupName: 'Office Lunch',
-          paidBy: 'user5',
-          paidByName: 'Charlie Davis',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'mock-expense-6',
-          title: '🚕 Taxi Ride (TEST)',
-          description: 'Mock expense for testing infinite scroll',
-          amount: 450.00,
-          groupId: 'mock-1',
-          groupName: 'Weekend Trip',
-          paidBy: 'user1',
-          paidByName: 'John Doe',
-          splitType: 'equal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-
-      // Combine real and mock data
-      const combinedExpenses = [...allExpenses, ...mockExpenses];
-      
       // Simulate pagination
       const pageSize = 3;
       const startIndex = (pageNum - 1) * pageSize;
       const endIndex = startIndex + pageSize;
-      const paginatedExpenses = combinedExpenses.slice(startIndex, endIndex);
+      const paginatedExpenses = allExpenses.slice(startIndex, endIndex);
       
       setExpenses(prev => [...prev, ...paginatedExpenses]);
-      setHasMore(endIndex < combinedExpenses.length);
+      setHasMore(endIndex < allExpenses.length);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load more expenses';
       setError(errorMessage);

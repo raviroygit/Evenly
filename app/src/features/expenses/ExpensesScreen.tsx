@@ -50,35 +50,18 @@ export const ExpensesScreen: React.FC = () => {
     groups,
   });
 
-  // Debug logging
-  console.log('[ExpensesScreen] Expenses data:', {
-    expenses,
-    expensesLength: expenses.length,
-    loading: expensesLoading,
-    error: expensesError,
-    totalExpenses,
-    refreshing,
-    groupsLength: groups.length
-  });
-
   const onRefresh = async () => {
-    console.log('[ExpensesScreen] onRefresh called');
     setRefreshing(true);
     try {
-      console.log('[ExpensesScreen] Starting refresh...');
       // Refresh both groups and expenses
       if (refreshGroups) {
-        console.log('[ExpensesScreen] Refreshing groups...');
         await refreshGroups();
       }
-      console.log('[ExpensesScreen] Refreshing expenses...');
       await expensesRefresh();
-      console.log('[ExpensesScreen] Refresh completed');
     } catch (error) {
       console.error('[ExpensesScreen] Refresh error:', error);
     } finally {
       setRefreshing(false);
-      console.log('[ExpensesScreen] Refresh state reset');
     }
   };
 
@@ -204,7 +187,6 @@ export const ExpensesScreen: React.FC = () => {
                 keyExtractor={(expense, index) => `${expense.id}-${index}`}
                 onEndReached={() => {
                   if (expensesHasMore && !expensesLoadingMore) {
-                    console.log('[ExpensesScreen] Loading more expenses...');
                     expensesLoadMore();
                   }
                 }}
@@ -252,7 +234,6 @@ export const ExpensesScreen: React.FC = () => {
       <SearchModal
         visible={isSearchVisible}
         onClose={() => {
-          console.log('Search modal closing');
           closeSearch();
         }}
         onItemSelect={handleItemSelect}
@@ -268,11 +249,9 @@ export const ExpensesScreen: React.FC = () => {
             id: 'search',
             title: 'Search',
             icon: '🔍',
-            onPress: () => {
-              console.log('Search button pressed, isSearchVisible:', isSearchVisible);
-              console.log('Search items count:', searchItems.length);
-              openSearch();
-            },
+                  onPress: () => {
+                    openSearch();
+                  },
           },
           {
             id: 'add-expense',

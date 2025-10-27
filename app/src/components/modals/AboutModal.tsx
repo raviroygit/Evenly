@@ -131,7 +131,9 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           <View style={styles.legalList}>
             <TouchableOpacity 
               style={styles.legalItem}
-              onPress={() => console.log('Privacy Policy')}
+              onPress={() => {
+                // Handle privacy policy
+              }}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
                 Privacy Policy
@@ -139,7 +141,9 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.legalItem}
-              onPress={() => console.log('Terms of Service')}
+              onPress={() => {
+                // Handle terms of service
+              }}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
                 Terms of Service

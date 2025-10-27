@@ -102,7 +102,6 @@ export const useSearch = ({
 
   const handleItemSelect = (item: SearchItem) => {
     // Handle item selection based on screen type
-    console.log('Selected item:', item);
     
     // You can add navigation logic here based on the item type and screen
     switch (item.type) {

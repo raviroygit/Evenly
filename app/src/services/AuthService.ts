@@ -20,7 +20,6 @@ export class AuthService {
 
       // Use the Axios client to make a test API call to evenly-backend to trigger user sync
       await evenlyApiClient.get('/groups');
-      console.log('User successfully synced with evenly-backend');
     } catch (error) {
       console.warn('Failed to sync user with evenly-backend:', error);
       // Don't throw error as this shouldn't block the auth flow
@@ -54,7 +53,6 @@ export class AuthService {
       // Extract sso_token from Set-Cookie header
       let extractedSsoToken: string | undefined;
       const setCookieHeader = response.headers['set-cookie'];
-      console.log('[AuthService] Set-Cookie header:', setCookieHeader);
       
       if (setCookieHeader) {
         // Handle both string and array cases
@@ -62,12 +60,7 @@ export class AuthService {
         const ssoTokenMatch = cookieString.match(/sso_token=([^;]+)/);
         if (ssoTokenMatch) {
           extractedSsoToken = decodeURIComponent(ssoTokenMatch[1]);
-          console.log('[AuthService] sso_token extracted from response:', extractedSsoToken);
-        } else {
-          console.log('[AuthService] No sso_token found in Set-Cookie header');
         }
-      } else {
-        console.log('[AuthService] No Set-Cookie header found in response');
       }
 
       // Extract JWT tokens from response body if available
@@ -132,11 +125,6 @@ export class AuthService {
         body: JSON.stringify({ email, otp }),
       });
 
-      console.log('[AuthService] verifyOTP response:', response);
-      console.log('[AuthService] verifyOTP ssoToken:', ssoToken);
-      console.log('[AuthService] verifyOTP accessToken:', accessToken);
-      console.log('[AuthService] verifyOTP refreshToken:', refreshToken);
-
       if (response.success && (response.user || response.data?.user)) {
         const user = response.user || response.data?.user;
         
@@ -162,14 +150,12 @@ export class AuthService {
         };
       }
 
-      console.log('[AuthService] verifyOTP failed - response not successful or no user');
       return {
         success: false,
         message: response.message || 'Invalid OTP',
         ssoToken, // Still return the ssoToken even if login failed
       };
     } catch (error: any) {
-      console.log('[AuthService] verifyOTP error:', error);
       return {
         success: false,
         message: error.message || 'Invalid OTP',
@@ -204,7 +190,6 @@ export class AuthService {
         method: 'POST',
       });
     } catch (error) {
-      console.log('Logout failed:', error);
       // Even if logout fails on server, we should clear local state
     }
   }

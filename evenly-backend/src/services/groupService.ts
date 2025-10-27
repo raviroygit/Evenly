@@ -63,6 +63,7 @@ export class GroupService {
           userId: groupMembers.userId,
           role: groupMembers.role,
           joinedAt: groupMembers.joinedAt,
+          isActive: groupMembers.isActive,
           user: {
             id: users.id,
             email: users.email,
@@ -384,6 +385,7 @@ export class GroupService {
           userId: groupMembers.userId,
           role: groupMembers.role,
           joinedAt: groupMembers.joinedAt,
+          isActive: groupMembers.isActive,
           user: {
             id: users.id,
             email: users.email,

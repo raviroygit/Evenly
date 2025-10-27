@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -14,7 +15,57 @@ import { paymentRoutes } from './routes/paymentRoutes';
 import { groupInvitationRoutes } from './routes/groupInvitationRoutes';
 import { authRoutes } from './routes/authRoutes';
 import supportRoutes from './routes/supportRoutes';
+// Health check routes removed - using simple background service instead
 import { handleError } from './utils/errors';
+// Simple health check service that runs in the main process
+let healthCheckInterval: NodeJS.Timeout | null = null;
+
+/**
+ * Start simple health check service
+ */
+function startHealthCheckService(): void {
+  console.log('🔍 Starting simple health check service...');
+  
+  // Run health check every 2 minutes
+  healthCheckInterval = setInterval(async () => {
+    try {
+      const startTime = Date.now();
+      const healthUrl = `http://${config.server.host}:${config.server.port}/health`;
+      
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Evenly-Backend-HealthCheck/1.0.0',
+        },
+      });
+      
+      const responseTime = Date.now() - startTime;
+      
+      if (response.ok) {
+        console.log(`✅ Health check successful: ${responseTime}ms`);
+      } else {
+        console.error(`❌ Health check failed: HTTP ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error(`❌ Health check error: ${error.message}`);
+    }
+  }, 2 * 60 * 1000); // 2 minutes
+  
+  console.log(`✅ Health check service started`);
+  console.log(`🎯 Target URL: http://${config.server.host}:${config.server.port}/health`);
+  console.log(`⏰ Interval: Every 2 minutes`);
+}
+
+/**
+ * Stop health check service
+ */
+function stopHealthCheckService(): void {
+  if (healthCheckInterval) {
+    clearInterval(healthCheckInterval);
+    healthCheckInterval = null;
+    console.log('✅ Health check service stopped');
+  }
+}
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -37,11 +88,11 @@ async function registerPlugins() {
   // Helmet for security headers
   await fastify.register(helmet);
 
-  // Rate limiting
-  await fastify.register(rateLimit, {
-    max: config.rateLimit.max,
-    timeWindow: config.rateLimit.timeWindow,
-  });
+  // Rate limiting - DISABLED for development
+  // await fastify.register(rateLimit, {
+  //   max: config.rateLimit.max,
+  //   timeWindow: config.rateLimit.timeWindow,
+  // });
 
   // Swagger documentation
   await fastify.register(swagger, {
@@ -128,6 +179,7 @@ async function registerRoutes() {
   await fastify.register(paymentRoutes, { prefix: '/api/payments' });
   await fastify.register(groupInvitationRoutes, { prefix: '/api/invitations' });
   await fastify.register(supportRoutes, { prefix: '/api/support' });
+  // Health check management routes removed - using simple background service instead
 }
 
 // Error handler
@@ -139,6 +191,9 @@ fastify.setErrorHandler((error, request, reply) => {
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, shutting down gracefully...`);
   try {
+    // Stop health check service
+    stopHealthCheckService();
+    
     await fastify.close();
     await closePool();
     console.log('Server closed successfully');
@@ -170,6 +225,9 @@ const start = async () => {
 
     console.log(`🚀 Server running on http://${config.server.host}:${config.server.port}`);
     console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
+    
+    // Auto-start health check service in background
+    startHealthCheckService();
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

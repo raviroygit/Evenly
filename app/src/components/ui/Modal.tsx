@@ -27,14 +27,9 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  console.log('Modal render - visible:', visible, 'title:', title);
-
   if (!visible) {
-    console.log('Modal not visible, returning null');
     return null;
   }
-
-  console.log('Modal is visible, rendering modal');
 
   return (
     <RNModal

@@ -83,7 +83,7 @@ export class ExpenseService {
         groupId: expenseData.groupId,
         title: expenseData.title,
         description: expenseData.description,
-        totalAmount: parseFloat(expenseData.totalAmount),
+        totalAmount: expenseData.totalAmount,
         currency: expenseData.currency || 'INR',
         paidBy: paidBy, // Use the resolved paidBy (current user if not provided)
         splitType: expenseData.splitType,
@@ -101,8 +101,8 @@ export class ExpenseService {
       const expenseSplitData: NewExpenseSplit[] = splits.map(split => ({
         expenseId: createdExpense.id,
         userId: split.userId,
-        amount: parseFloat(split.amount),
-        percentage: split.percentage ? parseFloat(split.percentage) : undefined,
+        amount: split.amount,
+        percentage: split.percentage ? split.percentage : undefined,
         shares: split.shares,
       }));
 
@@ -311,6 +311,15 @@ export class ExpenseService {
 
     return {
       ...expense,
+      totalAmount: parseFloat(expense.totalAmount),
+      description: expense.description || undefined,
+      receipt: expense.receipt || undefined,
+      splits: expense.splits?.map(split => ({
+        ...split,
+        amount: parseFloat(split.amount),
+        percentage: split.percentage ? parseFloat(split.percentage) : undefined,
+        shares: split.shares || undefined,
+      })),
       paidByDisplay,
       sharesList,
       currentUserShare,
@@ -377,7 +386,9 @@ export class ExpenseService {
             id: users.id,
             email: users.email,
             name: users.name,
-            avatar: users.avatar,
+            avatar: users.avatar || undefined,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
           },
         })
         .from(expenses)
@@ -403,7 +414,9 @@ export class ExpenseService {
                 id: users.id,
                 email: users.email,
                 name: users.name,
-                avatar: users.avatar,
+                avatar: users.avatar || undefined,
+                createdAt: users.createdAt,
+                updatedAt: users.updatedAt,
               },
             })
             .from(expenseSplits)
@@ -427,10 +440,27 @@ export class ExpenseService {
           // Return a fallback enhanced expense
           return {
             ...expense,
+            totalAmount: parseFloat(expense.totalAmount),
+            description: expense.description || undefined,
+            receipt: expense.receipt || undefined,
+            paidByUser: expense.paidByUser ? {
+              ...expense.paidByUser,
+              avatar: expense.paidByUser.avatar || undefined,
+            } : undefined,
+            splits: expense.splits?.map(split => ({
+              ...split,
+              amount: parseFloat(split.amount),
+              percentage: split.percentage ? parseFloat(split.percentage) : undefined,
+              shares: split.shares || undefined,
+              user: split.user ? {
+                ...split.user,
+                avatar: split.user.avatar || undefined,
+              } : undefined,
+            })),
             paidByDisplay: expense.paidByUser?.name ? `${expense.paidByUser.name.split(' ')[0]} paid` : 'Unknown paid',
             sharesList: [],
-            currentUserShare: { amount: 0, status: 'even', color: '#6B7280' },
-            netBalance: { amount: 0, status: 'zero', text: 'even', color: '#6B7280' }
+            currentUserShare: { amount: 0, status: 'even' as const, color: '#6B7280' },
+            netBalance: { amount: 0, status: 'zero' as const, text: 'even', color: '#6B7280' }
           };
         }
       });
@@ -669,7 +699,7 @@ export class ExpenseService {
             .update(userBalances)
             .set({
               balance: newBalance.toString(),
-              lastUpdated: new Date(),
+              updatedAt: new Date(),
             })
             .where(and(eq(userBalances.userId, memberId), eq(userBalances.groupId, groupId)));
         } else {
@@ -766,7 +796,7 @@ export class ExpenseService {
             {
               id: expense.id,
               title: expense.title,
-              description: expense.description,
+              description: expense.description || undefined,
               totalAmount: expense.totalAmount.toString(),
               category: expense.category,
               date: expense.date.toISOString(),

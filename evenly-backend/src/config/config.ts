@@ -22,8 +22,8 @@ export const config = {
     origin: process.env.CORS_ORIGIN || 'http://localhost:8081',
   },
   rateLimit: {
-    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-    timeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10),
+    max: parseInt(process.env.RATE_LIMIT_MAX || '10000', 10), // Increased from 100 to 10000
+    timeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW || '60000', 10), // 1 minute
   },
   swagger: {
     host: process.env.SWAGGER_HOST || 'localhost:3001',
