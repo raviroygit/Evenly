@@ -13,9 +13,6 @@ import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DashboardStats } from '../../components/features/dashboard/DashboardStats';
 import { RecentActivity } from '../../components/features/dashboard/RecentActivity';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
-import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
-import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
-import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 
 export const HomeScreen: React.FC = () => {
   const { colors, theme } = useTheme();
@@ -37,11 +34,6 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // Create pull-to-refresh handlers using utility function
-  const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
-    onRefresh,
-    refreshing,
-  });
 
   const handleCreateGroup = async (groupData: {
     name: string;
@@ -140,29 +132,17 @@ export const HomeScreen: React.FC = () => {
   // Check if user is authenticated
   if (!isAuthenticated || !user) {
     return (
-      <>
-        <PullToRefreshSpinner refreshing={refreshing} />
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <PullToRefreshScrollView
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEndDrag}
-            contentContainerStyle={styles.contentContainer}
-          >
-            <GlassListCard
-              title="Authentication Required"
-              subtitle="Please log in to access the app"
-              contentGap={0}
-            >
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                You need to be logged in to access this feature.
-              </Text>
-            </GlassListCard>
-          </PullToRefreshScrollView>
-        </View>
-      </>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassListCard
+          title="Authentication Required"
+          subtitle="Please log in to access the app"
+          contentGap={0}
+        >
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+            You need to be logged in to access this feature.
+          </Text>
+        </GlassListCard>
+      </View>
     );
   }
 
@@ -192,18 +172,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <>
-      {/* Reusable Pull-to-Refresh Spinner */}
-      <PullToRefreshSpinner refreshing={refreshing} />
-      
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <PullToRefreshScrollView
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          onScroll={handleScroll}
-          onScrollBeginDrag={handleScrollBeginDrag}
-          onScrollEndDrag={handleScrollEndDrag}
-          contentContainerStyle={styles.contentContainer}
-        >
         {/* Welcome Header */}
         <ResponsiveLiquidGlassCard
           padding={{
@@ -219,7 +188,7 @@ export const HomeScreen: React.FC = () => {
             large: 24,
             tablet: 26,
           }}
-          style={platformStyles.headerCard}
+          style={[platformStyles.headerCard, styles.headerCard] as any}
         >
           <SectionHeader
             title={`Welcome back, ${user?.name || 'User'}!`}
@@ -231,59 +200,56 @@ export const HomeScreen: React.FC = () => {
         {/* Dashboard Stats */}
         <DashboardStats stats={dashboardStats} loading={dashboardLoading} />
 
-
         {/* Recent Activity */}
         <RecentActivity
           onViewAll={() => {
             // Navigate to activity screen
           }}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
-
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
-        </PullToRefreshScrollView>
-
-        {/* Modals */}
-        <CreateGroupModal
-          visible={showCreateGroupModal}
-          onClose={() => setShowCreateGroupModal(false)}
-          onCreateGroup={handleCreateGroup}
-        />
-
-        {user && (
-          <AddExpenseModal
-            visible={showAddExpenseModal}
-            onClose={() => setShowAddExpenseModal(false)}
-            onAddExpense={handleAddExpense}
-            currentUserId={user.id}
-          />
-        )}
       </View>
 
-    {/* Floating Action Button - Outside container for proper positioning */}
-    <FloatingActionButton
-      actions={[
-        {
-          id: 'create-group',
-          title: 'Create Group',
-          icon: '👥',
-          onPress: () => setShowCreateGroupModal(true),
-        },
-        {
-          id: 'add-expense',
-          title: 'Add Expense',
-          icon: '💰',
-          onPress: () => {
-            if (stats.totalGroups === 0) {
-              Alert.alert('No Groups', 'Please create a group first before adding expenses.');
-            } else {
-              setShowAddExpenseModal(true);
-            }
+      {/* Modals */}
+      <CreateGroupModal
+        visible={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onCreateGroup={handleCreateGroup}
+      />
+
+      {user && (
+        <AddExpenseModal
+          visible={showAddExpenseModal}
+          onClose={() => setShowAddExpenseModal(false)}
+          onAddExpense={handleAddExpense}
+          currentUserId={user.id}
+        />
+      )}
+
+      {/* Floating Action Button - Outside container for proper positioning */}
+      <FloatingActionButton
+        actions={[
+          {
+            id: 'create-group',
+            title: 'Create Group',
+            icon: '👥',
+            onPress: () => setShowCreateGroupModal(true),
           },
-        },
-      ]}
-      position="bottom-right"
-    />
+          {
+            id: 'add-expense',
+            title: 'Add Expense',
+            icon: '💰',
+            onPress: () => {
+              if (stats.totalGroups === 0) {
+                Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+              } else {
+                setShowAddExpenseModal(true);
+              }
+            },
+          },
+        ]}
+        position="bottom-right"
+      />
     </>
   );
 };
@@ -291,18 +257,14 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 10 : 20,
-    paddingBottom: 20,
+  },
+  headerCard: {
+    marginBottom: 24,
   },
   headerContent: {
     marginBottom: 0,
-  },
-  bottomSpacing: {
-    height: 100, // Add space at bottom for better scrolling
   },
   emptyText: {
     fontSize: 14,

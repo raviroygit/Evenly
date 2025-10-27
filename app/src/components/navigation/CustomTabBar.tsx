@@ -20,15 +20,15 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigat
       styles.tabbar,
       {
         backgroundColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.15)' 
-        : 'rgba(255, 255, 255, 0.85)',
+        ? 'rgba(0, 0, 0, 0.65)' // Slightly transparent for dark theme
+        : 'rgba(255, 255, 255, 0.95)', // Slightly transparent for light theme
         borderColor: 'transparent',
         borderWidth: 0,
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation:Platform.OS === 'ios' ? 10 : 0,
       }
     ]}>
       {state.routes.map((route: any, index: number) => {
@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 25,
     borderCurve: 'continuous',
+    zIndex: 999, // Lower z-index than floating buttons
   },
   androidGlassmorphism: {
     borderWidth: 1,
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 10,
     shadowOpacity: 0.15,
-    elevation: 12,
+    elevation: Platform.OS === 'ios' ? 12 : 0,
   },
   iosTabbar: {
     backgroundColor: 'rgba(255, 255, 255, 0.8)',

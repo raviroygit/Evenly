@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
+import ErrorHandler from '../utils/ErrorHandler';
+import { Platform } from 'react-native';
 
 /**
  * Axios instance for Evenly Backend API with automatic authentication
@@ -49,9 +51,9 @@ class EvenlyApiClient {
               // Split by semicolon (standard cookie separator), filter out sso_token entries, then rejoin
               const cookieParts = existingCookie
                 .split(';')
-                .map(part => part.trim())
-                .filter(part => !part.startsWith('sso_token='))
-                .filter(part => part.length > 0); // Remove empty parts
+                .map((part: string) => part.trim())
+                .filter((part: string) => !part.startsWith('sso_token='))
+                .filter((part: string) => part.length > 0); // Remove empty parts
               
               console.log('[EvenlyApiClient] Cleaned cookie parts:', cookieParts);
               
@@ -68,7 +70,7 @@ class EvenlyApiClient {
           }
 
           console.log('[EvenlyApiClient] Request:', config.method?.toUpperCase(), config.url);
-          console.log('[EvenlyApiClient] Full URL:', config.baseURL + config.url);
+          console.log('[EvenlyApiClient] Full URL:', config.baseURL + (config.url || ''));
           return config;
         } catch (error) {
           console.error('[EvenlyApiClient] Request interceptor error:', error);
@@ -88,8 +90,9 @@ class EvenlyApiClient {
         return response;
       },
       async (error) => {
-        console.error('[EvenlyApiClient] Response error:', error.response?.status, error.config?.url);
-
+        // Log the error for debugging
+        ErrorHandler.logError(error, 'API Request');
+        
         // Handle 401 Unauthorized - token might be expired
         if (error.response?.status === 401) {
           console.log('[EvenlyApiClient] 401 Unauthorized - attempting token refresh');
@@ -122,7 +125,7 @@ class EvenlyApiClient {
 
                 // Retry the original request with new token
                 const originalRequest = error.config;
-                const decodedToken = decodeURIComponent(authData.ssoToken);
+                const decodedToken = authData.ssoToken ? decodeURIComponent(authData.ssoToken) : '';
                 
                 // Handle existing cookies properly
                 const existingCookie = originalRequest.headers['Cookie'] || originalRequest.headers['cookie'];
@@ -130,9 +133,9 @@ class EvenlyApiClient {
                   // Split by semicolon (standard cookie separator), filter out sso_token entries, then rejoin
                   const cookieParts = existingCookie
                     .split(';')
-                    .map(part => part.trim())
-                    .filter(part => !part.startsWith('sso_token='))
-                    .filter(part => part.length > 0); // Remove empty parts
+                    .map((part: string) => part.trim())
+                    .filter((part: string) => !part.startsWith('sso_token='))
+                    .filter((part: string) => part.length > 0); // Remove empty parts
                   
                   // Add the new sso_token
                   cookieParts.push(`sso_token=${decodedToken}`);
@@ -147,11 +150,13 @@ class EvenlyApiClient {
             }
           } catch (refreshError) {
             console.error('[EvenlyApiClient] Token refresh failed:', refreshError);
+            ErrorHandler.logError(refreshError, 'Token Refresh');
             // Clear auth data and redirect to login
             await AuthStorage.clearAuthData();
           }
         }
 
+        // For non-401 errors, we'll let the calling code handle the user-friendly error display
         return Promise.reject(error);
       }
     );

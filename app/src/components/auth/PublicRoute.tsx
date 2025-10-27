@@ -13,7 +13,12 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   React.useEffect(() => {
     // Only redirect if we're not loading and user is authenticated
     if (!isLoading && isAuthenticated) {
-      router.replace('/tabs');
+      // Add a small delay to ensure the Slot component is mounted
+      const timer = setTimeout(() => {
+        router.replace('/tabs');
+      }, 100); // 100ms delay
+
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, router]);
 

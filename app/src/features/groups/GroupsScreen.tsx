@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, Platform } from 'react-native';
+import { View, StyleSheet, Alert, Text, Platform, TouchableOpacity } from 'react-native';
 import { useGroupsInfinite } from '../../hooks/useGroupsInfinite';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { GroupItem } from '../../components/features/groups/GroupItem';
@@ -7,16 +7,14 @@ import { CreateGroupModal } from '../../components/modals/CreateGroupModal';
 import { InviteUserModal } from '../../components/modals/InviteUserModal';
 import { InvitationsModal } from '../../components/modals/InvitationsModal';
 import { SearchModal } from '../../components/modals/SearchModal';
-import { SearchFloatingButton } from '../../components/ui/SearchFloatingButton';
 import { useGroupInvitations } from '../../hooks/useGroupInvitations';
 import { useTheme } from '../../contexts/ThemeContext';
-import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
-import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
-import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { SkeletonGroupList } from '../../components/ui/SkeletonLoader';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { useSearch } from '../../hooks/useSearch';
+import { useApiError } from '../../hooks/useApiError';
+import ErrorHandler from '../../utils/ErrorHandler';
 
 export const GroupsScreen: React.FC = () => {
   const { 
@@ -38,6 +36,7 @@ export const GroupsScreen: React.FC = () => {
   } = useGroupInvitations();
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const { showErrorWithRetry } = useApiError();
 
   // Search functionality
   const {
@@ -63,16 +62,12 @@ export const GroupsScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error refreshing data:', error);
+      showErrorWithRetry(error, () => onRefresh());
     } finally {
       setRefreshing(false);
     }
   };
 
-  // Create pull-to-refresh handlers using utility function
-  const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
-    onRefresh,
-    refreshing,
-  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
@@ -145,52 +140,41 @@ export const GroupsScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <>
-        <PullToRefreshSpinner refreshing={refreshing} />
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <PullToRefreshScrollView
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEndDrag}
-            contentContainerStyle={styles.contentContainer}
-          >
-            <GlassListCard
-              title="Groups"
-              contentGap={8}
-            >
-              <SkeletonGroupList count={3} />
-            </GlassListCard>
-          </PullToRefreshScrollView>
-        </View>
-      </>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassListCard
+          title="Groups"
+          contentGap={8}
+        >
+          <SkeletonGroupList count={3} />
+        </GlassListCard>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <>
-        <PullToRefreshSpinner refreshing={refreshing} />
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <PullToRefreshScrollView
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onScroll={handleScroll}
-            onScrollBeginDrag={handleScrollBeginDrag}
-            onScrollEndDrag={handleScrollEndDrag}
-            contentContainerStyle={styles.contentContainer}
-          >
-            <GlassListCard
-              title="Groups"
-              subtitle="Error loading groups"
-              contentGap={0}
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassListCard
+          title="Groups"
+          subtitle="Unable to load groups"
+          contentGap={0}
+        >
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorIcon, { color: colors.destructive }]}>⚠️</Text>
+            <Text style={[styles.errorText, { color: colors.destructive }]}>
+              {ErrorHandler.handleApiError(error).message}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: colors.primary }]}
+              onPress={() => showErrorWithRetry(error, () => refresh())}
             >
-              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
-            </GlassListCard>
-          </PullToRefreshScrollView>
-        </View>
-      </>
+              <Text style={[styles.retryButtonText, { color: colors.primaryForeground }]}>
+                Try Again
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </GlassListCard>
+      </View>
     );
   }
 
@@ -213,9 +197,6 @@ export const GroupsScreen: React.FC = () => {
 
   return (
     <>
-      {/* Reusable Pull-to-Refresh Spinner */}
-      <PullToRefreshSpinner refreshing={refreshing} />
-      
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <InfiniteScrollScreen
           data={groups}
@@ -230,7 +211,7 @@ export const GroupsScreen: React.FC = () => {
           emptyMessage="Create a group to start splitting expenses with friends and family."
           loadingMessage="Loading groups..."
           ListHeaderComponent={ListHeaderComponent}
-          contentContainerStyle={styles.contentContainer}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
         />
 
@@ -273,16 +254,15 @@ export const GroupsScreen: React.FC = () => {
         />
       </View>
 
-      {/* Search Floating Button */}
-      <SearchFloatingButton
-        onPress={openSearch}
-        position="bottom-right"
-        size="medium"
-      />
-
       {/* Floating Action Button - Outside container for proper positioning */}
       <FloatingActionButton
         actions={[
+          {
+            id: 'search',
+            title: 'Search',
+            icon: '🔍',
+            onPress: openSearch,
+          },
           {
             id: 'create-group',
             title: 'Create Group',
@@ -322,6 +302,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 8,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  errorIcon: {
+    fontSize: 32,
+    marginBottom: 12,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   emptyText: {
     fontSize: 14,

@@ -11,11 +11,16 @@ export default function Index() {
 
   React.useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/tabs');
-      } else {
-        router.replace('/auth/login');
-      }
+      // Add a small delay to ensure the Slot component is mounted
+      const timer = setTimeout(() => {
+        if (isAuthenticated) {
+          router.replace('/tabs');
+        } else {
+          router.replace('/auth/login');
+        }
+      }, 100); // 100ms delay
+
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, router]);
 

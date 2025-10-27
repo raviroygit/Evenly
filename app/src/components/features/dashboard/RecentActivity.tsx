@@ -20,10 +20,14 @@ interface ActivityItem {
 
 interface RecentActivityProps {
   onViewAll?: () => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export const RecentActivity: React.FC<RecentActivityProps> = ({ 
-  onViewAll 
+  onViewAll,
+  refreshing = false,
+  onRefresh
 }) => {
   const {
     activities,
@@ -215,6 +219,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         subtitle={loading ? "Loading..." : "View your recent activities"}
         contentGap={6}
         badge={loading ? undefined : (activities.length > 0 ? activities.length : undefined)}
+        style={styles.glassCard}
       >
         {loading ? (
           <SkeletonActivityList count={3} />
@@ -231,10 +236,19 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
               <ActivityItemComponent key={activity.id} activity={activity} />
             )}
             keyExtractor={(activity) => activity.id}
-            scrollEnabled={false}
+            scrollEnabled={true}
             showsVerticalScrollIndicator={false}
             style={styles.activitiesList}
             contentContainerStyle={styles.activitiesContainer}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onEndReached={() => {
+              if (hasMore && !loadingMore) {
+                console.log('[RecentActivity] Loading more activities...');
+                loadMore();
+              }
+            }}
+            onEndReachedThreshold={0.1}
             ListFooterComponent={() => {
               if (loadingMore) {
                 return (
@@ -243,19 +257,6 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                       Loading more activities...
                     </Text>
                   </View>
-                );
-              }
-              if (hasMore && !loadingMore) {
-                return (
-                  <TouchableOpacity
-                    style={[styles.loadMoreButton, { backgroundColor: colors.primary }]}
-                    onPress={() => {
-                      console.log('[RecentActivity] Loading more activities...');
-                      loadMore();
-                    }}
-                  >
-                    <Text style={styles.loadMoreButtonText}>Load More</Text>
-                  </TouchableOpacity>
                 );
               }
               return null;
@@ -287,27 +288,27 @@ const styles = StyleSheet.create({
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
+    padding: 12, // Reduced from 16
+    borderRadius: 8, // Reduced from 12
     borderWidth: 1,
-    marginBottom: 4,
+    marginBottom: 3, // Reduced from 4
     // shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    // elevation: 2,
+    shadowOffset: { width: 0, height: 1 }, // Reduced shadow
+    shadowOpacity: 0.03, // Reduced shadow
+    shadowRadius: 2, // Reduced shadow
+    // elevation: 1, // Reduced elevation
   },
   activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32, // Reduced from 40
+    height: 32, // Reduced from 40
+    borderRadius: 16, // Reduced from 20
     // backgroundColor: 'rgba(0, 0, 0, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10, // Reduced from 12
   },
   iconText: {
-    fontSize: 18,
+    fontSize: 16, // Reduced from 18
   },
   activityContent: {
     flex: 1,
@@ -316,22 +317,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2, // Reduced from 4
   },
   activityTitle: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16
     fontWeight: '600',
     flex: 1,
   },
   activityAmount: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16
     fontWeight: '700',
-    marginLeft: 8,
+    marginLeft: 6, // Reduced from 8
   },
   activityDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-    lineHeight: 18,
+    fontSize: 12, // Reduced from 14
+    marginBottom: 4, // Reduced from 8
+    lineHeight: 16, // Reduced from 18
   },
   activityFooter: {
     flexDirection: 'row',
@@ -339,30 +340,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activityDate: {
-    fontSize: 12,
+    fontSize: 10, // Reduced from 12
     fontWeight: '500',
   },
   badgesContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4, // Reduced from 6
   },
   memberBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6, // Reduced from 8
+    paddingVertical: 2, // Reduced from 4
+    borderRadius: 8, // Reduced from 12
   },
   memberText: {
-    fontSize: 10,
+    fontSize: 9, // Reduced from 10
     fontWeight: '600',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6, // Reduced from 8
+    paddingVertical: 2, // Reduced from 4
+    borderRadius: 8, // Reduced from 12
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 9, // Reduced from 10
     fontWeight: '600',
     textTransform: 'uppercase',
   },
@@ -376,10 +377,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   activitiesContainer: {
-    gap: 6,
+    gap: 3, // Reduced from 6
+    paddingBottom: 80, // Reduced from 100
+  },
+  glassCard: {
+    // Remove flex to allow natural height
   },
   activitiesList: {
-    flexGrow: 0,
+    maxHeight: 300, // Reduced height for smaller cards
   },
   loadingMore: {
     paddingVertical: 16,
@@ -387,17 +392,5 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     fontSize: 14,
-  },
-  loadMoreButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignSelf: 'center',
-    marginTop: 8,
-  },
-  loadMoreButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

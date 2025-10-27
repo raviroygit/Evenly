@@ -202,26 +202,26 @@ export const SkeletonGroupItem: React.FC = () => {
     >
       <View style={styles.groupHeader}>
         <View style={styles.groupIcon}>
-          <SkeletonLoader width={24} height={24} borderRadius={12} />
+          <SkeletonLoader width={20} height={20} borderRadius={10} />
         </View>
         <View style={styles.groupInfo}>
-          <SkeletonLoader width={120} height={16} borderRadius={8} style={styles.groupName} />
-          <SkeletonLoader width={100} height={14} borderRadius={6} style={styles.groupMembers} />
-          <SkeletonLoader width={80} height={12} borderRadius={6} style={styles.groupDescription} />
+          <SkeletonLoader width={140} height={16} borderRadius={8} style={styles.groupName} />
+          <SkeletonLoader width={120} height={14} borderRadius={6} style={styles.groupMembers} />
+          <SkeletonLoader width={100} height={12} borderRadius={6} style={styles.groupDescription} />
         </View>
         <View style={styles.groupAmount}>
-          <SkeletonLoader width={60} height={16} borderRadius={8} />
+          <SkeletonLoader width={50} height={16} borderRadius={8} />
         </View>
       </View>
       
       <View style={styles.groupActions}>
-        <SkeletonLoader width={80} height={32} borderRadius={8} />
+        <SkeletonLoader width={70} height={32} borderRadius={8} />
       </View>
     </ResponsiveLiquidGlassCard>
   );
 };
 
-// Skeleton for group list
+// Skeleton for group list - Just the group items, no header (header is handled by parent GlassListCard)
 export const SkeletonGroupList: React.FC<{ count?: number }> = ({ count = 3 }) => (
   <View style={styles.groupList}>
     {Array.from({ length: count }).map((_, index) => (
@@ -877,6 +877,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)', // Light blue background like actual GroupItem
   },
   groupInfo: {
     flex: 1,

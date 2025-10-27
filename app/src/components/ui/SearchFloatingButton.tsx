@@ -26,7 +26,7 @@ export const SearchFloatingButton: React.FC<SearchFloatingButtonProps> = ({
         };
       case 'bottom-right':
         return {
-          bottom: Platform.OS === 'ios' ? 180 : 200, // More spacing for Android to prevent overlap
+          bottom: Platform.OS === 'ios' ? 220 : 240, // Increased spacing to prevent overlap with FAB
           right: 20,
         };
       case 'top-left':
@@ -103,15 +103,15 @@ const SearchIcon: React.FC<{ size: number; color: string }> = ({ size, color }) 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    zIndex: 1001,
+    zIndex: 1003, // Higher z-index to appear above FAB
     pointerEvents: 'auto',
   },
   button: {
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12, // Increased elevation for better visibility
   },
 });

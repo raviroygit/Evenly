@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Text, Alert, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, Text, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { useExpensesInfinite } from '../../hooks/useExpensesInfinite';
 import { useGroups } from '../../hooks/useGroups';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,11 +10,8 @@ import { ExpenseSummary } from '../../components/features/expenses/ExpenseSummar
 import { SkeletonExpenseList, SkeletonExpenseSummary } from '../../components/ui/SkeletonLoader';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { SearchModal } from '../../components/modals/SearchModal';
-import { SearchFloatingButton } from '../../components/ui/SearchFloatingButton';
+import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 // import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
-import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
-import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
-import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../hooks/useSearch';
 
@@ -85,11 +82,6 @@ export const ExpensesScreen: React.FC = () => {
     }
   };
 
-  // Create pull-to-refresh handlers using utility function
-  const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
-    onRefresh,
-    refreshing,
-  });
 
   const handleAddExpense = async (expenseData: {
     groupId: string;
@@ -134,7 +126,7 @@ export const ExpensesScreen: React.FC = () => {
   // Check if user is authenticated
   if (!isAuthenticated || !user) {
     return (
-      <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
+      <ScreenContainer scrollable={false}>
         <GlassListCard
           title="Authentication Required"
           subtitle="Please log in to view expenses"
@@ -156,48 +148,46 @@ export const ExpensesScreen: React.FC = () => {
 
   return (
     <>
-      {/* Reusable Pull-to-Refresh Spinner */}
-      <PullToRefreshSpinner refreshing={refreshing} />
-      
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <PullToRefreshScrollView
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          onScroll={handleScroll}
-          onScrollBeginDrag={handleScrollBeginDrag}
-          onScrollEndDrag={handleScrollEndDrag}
-          contentContainerStyle={styles.contentContainer}
-          style={styles.scrollView}
-        >
-        {/* Summary Cards */}
-        {showSkeletonLoading ? (
-          <View style={styles.summaryContainer}>
-            <SkeletonExpenseSummary />
-          </View>
-        ) : (
-          <View style={styles.summaryContainer}>
-            <ExpenseSummary
-              totalExpenses={totalExpenses}
-              totalIncome={0} // Not applicable for group expenses
-              netBalance={totalExpenses}
-            />
-          </View>
-        )}
+      <ScreenContainer scrollable={false}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          {/* Summary Cards */}
+          {showSkeletonLoading ? (
+            <View style={styles.summaryContainer}>
+              <SkeletonExpenseSummary />
+            </View>
+          ) : (
+            <View style={styles.summaryContainer}>
+              <ExpenseSummary
+                totalExpenses={totalExpenses}
+                totalIncome={0} // Not applicable for group expenses
+                netBalance={totalExpenses}
+              />
+            </View>
+          )}
 
-        {/* Expenses List */}
-        <View style={styles.expensesListContainer}>
-          <GlassListCard
-            title="Recent Transactions"
-            subtitle={
-              refreshing 
-                ? "Refreshing..."
-                : showSkeletonLoading 
-                  ? "Loading expenses..." 
-                  : "View your recent transactions"
-            }
-            contentGap={8}
-            badge={refreshing || showSkeletonLoading ? undefined : (expenses.length > 0 ? expenses.length : undefined)}
-          >
+          {/* Expenses List Header */}
+          <View style={styles.expensesListHeader}>
+            <GlassListCard
+              title="Recent Transactions"
+              subtitle={
+                refreshing 
+                  ? "Refreshing..."
+                  : showSkeletonLoading 
+                    ? "Loading expenses..." 
+                    : "View your recent transactions"
+              }
+              contentGap={8}
+              badge={refreshing || showSkeletonLoading ? undefined : (expenses.length > 0 ? expenses.length : undefined)}
+              style={styles.glassCardHeader}
+            >
+              <View style={styles.headerContent}>
+                {/* Header content only, no list here */}
+              </View>
+            </GlassListCard>
+          </View>
+
+          {/* Expenses List - Full Height */}
+          <View style={styles.expensesListContainer}>
             {showSkeletonLoading ? (
               <SkeletonExpenseList count={5} />
             ) : expensesError ? (
@@ -207,12 +197,11 @@ export const ExpensesScreen: React.FC = () => {
                 data={expenses}
                 renderItem={({ item: expense }) => (
                   <ExpenseItem 
-                    key={expense.id} 
                     item={expense} 
                     groupName={groupMap.get(expense.groupId)}
                   />
                 )}
-                keyExtractor={(expense) => expense.id}
+                keyExtractor={(expense, index) => `${expense.id}-${index}`}
                 onEndReached={() => {
                   if (expensesHasMore && !expensesLoadingMore) {
                     console.log('[ExpensesScreen] Loading more expenses...');
@@ -222,6 +211,14 @@ export const ExpensesScreen: React.FC = () => {
                 onEndReachedThreshold={0.1}
                 showsVerticalScrollIndicator={false}
                 style={styles.expensesList}
+                contentContainerStyle={styles.expensesListContent}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                ListHeaderComponent={() => (
+                  <View style={styles.listHeader}>
+                    {/* Add any header content here if needed */}
+                  </View>
+                )}
                 ListFooterComponent={() => {
                   if (expensesLoadingMore) {
                     return (
@@ -237,79 +234,68 @@ export const ExpensesScreen: React.FC = () => {
                 }}
               />
             )}
-          </GlassListCard>
+          </View>
         </View>
+      </ScreenContainer>
 
-        {/* Extra spacing for iOS pull-to-refresh */}
-        {Platform.OS === 'ios' && <View style={styles.iosExtraSpacing} />}
-        </PullToRefreshScrollView>
-
-        {/* Add Expense Modal */}
-        {user && (
-          <AddExpenseModal
-            visible={showAddModal}
-            onClose={() => setShowAddModal(false)}
-            onAddExpense={handleAddExpense}
-            currentUserId={user.id}
-          />
-        )}
-
-        {/* Search Modal */}
-        <SearchModal
-          visible={isSearchVisible}
-          onClose={() => {
-            console.log('Search modal closing');
-            closeSearch();
-          }}
-          onItemSelect={handleItemSelect}
-          searchItems={searchItems}
-          placeholder={getSearchPlaceholder()}
-          title={getSearchTitle()}
+      {/* Add Expense Modal */}
+      {user && (
+        <AddExpenseModal
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onAddExpense={handleAddExpense}
+          currentUserId={user.id}
         />
-      </View>
+      )}
 
-      {/* Search Floating Button */}
-      <SearchFloatingButton
-        onPress={() => {
-          console.log('Search button pressed, isSearchVisible:', isSearchVisible);
-          console.log('Search items count:', searchItems.length);
-          openSearch();
+      {/* Search Modal */}
+      <SearchModal
+        visible={isSearchVisible}
+        onClose={() => {
+          console.log('Search modal closing');
+          closeSearch();
         }}
-        position="bottom-right"
-        size="medium"
+        onItemSelect={handleItemSelect}
+        searchItems={searchItems}
+        placeholder={getSearchPlaceholder()}
+        title={getSearchTitle()}
       />
 
-      {/* Floating Action Button - Directly opens add expense modal */}
-      <View style={[styles.fabContainer, { bottom: Platform.OS === 'android' ? 120 : 100 }]}>
-        <TouchableOpacity
-          style={[styles.fabButton, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            if (groups.length === 0) {
-              Alert.alert('No Groups', 'Please create a group first before adding expenses.');
-            } else {
-              setShowAddModal(true);
-            }
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.fabIcon, { color: colors.primaryForeground }]}>💰</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        actions={[
+          {
+            id: 'search',
+            title: 'Search',
+            icon: '🔍',
+            onPress: () => {
+              console.log('Search button pressed, isSearchVisible:', isSearchVisible);
+              console.log('Search items count:', searchItems.length);
+              openSearch();
+            },
+          },
+          {
+            id: 'add-expense',
+            title: 'Add Expense',
+            icon: '💰',
+            onPress: () => {
+              if (groups.length === 0) {
+                Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+              } else {
+                setShowAddModal(true);
+              }
+            },
+          },
+        ]}
+        position="bottom-right"
+      />
     </>
   );
-    };
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    paddingTop: Platform.OS === 'ios' ? 10 : 20, // Reduce top padding on iOS
-    paddingBottom: 20,
   },
   errorText: {
     fontSize: 14,
@@ -322,22 +308,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
-  summarySkeleton: {
-    marginBottom: 24,
-    marginTop: Platform.OS === 'ios' ? -10 : 0, // Move up on iOS
-  },
-  iosExtraSpacing: {
-    height: 100, // Extra space to ensure content is scrollable on iOS
-  },
   summaryContainer: {
     paddingHorizontal: 20,
     marginBottom: 24,
   },
+  expensesListHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  glassCardHeader: {
+    // Header card doesn't need flex
+  },
+  headerContent: {
+    height: 0, // No content in header card
+  },
   expensesListContainer: {
     paddingHorizontal: 20,
+    flex: 1,
   },
   expensesList: {
-    maxHeight: 400,
+    flex: 1,
+  },
+  expensesListContent: {
+    paddingBottom: 100, // Add padding to prevent items from being hidden behind bottom tabs
+  },
+  listHeader: {
+    height: 0, // No header content for now
   },
   loadingMore: {
     flexDirection: 'row',
@@ -360,26 +356,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-  },
-  fabContainer: {
-    position: 'absolute',
-    right: 20,
-    zIndex: 1000,
-  },
-  fabButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
   },
 });

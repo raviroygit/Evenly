@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, StatusBar } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
 // Custom Grid Icon Component with 4x4 grid that fits perfectly to button border
@@ -116,6 +116,17 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     });
   }, [animation]);
 
+  // Control status bar appearance when menu is open
+  useEffect(() => {
+    if (isOpen) {
+      StatusBar.setBarStyle('light-content', true);
+      StatusBar.setBackgroundColor('#00000080', true); // Use hex with alpha for better consistency
+    } else {
+      StatusBar.setBarStyle(theme === 'dark' ? 'light-content' : 'dark-content', true);
+      StatusBar.setBackgroundColor('transparent', true);
+    }
+  }, [isOpen, theme]);
+
   const getPositionStyle = () => {
     // Platform-specific bottom positioning
     const bottomPosition = Platform.OS === 'android' ? 120 : 100;
@@ -124,7 +135,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       case 'bottom-left':
         return { bottom: bottomPosition, left: 20 };
       case 'bottom-center':
-        return { bottom: bottomPosition, alignSelf: 'center' };
+        return { bottom: bottomPosition, alignSelf: 'center' as const };
       case 'bottom-right':
       default:
         return { bottom: bottomPosition, right: 20 };
@@ -136,8 +147,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     height: 56,
     borderRadius: 28, // Circular button
     backgroundColor: 'transparent', // Transparent to show glass background
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     // Remove shadow from inner button since glass background has it
   };
 
@@ -146,14 +157,14 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation:Platform.OS === 'ios' ? 8 : 0, // Increased elevation
     borderWidth: 1,
     borderColor: colors.border,
   };
@@ -161,15 +172,21 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const actionTextStyle = {
     color: colors.foreground,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600' as const,
     marginTop: 4,
-    textAlign: 'center',
-  };
-
-  const iconStyle = {
-    color: colors.primaryForeground,
-    fontSize: 24,
-    fontWeight: 'bold',
+    textAlign: 'center' as const,
+    backgroundColor: theme === 'dark' 
+      ? 'rgba(0, 0, 0, 0.8)' 
+      : 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   };
 
   const actionIconStyle = {
@@ -203,6 +220,15 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
             },
           ]}
         >
+          {/* Background container for better visual separation */}
+          <View style={[
+            styles.actionsBackground,
+            {
+              backgroundColor: theme === 'dark' 
+                ? 'rgba(0, 0, 0, 0.4)' 
+                : 'rgba(255, 255, 255, 0.2)',
+            }
+          ]}>
           {actions.map((action, index) => (
             <Animated.View
               key={action.id}
@@ -233,6 +259,7 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
               <Text style={actionTextStyle}>{action.title}</Text>
             </Animated.View>
           ))}
+          </View>
         </Animated.View>
       )}
 
@@ -275,11 +302,13 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
 
       {/* Overlay to close menu when tapping outside */}
       {isOpen && (
-        <TouchableOpacity
-          style={styles.overlay}
-          onPress={toggleMenu}
-          activeOpacity={1}
-        />
+        <View style={styles.fullScreenOverlay}>
+          <TouchableOpacity
+            style={styles.overlay}
+            onPress={toggleMenu}
+            activeOpacity={1}
+          />
+        </View>
       )}
     </View>
   );
@@ -293,11 +322,11 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     pointerEvents: 'box-none',
-    zIndex: 1000,
+    zIndex: 1000, // Lower z-index than SearchFloatingButton
   },
   mainButtonContainer: {
     position: 'absolute',
-    zIndex: 1001,
+    zIndex: 1001, // Lower than SearchFloatingButton
     pointerEvents: 'auto',
   },
   glassBackground: {
@@ -308,21 +337,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation:Platform.OS === 'ios' ? 10 : 0, // Increased elevation for better visibility
   },
   actionsContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'android' ? 190 : 170,
+    bottom: Platform.OS === 'android' ? 210 : 190, // Increased spacing to prevent overlap
     right: 20,
     alignItems: 'center',
-    zIndex: 1002,
+    zIndex: 1002, // Higher than main button but lower than search
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   actionItem: {
     alignItems: 'center',
     marginBottom: 8,
+  },
+  actionsBackground: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation:Platform.OS === 'ios' ? 6 : 0,
+  },
+  fullScreenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 998, // Lower than FAB but higher than content
   },
   overlay: {
     position: 'absolute',
@@ -330,6 +385,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#00000080', // Match status bar color exactly using hex
+    zIndex: 999, // Lower than FAB menu but higher than content
   },
 });
