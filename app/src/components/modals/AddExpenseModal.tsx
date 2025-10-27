@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ReusableModal } from '../ui/ReusableModal';
@@ -6,6 +6,7 @@ import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
 import { useGroups } from '../../hooks/useGroups';
 import { useTheme } from '../../contexts/ThemeContext';
+import { EnhancedExpense } from '../../types';
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -16,14 +17,22 @@ interface AddExpenseModalProps {
     totalAmount: string;
     date: string;
   }) => Promise<void>;
+  onUpdateExpense?: (expenseId: string, expenseData: {
+    title: string;
+    totalAmount: string;
+    date: string;
+  }) => Promise<void>;
   currentUserId: string;
+  editExpense?: EnhancedExpense | null;
 }
 
 export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   visible,
   onClose,
   onAddExpense,
+  onUpdateExpense,
   currentUserId,
+  editExpense,
 }) => {
   const { groups } = useGroups();
   const { colors } = useTheme();
@@ -35,13 +44,31 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleAdd = async () => {
+  const isEditMode = !!editExpense;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editExpense) {
+      setTitle(editExpense.title);
+      setSelectedGroupId(editExpense.groupId);
+      setTotalAmount(editExpense.totalAmount.toString());
+      setDate(editExpense.date instanceof Date ? editExpense.date.toISOString().split('T')[0] : editExpense.date);
+    } else {
+      // Reset form when creating
+      setTitle('');
+      setSelectedGroupId('');
+      setTotalAmount('');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [editExpense]);
+
+  const handleSubmit = async () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Expense title is required');
       return;
     }
 
-    if (!selectedGroupId) {
+    if (!isEditMode && !selectedGroupId) {
       Alert.alert('Error', 'Please select a group');
       return;
     }
@@ -53,22 +80,25 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     try {
       setIsLoading(true);
-      await onAddExpense({
-        groupId: selectedGroupId,
-        title: title.trim(),
-        totalAmount: totalAmount.trim(),
-        date,
-      });
       
-      // Reset form
-      setTitle('');
-      setSelectedGroupId('');
-      setTotalAmount('');
-      setDate(new Date().toISOString().split('T')[0]);
+      if (isEditMode && onUpdateExpense && editExpense) {
+        await onUpdateExpense(editExpense.id, {
+          title: title.trim(),
+          totalAmount: totalAmount.trim(),
+          date,
+        });
+      } else {
+        await onAddExpense({
+          groupId: selectedGroupId,
+          title: title.trim(),
+          totalAmount: totalAmount.trim(),
+          date,
+        });
+      }
       
       onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add expense');
+      Alert.alert('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'add'} expense`);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +120,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={handleClose}
-      title="Add New Expense"
+      title={isEditMode ? "Edit Expense" : "Add New Expense"}
     >
       <View style={styles.container}>
         {/* Expense Title Input */}
@@ -112,58 +142,77 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           </View>
         </View>
 
-        {/* Group Selection Dropdown */}
-        <View style={styles.input}>
-          <Text style={[styles.label, { color: colors.foreground }]}>
-            Group *
-          </Text>
-          <TouchableOpacity
-            style={[styles.inputContainer, { 
+        {/* Group Selection Dropdown - Only show in create mode */}
+        {!isEditMode && (
+          <View style={styles.input}>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Group *
+            </Text>
+            <TouchableOpacity
+              style={[styles.inputContainer, { 
+                backgroundColor: colors.background,
+                borderColor: colors.border 
+              }]}
+              onPress={() => setShowGroupDropdown(!showGroupDropdown)}
+            >
+              <Text style={[styles.dropdownText, { 
+                color: selectedGroup ? colors.foreground : colors.mutedForeground 
+              }]}>
+                {selectedGroup ? selectedGroup.name : 'Select a group'}
+              </Text>
+              <Text style={[styles.dropdownArrow, { color: colors.foreground }]}>
+                {showGroupDropdown ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+            
+            {showGroupDropdown && (
+              <View style={[styles.dropdownList, { 
+                backgroundColor: colors.background,
+                borderColor: colors.border 
+              }]}>
+                <ScrollView 
+                  style={styles.dropdownScrollView}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled={true}
+                >
+                  {groups.map((group) => (
+                    <TouchableOpacity
+                      key={group.id}
+                      style={[styles.dropdownItem, { 
+                        borderBottomColor: colors.border 
+                      }]}
+                      onPress={() => {
+                        setSelectedGroupId(group.id);
+                        setShowGroupDropdown(false);
+                      }}
+                    >
+                      <Text style={[styles.dropdownItemText, { color: colors.foreground }]}>
+                        {group.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Show current group in edit mode */}
+        {isEditMode && selectedGroup && (
+          <View style={styles.input}>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Group
+            </Text>
+            <View style={[styles.inputContainer, { 
               backgroundColor: colors.background,
               borderColor: colors.border 
-            }]}
-            onPress={() => setShowGroupDropdown(!showGroupDropdown)}
-          >
-            <Text style={[styles.dropdownText, { 
-              color: selectedGroup ? colors.foreground : colors.mutedForeground 
             }]}>
-              {selectedGroup ? selectedGroup.name : 'Select a group'}
-            </Text>
-            <Text style={[styles.dropdownArrow, { color: colors.foreground }]}>
-              {showGroupDropdown ? '▲' : '▼'}
-            </Text>
-          </TouchableOpacity>
-          
-          {showGroupDropdown && (
-            <View style={[styles.dropdownList, { 
-              backgroundColor: colors.background,
-              borderColor: colors.border 
-            }]}>
-              <ScrollView 
-                style={styles.dropdownScrollView}
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled={true}
-              >
-                {groups.map((group) => (
-                  <TouchableOpacity
-                    key={group.id}
-                    style={[styles.dropdownItem, { 
-                      borderBottomColor: colors.border 
-                    }]}
-                    onPress={() => {
-                      setSelectedGroupId(group.id);
-                      setShowGroupDropdown(false);
-                    }}
-                  >
-                    <Text style={[styles.dropdownItemText, { color: colors.foreground }]}>
-                      {group.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <Text style={[styles.dropdownText, { color: colors.foreground }]}>
+                {selectedGroup.name}
+              </Text>
             </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* Amount Input */}
         <View style={styles.input}>
@@ -263,8 +312,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               variant: "destructive",
             },
             {
-              title: "Add Expense",
-              onPress: handleAdd,
+              title: isEditMode ? "Update Expense" : "Add Expense",
+              onPress: handleSubmit,
               variant: "primary",
               loading: isLoading,
             },

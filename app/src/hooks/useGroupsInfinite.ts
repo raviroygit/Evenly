@@ -58,6 +58,31 @@ export const useGroupsInfinite = () => {
     }
   }, [groups, setData]);
 
+  const updateGroup = useCallback(async (groupId: string, groupData: {
+    name: string;
+    description?: string;
+    defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
+  }) => {
+    try {
+      const updatedGroup = await EvenlyBackendService.updateGroup(groupId, groupData);
+      // Update the group in the list
+      setData(groups.map(group => group.id === groupId ? updatedGroup : group));
+      return updatedGroup;
+    } catch (error) {
+      throw error;
+    }
+  }, [groups, setData]);
+
+  const deleteGroup = useCallback(async (groupId: string) => {
+    try {
+      await EvenlyBackendService.deleteGroup(groupId);
+      // Remove the group from the list
+      setData(groups.filter(group => group.id !== groupId));
+    } catch (error) {
+      throw error;
+    }
+  }, [groups, setData]);
+
   return {
     groups,
     loading,
@@ -68,6 +93,8 @@ export const useGroupsInfinite = () => {
     loadMore,
     refresh,
     createGroup,
+    updateGroup,
+    deleteGroup,
     setData,
     appendData,
     reset,

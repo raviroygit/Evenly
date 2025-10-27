@@ -21,6 +21,7 @@ export const ExpensesScreen: React.FC = () => {
   const { colors } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<EnhancedExpense | null>(null);
 
   // Use infinite scroll expenses hook
   const {
@@ -33,6 +34,8 @@ export const ExpensesScreen: React.FC = () => {
     refresh: expensesRefresh,
     totalExpenses,
     addExpense,
+    updateExpense,
+    deleteExpense,
   } = useExpensesInfinite();
 
   // Search functionality
@@ -103,6 +106,45 @@ export const ExpensesScreen: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add expense');
     }
+  };
+
+  const handleUpdateExpense = async (expenseId: string, expenseData: {
+    title: string;
+    totalAmount: string;
+    date: string;
+  }) => {
+    try {
+      await updateExpense(expenseId, expenseData);
+      Alert.alert('Success', 'Expense updated successfully!');
+      setEditingExpense(null);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update expense');
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string, expenseTitle: string) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteExpense(expenseId);
+              Alert.alert('Success', 'Expense deleted successfully!');
+            } catch (error) {
+              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to delete expense');
+            }
+          },
+        },
+      ]
+    );
   };
 
 
@@ -182,6 +224,8 @@ export const ExpensesScreen: React.FC = () => {
                   <ExpenseItem 
                     item={expense} 
                     groupName={groupMap.get(expense.groupId)}
+                    onEditExpense={setEditingExpense}
+                    onDeleteExpense={handleDeleteExpense}
                   />
                 )}
                 keyExtractor={(expense, index) => `${expense.id}-${index}`}
@@ -220,13 +264,18 @@ export const ExpensesScreen: React.FC = () => {
         </View>
       </ScreenContainer>
 
-      {/* Add Expense Modal */}
+      {/* Add/Edit Expense Modal */}
       {user && (
         <AddExpenseModal
-          visible={showAddModal}
-          onClose={() => setShowAddModal(false)}
+          visible={showAddModal || !!editingExpense}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingExpense(null);
+          }}
           onAddExpense={handleAddExpense}
+          onUpdateExpense={handleUpdateExpense}
           currentUserId={user.id}
+          editExpense={editingExpense}
         />
       )}
 

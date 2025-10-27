@@ -25,7 +25,9 @@ export const GroupsScreen: React.FC = () => {
     hasMore, 
     loadMore, 
     refresh, 
-    createGroup 
+    createGroup,
+    updateGroup,
+    deleteGroup
   } = useGroupsInfinite();
   const { 
     sendInvitation, 
@@ -73,6 +75,7 @@ export const GroupsScreen: React.FC = () => {
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
   const [selectedGroupForInvite, setSelectedGroupForInvite] = useState<{ id: string; name: string } | null>(null);
   const [processingToken, setProcessingToken] = useState<string | null>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
 
   const handleCreateGroup = async (groupData: {
@@ -86,6 +89,45 @@ export const GroupsScreen: React.FC = () => {
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create group');
     }
+  };
+
+  const handleUpdateGroup = async (groupId: string, groupData: {
+    name: string;
+    description?: string;
+    defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
+  }) => {
+    try {
+      await updateGroup(groupId, groupData);
+      Alert.alert('Success', 'Group updated successfully!');
+      setEditingGroup(null);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update group');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    Alert.alert(
+      'Delete Group',
+      `Are you sure you want to delete "${groupName}"? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteGroup(groupId);
+              Alert.alert('Success', 'Group deleted successfully!');
+            } catch (err) {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete group');
+            }
+          },
+        },
+      ]
+    );
   };
 
 
@@ -179,7 +221,13 @@ export const GroupsScreen: React.FC = () => {
   }
 
   const renderGroupItem = ({ item: group }: { item: any }) => (
-    <GroupItem key={group.id} group={group} onInviteUser={handleInviteUser} />
+    <GroupItem 
+      key={group.id} 
+      group={group} 
+      onInviteUser={handleInviteUser}
+      onEditGroup={setEditingGroup}
+      onDeleteGroup={handleDeleteGroup}
+    />
   );
 
   const ListHeaderComponent = () => (
@@ -215,11 +263,16 @@ export const GroupsScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         />
 
-          {/* Create Group Modal */}
+          {/* Create/Edit Group Modal */}
           <CreateGroupModal
-            visible={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
+            visible={showCreateModal || !!editingGroup}
+            onClose={() => {
+              setShowCreateModal(false);
+              setEditingGroup(null);
+            }}
             onCreateGroup={handleCreateGroup}
+            onUpdateGroup={handleUpdateGroup}
+            editGroup={editingGroup}
           />
 
           {/* Invite User Modal */}

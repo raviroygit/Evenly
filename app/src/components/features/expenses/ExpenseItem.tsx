@@ -2,18 +2,53 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
+import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { EnhancedExpense } from '../../../types';
 
 interface ExpenseItemProps {
   item: EnhancedExpense;
   groupName?: string;
   onPress?: () => void;
+  onEditExpense?: (expense: EnhancedExpense) => void;
+  onDeleteExpense?: (expenseId: string, expenseTitle: string) => void;
 }
 
-export const ExpenseItem: React.FC<ExpenseItemProps> = ({ item, groupName, onPress }) => {
-  const { colors,theme } = useTheme();
-  
-  return (
+export const ExpenseItem: React.FC<ExpenseItemProps> = ({ 
+  item, 
+  groupName, 
+  onPress, 
+  onEditExpense, 
+  onDeleteExpense 
+}) => {
+  const { colors } = useTheme();
+
+  // Prepare swipe actions
+  const swipeActions = [
+    ...(onEditExpense ? [{
+      id: 'edit',
+      title: 'Edit',
+      icon: 'pencil-outline',
+      color: '#FFFFFF',
+      backgroundColor: '#FF9500', // Orange for edit
+      onPress: () => {
+        console.log('Edit action pressed for expense:', item.title);
+        onEditExpense(item);
+      },
+    }] : []),
+    ...(onDeleteExpense ? [{
+      id: 'delete',
+      title: 'Delete',
+      icon: 'trash-outline',
+      color: '#FFFFFF',
+      backgroundColor: '#FF3B30', // Red for delete
+      onPress: () => {
+        console.log('Delete action pressed for expense:', item.title);
+        onDeleteExpense(item.id, item.title);
+      },
+    }] : []),
+  ];
+
+  const content = (
     <ResponsiveLiquidGlassCard
       padding={{
         small: 12,
@@ -29,7 +64,6 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ item, groupName, onPre
         tablet: 18,
       }}
       // glassEffectStyle="regular"
-      isInteractive={true}
       onPress={onPress}
       style={styles.expenseCardOverrides}
     >
@@ -85,6 +119,17 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({ item, groupName, onPre
       </View>
     </ResponsiveLiquidGlassCard>
   );
+
+  // If there are actions, wrap with SwipeActionRow
+  if (swipeActions.length > 0) {
+    return (
+      <SwipeActionRow actions={swipeActions} swipeId={`expense-${item.id}`}>
+        {content}
+      </SwipeActionRow>
+    );
+  }
+
+  return content;
 };
 
 const styles = StyleSheet.create({

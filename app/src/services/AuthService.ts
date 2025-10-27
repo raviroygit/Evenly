@@ -1,5 +1,6 @@
 import { User } from '../types';
 import { evenlyApiClient } from './EvenlyApiClient';
+import { ENV } from '../config/env';
 
 interface AuthResponse {
   success: boolean;
@@ -84,7 +85,11 @@ export class AuthService {
     try {
       const { data: response } = await this.makeRequest('/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email,
+          senderName: ENV.APP_NAME,
+          appName: ENV.APP_NAME
+        }),
       });
 
       return {
@@ -103,7 +108,11 @@ export class AuthService {
     try {
       const { data: response } = await this.makeRequest('/auth/login/otp', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email,
+          senderName: ENV.APP_NAME,
+          appName: ENV.APP_NAME
+        }),
       });
 
       return {
@@ -189,7 +198,7 @@ export class AuthService {
       await this.makeRequest('/auth/logout', {
         method: 'POST',
       });
-    } catch (error) {
+    } catch {
       // Even if logout fails on server, we should clear local state
     }
   }

@@ -105,6 +105,29 @@ export const useExpensesInfinite = () => {
     }
   }, []);
 
+  const updateExpense = useCallback(async (expenseId: string, expenseData: {
+    title: string;
+    totalAmount: string;
+    date: string;
+  }) => {
+    try {
+      const updatedExpense = await EvenlyBackendService.updateExpense(expenseId, expenseData);
+      setExpenses(prev => prev.map(expense => expense.id === expenseId ? updatedExpense : expense));
+      return updatedExpense;
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
+  const deleteExpense = useCallback(async (expenseId: string) => {
+    try {
+      await EvenlyBackendService.deleteExpense(expenseId);
+      setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
   // Calculate total expenses
   const totalExpenses = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
@@ -118,6 +141,8 @@ export const useExpensesInfinite = () => {
     loadMore,
     refresh,
     addExpense,
+    updateExpense,
+    deleteExpense,
     totalExpenses,
     setData: setExpenses,
     appendData: (newData: EnhancedExpense[]) => setExpenses(prev => [...prev, ...newData]),

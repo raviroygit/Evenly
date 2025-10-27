@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Dimensions } from 'react-native';
 import { ReusableModal } from '../ui/ReusableModal';
 import { SimpleInput } from '../ui/SimpleInput';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Group } from '../../types';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -14,12 +15,20 @@ interface CreateGroupModalProps {
     description?: string;
     defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
   }) => Promise<void>;
+  onUpdateGroup?: (groupId: string, groupData: {
+    name: string;
+    description?: string;
+    defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
+  }) => Promise<void>;
+  editGroup?: Group | null;
 }
 
 export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   visible,
   onClose,
   onCreateGroup,
+  onUpdateGroup,
+  editGroup,
 }) => {
   const { colors } = useTheme();
   const [name, setName] = useState('');
@@ -27,7 +36,23 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const [defaultSplitType, setDefaultSplitType] = useState<'equal' | 'percentage' | 'shares' | 'exact'>('equal');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreate = async () => {
+  const isEditMode = !!editGroup;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editGroup) {
+      setName(editGroup.name);
+      setDescription(editGroup.description || '');
+      setDefaultSplitType(editGroup.defaultSplitType || 'equal');
+    } else {
+      // Reset form when creating
+      setName('');
+      setDescription('');
+      setDefaultSplitType('equal');
+    }
+  }, [editGroup]);
+
+  const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Group name is required');
       return;
@@ -35,20 +60,24 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
     try {
       setIsLoading(true);
-      await onCreateGroup({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        defaultSplitType,
-      });
       
-      // Reset form
-      setName('');
-      setDescription('');
-      setDefaultSplitType('equal');
+      if (isEditMode && onUpdateGroup && editGroup) {
+        await onUpdateGroup(editGroup.id, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+          defaultSplitType,
+        });
+      } else {
+        await onCreateGroup({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          defaultSplitType,
+        });
+      }
       
       onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create group');
+      Alert.alert('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} group`);
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +95,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={handleClose}
-      title="Create New Group"
+      title={isEditMode ? "Edit Group" : "Create New Group"}
       buttons={
         <ModalButtonContainer
           buttons={[
@@ -76,8 +105,8 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
               variant: "destructive",
             },
             {
-              title: "Create Group",
-              onPress: handleCreate,
+              title: isEditMode ? "Update Group" : "Create Group",
+              onPress: handleSubmit,
               variant: "primary",
               loading: isLoading,
             },

@@ -3,16 +3,62 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
+import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { Group } from '../../../types';
 
 interface GroupItemProps {
   group: Group;
   onPress?: () => void;
   onInviteUser?: (groupId: string, groupName: string) => void;
+  onEditGroup?: (group: Group) => void;
+  onDeleteGroup?: (groupId: string, groupName: string) => void;
 }
 
-export const GroupItem: React.FC<GroupItemProps> = ({ group, onPress, onInviteUser }) => {
+export const GroupItem: React.FC<GroupItemProps> = ({ 
+  group, 
+  onPress, 
+  onInviteUser, 
+  onEditGroup, 
+  onDeleteGroup 
+}) => {
   const { colors } = useTheme();
+
+  // Prepare swipe actions
+  const swipeActions = [
+    ...(onInviteUser ? [{
+      id: 'invite',
+      title: 'Invite',
+      icon: 'person-add-outline',
+      color: '#FFFFFF',
+      backgroundColor: '#007AFF', // Blue for invite
+      onPress: () => {
+        console.log('Invite action pressed for group:', group.name);
+        onInviteUser(group.id, group.name);
+      },
+    }] : []),
+    ...(onEditGroup ? [{
+      id: 'edit',
+      title: 'Edit',
+      icon: 'pencil-outline',
+      color: '#FFFFFF',
+      backgroundColor: '#FF9500', // Orange for edit
+      onPress: () => {
+        console.log('Edit action pressed for group:', group.name);
+        onEditGroup(group);
+      },
+    }] : []),
+    ...(onDeleteGroup ? [{
+      id: 'delete',
+      title: 'Delete',
+      icon: 'trash-outline',
+      color: '#FFFFFF',
+      backgroundColor: '#FF3B30', // Red for delete
+      onPress: () => {
+        console.log('Delete action pressed for group:', group.name);
+        onDeleteGroup(group.id, group.name);
+      },
+    }] : []),
+  ];
 
   const content = (
     <ResponsiveLiquidGlassCard
@@ -59,22 +105,17 @@ export const GroupItem: React.FC<GroupItemProps> = ({ group, onPress, onInviteUs
           </Text>
         </View>
       </View>
-      
-      {onInviteUser && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.inviteButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-            onPress={() => onInviteUser(group.id, group.name)}
-          >
-            <Ionicons name="person-add-outline" size={16} color={colors.primary} />
-            <Text style={[styles.inviteButtonText, { color: colors.primary }]}>
-              Invite
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </ResponsiveLiquidGlassCard>
   );
+
+  // If there are actions, wrap with SwipeActionRow
+  if (swipeActions.length > 0) {
+    return (
+      <SwipeActionRow actions={swipeActions} swipeId={`group-${group.id}`}>
+        {content}
+      </SwipeActionRow>
+    );
+  }
 
   return content;
 };
@@ -126,21 +167,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  actions: {
-    marginTop: 12,
-    alignItems: 'flex-end',
-  },
-  inviteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  inviteButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
 });
+

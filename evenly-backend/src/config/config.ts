@@ -19,7 +19,7 @@ export const config = {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:8081',
+    origin: process.env.CORS_ORIGIN || '',
   },
   rateLimit: {
     max: parseInt(process.env.RATE_LIMIT_MAX || '10000', 10), // Increased from 100 to 10000
