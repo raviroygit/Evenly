@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Dimensions, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -26,6 +26,7 @@ interface SwipeActionRowProps {
   threshold?: number;
   disabled?: boolean;
   swipeId: string; // Unique identifier for this swipe row
+  onActionExecuted?: () => void; // Callback after action is executed
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -36,6 +37,7 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   threshold = 80,
   disabled = false,
   swipeId,
+  onActionExecuted,
 }) => {
   const { colors } = useTheme();
   const { activeSwipeId, setActiveSwipeId } = useSwipeAction();
@@ -60,30 +62,56 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
     .onUpdate((event) => {
       if (disabled) return;
       
-      // Only allow swiping left (negative values)
-      if (event.translationX <= 0) {
-        translateX.value = event.translationX;
+      if (isOpen) {
+        // When swipe actions are open, allow swiping right to close them
+        if (event.translationX >= 0) {
+          translateX.value = Math.max(event.translationX, -Math.min(actions.length * 50 + (actions.length - 1) * 12 + 8, screenWidth * 0.6));
+        }
+      } else {
+        // When closed, only allow swiping left to open
+        if (event.translationX <= 0) {
+          translateX.value = event.translationX;
+        }
       }
     })
     .onEnd((event) => {
       if (disabled) return;
       
-      const shouldOpen = Math.abs(event.translationX) > threshold;
-      
-      if (shouldOpen) {
-        // Calculate the width needed for all actions
-        const actionWidth = actions.length * 50 + (actions.length - 1) * 12; // 50px width + 12px spacing between buttons
-        const paddingRight = 8; // Account for container padding
-        const totalWidth = actionWidth + paddingRight;
-        const maxTranslateX = -Math.min(totalWidth, screenWidth * 0.6); // Reduced back to 60% since we have less padding
+      if (isOpen) {
+        // If swipe actions are open, check if we should close them
+        const shouldClose = event.translationX > threshold / 2; // Easier to close than open
         
-        translateX.value = withSpring(maxTranslateX);
-        runOnJS(setIsOpen)(true);
-        runOnJS(setActiveSwipeId)(swipeId);
+        if (shouldClose) {
+          translateX.value = withSpring(0);
+          runOnJS(setIsOpen)(false);
+          runOnJS(setActiveSwipeId)(null);
+        } else {
+          // Snap back to open position
+          const actionWidth = actions.length * 50 + (actions.length - 1) * 12;
+          const paddingRight = 8;
+          const totalWidth = actionWidth + paddingRight;
+          const maxTranslateX = -Math.min(totalWidth, screenWidth * 0.6);
+          translateX.value = withSpring(maxTranslateX);
+        }
       } else {
-        translateX.value = withSpring(0);
-        runOnJS(setIsOpen)(false);
-        runOnJS(setActiveSwipeId)(null);
+        // If closed, check if we should open them
+        const shouldOpen = Math.abs(event.translationX) > threshold;
+        
+        if (shouldOpen) {
+          // Calculate the width needed for all actions
+          const actionWidth = actions.length * 50 + (actions.length - 1) * 12; // 50px width + 12px spacing between buttons
+          const paddingRight = 8; // Account for container padding
+          const totalWidth = actionWidth + paddingRight;
+          const maxTranslateX = -Math.min(totalWidth, screenWidth * 0.6); // Reduced back to 60% since we have less padding
+          
+          translateX.value = withSpring(maxTranslateX);
+          runOnJS(setIsOpen)(true);
+          runOnJS(setActiveSwipeId)(swipeId);
+        } else {
+          translateX.value = withSpring(0);
+          runOnJS(setIsOpen)(false);
+          runOnJS(setActiveSwipeId)(null);
+        }
       }
     });
 
@@ -91,14 +119,16 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   const tapGesture = Gesture.Tap()
     .onEnd(() => {
       if (isOpen) {
+        console.log('Tap gesture triggered - closing swipe actions');
         translateX.value = withSpring(0);
         runOnJS(setIsOpen)(false);
         runOnJS(setActiveSwipeId)(null);
       }
-    });
+    })
+    .enabled(isOpen); // Only enable tap gesture when swipe actions are open
 
-  // Combined gesture - use Race instead of Simultaneous for better compatibility
-  const combinedGesture = Gesture.Race(panGesture, tapGesture);
+  // Combined gesture - use Simultaneous for better tap detection
+  const combinedGesture = Gesture.Simultaneous(panGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -113,22 +143,27 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   });
 
   const handleActionPress = (action: SwipeAction) => {
-    console.log('Action pressed:', action.title, action.id);
+    console.log('=== SwipeActionRow: Action pressed ===');
+    console.log('Action:', action.title, action.id);
+    console.log('SwipeId:', swipeId);
+    console.log('IsOpen:', isOpen);
     
     // Execute the action first
     console.log('Executing action:', action.title);
-    action.onPress();
+    try {
+      action.onPress();
+      console.log('Action executed successfully');
+    } catch (error) {
+      console.error('Error executing action:', error);
+    }
     
-    // Close the swipe actions but keep activeSwipeId to prevent interference
-    translateX.value = withSpring(0);
-    setIsOpen(false);
+    // Call the callback if provided
+    if (onActionExecuted) {
+      console.log('Calling onActionExecuted callback');
+      onActionExecuted();
+    }
     
-    // Don't clear activeSwipeId immediately - let it be cleared by other interactions
-  };
-
-  const closeActions = () => {
-    translateX.value = withSpring(0);
-    setIsOpen(false);
+    console.log('=== SwipeActionRow: Action handling complete ===');
   };
 
   return (
@@ -136,42 +171,52 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
       {/* Action buttons container */}
       <View style={styles.actionContainer}>
         {actions.map((action, index) => (
-          <TouchableOpacity
+          <Pressable
             key={action.id}
             style={[
               styles.actionButton,
               {
                 backgroundColor: action.backgroundColor,
                 marginLeft: index === 0 ? 0 : 12, // Add spacing between buttons
-                zIndex: actions.length - index, // Higher z-index for buttons closer to content
+                zIndex: isOpen ? 10 + (actions.length - index) : 0, // Higher z-index when open
               },
             ]}
-            onPress={() => handleActionPress(action)}
-            activeOpacity={0.8}
+            onPress={() => {
+              console.log('Pressable onPress triggered for:', action.title);
+              handleActionPress(action);
+            }}
           >
             <Ionicons name={action.icon as any} size={18} color={action.color} />
             <Text style={[styles.actionText, { color: action.color }]}>
               {action.title}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 
       {/* Main content */}
-      <GestureDetector gesture={panGesture}>
+      <GestureDetector gesture={combinedGesture}>
         <Animated.View style={[styles.contentContainer, animatedStyle]}>
-          {children}
+          {isOpen ? (
+            <TouchableOpacity 
+              style={{ flex: 1 }} 
+              onPress={() => {
+                console.log('TouchableOpacity tap - closing swipe actions');
+                translateX.value = withSpring(0);
+                setIsOpen(false);
+                setActiveSwipeId(null);
+              }}
+              activeOpacity={1}
+            >
+              {children}
+            </TouchableOpacity>
+          ) : (
+            children
+          )}
         </Animated.View>
       </GestureDetector>
 
-      {/* Overlay to close actions when tapping outside */}
-      {isOpen && (
-        <TouchableOpacity
-          style={styles.overlay}
-          onPress={closeActions}
-          activeOpacity={1}
-        />
-      )}
+      {/* Overlay removed to prevent interference with action buttons */}
     </View>
   );
 };
@@ -191,7 +236,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingRight: 8, // Reduced padding to minimize right space
-    zIndex: 0,
+    zIndex: 0, // Lower than content to be hidden by default
   },
   actionButton: {
     width: 50,
@@ -217,14 +262,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     backgroundColor: 'transparent',
     zIndex: 1,
-  },
-  overlay: {
-    position: 'absolute',
-    top: -1000, // Extend above the screen
-    left: -1000, // Extend left of the screen
-    right: -1000, // Extend right of the screen
-    bottom: -1000, // Extend below the screen
-    backgroundColor: 'transparent',
-    zIndex: 0,
+    // Ensure content covers action buttons when not swiped
+    elevation: 1,
   },
 });

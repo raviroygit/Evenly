@@ -34,7 +34,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   currentUserId,
   editExpense,
 }) => {
-  const { groups } = useGroups();
+  const { groups, refreshGroups } = useGroups();
   const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -45,6 +45,13 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const isEditMode = !!editExpense;
+
+  // Refresh groups when modal opens
+  useEffect(() => {
+    if (visible) {
+      refreshGroups();
+    }
+  }, [visible, refreshGroups]);
 
   // Populate form when editing
   useEffect(() => {

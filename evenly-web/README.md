@@ -21,6 +21,7 @@ A stunning, modern product landing page for Evenly built with Next.js, TypeScrip
 - **Animations**: Framer Motion
 - **Icons**: Lucide React
 - **Fonts**: Inter & JetBrains Mono
+- **AI Support**: VoAgents AI widget for customer support
 
 ## 📦 Installation
 
@@ -33,7 +34,7 @@ A stunning, modern product landing page for Evenly built with Next.js, TypeScrip
    Create a `.env.local` file in the root directory:
    ```bash
    # Backend API URL
-   NEXT_PUBLIC_EVENLY_BACKEND_URL=https://evenly-backend-541410644975.us-central1.run.app
+   NEXT_PUBLIC_EVENLY_BACKEND_URL=https://evenly-backend-maps.onrender.com
    
    # ReCAPTCHA Configuration (optional - only if you want CAPTCHA protection)
    # Get your site key from: https://www.google.com/recaptcha/admin
@@ -62,7 +63,20 @@ A stunning, modern product landing page for Evenly built with Next.js, TypeScrip
 4. **Open your browser**:
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🎨 Design System
+## 🤖 AI Support Widget
+
+The website includes an AI-powered support widget from VoAgents that provides:
+- **Instant Support**: AI chatbot for immediate assistance
+- **24/7 Availability**: Always available for user questions
+- **Smart Responses**: Context-aware answers about Evenly
+- **Seamless Integration**: Appears on all pages
+
+### Configuration:
+- **Agent ID**: `57d118ec-450e-4379-a074-428a2e184fda`
+- **Widget URL**: https://chat.voagents.ai/widget.umd.js
+- **Styling**: https://chat.voagents.ai/widget.umd.css
+
+The AI widget is automatically loaded on all pages and provides instant customer support.
 
 The website uses the same design system as the Evenly mobile app:
 

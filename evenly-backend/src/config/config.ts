@@ -9,7 +9,7 @@ export const config = {
     env: process.env.NODE_ENV || 'development',
   },
   database: {
-    url: process.env.DATABASE_URL || '',
+    url: process.env.EVENLY_DATABASE_URL || '',
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   },
   auth: {
@@ -37,7 +37,7 @@ export const config = {
       user: process.env.EMAIL_USER || 'no-reply@nxtgenaidev.com',
       pass: process.env.EMAIL_PASS || 'a3A3CDqpuBhf',
     },
-    supportEmail: process.env.SUPPORT_EMAIL || 'support@evenly.com',
+    supportEmail: process.env.SUPPORT_EMAIL || 'ravi140398@gmail.com',
   },
   app: {
     baseUrl: process.env.APP_BASE_URL || 'https://b98351f842e5.ngrok-free.app',

@@ -1,7 +1,7 @@
 // Environment configuration for Evenly Web
 export const ENV = {
   // Backend API URL
-  EVENLY_BACKEND_URL: process.env.NEXT_PUBLIC_EVENLY_BACKEND_URL || 'https://evenly-backend-541410644975.us-central1.run.app',
+  EVENLY_BACKEND_URL: process.env.NEXT_PUBLIC_EVENLY_BACKEND_URL || 'https://evenly-backend-374738393915.us-central1.run.app',
   
   // ReCAPTCHA Configuration
   RECAPTCHA_SITE_KEY: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '',

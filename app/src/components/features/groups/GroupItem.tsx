@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { Group } from '../../../types';
@@ -12,6 +13,7 @@ interface GroupItemProps {
   onInviteUser?: (groupId: string, groupName: string) => void;
   onEditGroup?: (group: Group) => void;
   onDeleteGroup?: (groupId: string, groupName: string) => void;
+  onActionExecuted?: () => void;
 }
 
 export const GroupItem: React.FC<GroupItemProps> = ({ 
@@ -19,11 +21,25 @@ export const GroupItem: React.FC<GroupItemProps> = ({
   onPress, 
   onInviteUser, 
   onEditGroup, 
-  onDeleteGroup 
+  onDeleteGroup,
+  onActionExecuted
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
 
-  // Prepare swipe actions
+  // Check if current user is the creator of the group
+  const isCreator = user && group.createdBy === user.id;
+
+  // Show permission alert for non-creators
+  const showPermissionAlert = (action: string) => {
+    Alert.alert(
+      'Permission Denied',
+      `You don't have permission to ${action} this group because you are not the creator. Only the group creator can ${action} the group.`,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
+  // Prepare swipe actions - show all buttons but check permissions
   const swipeActions = [
     ...(onInviteUser ? [{
       id: 'invite',
@@ -32,8 +48,11 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#007AFF', // Blue for invite
       onPress: () => {
-        console.log('Invite action pressed for group:', group.name);
+        console.log('=== GroupItem: Invite action pressed ===');
+        console.log('Group:', group.name, group.id);
+        console.log('onInviteUser function:', typeof onInviteUser);
         onInviteUser(group.id, group.name);
+        console.log('=== GroupItem: Invite action completed ===');
       },
     }] : []),
     ...(onEditGroup ? [{
@@ -43,8 +62,15 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#FF9500', // Orange for edit
       onPress: () => {
-        console.log('Edit action pressed for group:', group.name);
-        onEditGroup(group);
+        if (isCreator) {
+          console.log('=== GroupItem: Edit action pressed ===');
+          console.log('Group:', group.name, group.id);
+          console.log('onEditGroup function:', typeof onEditGroup);
+          onEditGroup(group);
+          console.log('=== GroupItem: Edit action completed ===');
+        } else {
+          showPermissionAlert('edit');
+        }
       },
     }] : []),
     ...(onDeleteGroup ? [{
@@ -54,8 +80,15 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#FF3B30', // Red for delete
       onPress: () => {
-        console.log('Delete action pressed for group:', group.name);
-        onDeleteGroup(group.id, group.name);
+        if (isCreator) {
+          console.log('=== GroupItem: Delete action pressed ===');
+          console.log('Group:', group.name, group.id);
+          console.log('onDeleteGroup function:', typeof onDeleteGroup);
+          onDeleteGroup(group.id, group.name);
+          console.log('=== GroupItem: Delete action completed ===');
+        } else {
+          showPermissionAlert('delete');
+        }
       },
     }] : []),
   ];
@@ -111,7 +144,11 @@ export const GroupItem: React.FC<GroupItemProps> = ({
   // If there are actions, wrap with SwipeActionRow
   if (swipeActions.length > 0) {
     return (
-      <SwipeActionRow actions={swipeActions} swipeId={`group-${group.id}`}>
+      <SwipeActionRow 
+        actions={swipeActions} 
+        swipeId={`group-${group.id}`}
+        onActionExecuted={onActionExecuted}
+      >
         {content}
       </SwipeActionRow>
     );

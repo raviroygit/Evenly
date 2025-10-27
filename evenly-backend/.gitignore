@@ -75,7 +75,8 @@ jspm_packages/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# dist - commented out for Cloud Run deployment
+# dist
 
 # Gatsby files
 .cache/
@@ -121,7 +122,8 @@ public/uploads/
 
 # Docker
 .dockerignore
-Dockerfile
+# Dockerfile - commented out for Cloud Run deployment
+# Dockerfile
 docker-compose.yml
 docker-compose.override.yml
 

@@ -23,6 +23,9 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
+  // Note: Removed useFocusEffect to prevent infinite loops
+  // Dashboard and groups will refresh via pull-to-refresh
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {

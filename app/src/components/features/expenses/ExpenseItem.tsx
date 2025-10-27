@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { EnhancedExpense } from '../../../types';
@@ -11,6 +12,7 @@ interface ExpenseItemProps {
   onPress?: () => void;
   onEditExpense?: (expense: EnhancedExpense) => void;
   onDeleteExpense?: (expenseId: string, expenseTitle: string) => void;
+  onActionExecuted?: () => void;
 }
 
 export const ExpenseItem: React.FC<ExpenseItemProps> = ({ 
@@ -18,11 +20,25 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   groupName, 
   onPress, 
   onEditExpense, 
-  onDeleteExpense 
+  onDeleteExpense,
+  onActionExecuted
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
 
-  // Prepare swipe actions
+  // Check if current user is the one who paid for the expense
+  const isPayer = user && item.paidBy === user.id;
+
+  // Show permission alert for non-payers
+  const showPermissionAlert = (action: string) => {
+    Alert.alert(
+      'Permission Denied',
+      `You don't have permission to ${action} this expense because you didn't add it. Only the person who added the expense can ${action} it.`,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
+  // Prepare swipe actions - show all buttons but check permissions
   const swipeActions = [
     ...(onEditExpense ? [{
       id: 'edit',
@@ -31,8 +47,15 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#FF9500', // Orange for edit
       onPress: () => {
-        console.log('Edit action pressed for expense:', item.title);
-        onEditExpense(item);
+        if (isPayer) {
+          console.log('=== ExpenseItem: Edit action pressed ===');
+          console.log('Expense:', item.title, item.id);
+          console.log('onEditExpense function:', typeof onEditExpense);
+          onEditExpense(item);
+          console.log('=== ExpenseItem: Edit action completed ===');
+        } else {
+          showPermissionAlert('edit');
+        }
       },
     }] : []),
     ...(onDeleteExpense ? [{
@@ -42,8 +65,15 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#FF3B30', // Red for delete
       onPress: () => {
-        console.log('Delete action pressed for expense:', item.title);
-        onDeleteExpense(item.id, item.title);
+        if (isPayer) {
+          console.log('=== ExpenseItem: Delete action pressed ===');
+          console.log('Expense:', item.title, item.id);
+          console.log('onDeleteExpense function:', typeof onDeleteExpense);
+          onDeleteExpense(item.id, item.title);
+          console.log('=== ExpenseItem: Delete action completed ===');
+        } else {
+          showPermissionAlert('delete');
+        }
       },
     }] : []),
   ];
@@ -123,7 +153,11 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
   // If there are actions, wrap with SwipeActionRow
   if (swipeActions.length > 0) {
     return (
-      <SwipeActionRow actions={swipeActions} swipeId={`expense-${item.id}`}>
+      <SwipeActionRow 
+        actions={swipeActions} 
+        swipeId={`expense-${item.id}`}
+        onActionExecuted={onActionExecuted}
+      >
         {content}
       </SwipeActionRow>
     );

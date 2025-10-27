@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { useExpensesInfinite } from '../../hooks/useExpensesInfinite';
 import { useGroups } from '../../hooks/useGroups';
@@ -14,6 +14,9 @@ import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 // import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSearch } from '../../hooks/useSearch';
+import { useSwipeAction } from '../../contexts/SwipeActionContext';
+import { EnhancedExpense } from '../../types';
+import { groupEvents, GROUP_EVENTS } from '../../utils/groupEvents';
 
 export const ExpensesScreen: React.FC = () => {
   const { groups, refreshGroups } = useGroups();
@@ -22,6 +25,9 @@ export const ExpensesScreen: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<EnhancedExpense | null>(null);
+  const { setActiveSwipeId } = useSwipeAction();
+
+  // Note: Swipe actions are now closed via onActionExecuted callback instead of useEffect
 
   // Use infinite scroll expenses hook
   const {
@@ -37,6 +43,41 @@ export const ExpensesScreen: React.FC = () => {
     updateExpense,
     deleteExpense,
   } = useExpensesInfinite();
+
+  // Note: Removed useFocusEffect to prevent infinite loops
+  // Groups and expenses will refresh via pull-to-refresh and event system
+
+  // Listen for group deletion events with debouncing
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const handleGroupDeleted = () => {
+      console.log('ExpensesScreen: Group deleted event received - scheduling refresh');
+      
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Debounce the refresh to prevent rapid calls
+      timeoutId = setTimeout(() => {
+        console.log('ExpensesScreen: Executing debounced refresh');
+        if (refreshGroups) {
+          refreshGroups();
+        }
+        expensesRefresh();
+      }, 500); // 500ms debounce
+    };
+
+    groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupDeleted);
+
+    return () => {
+      groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupDeleted);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [refreshGroups, expensesRefresh]);
 
   // Search functionality
   const {
@@ -170,97 +211,107 @@ export const ExpensesScreen: React.FC = () => {
 
   // Create a map of group IDs to group names for quick lookup
   const groupMap = new Map(groups.map(group => [group.id, group.name]));
+  
+  // Filter out expenses from deleted groups
+  const validExpenses = expenses.filter(expense => groupMap.has(expense.groupId));
+
+  // Create header component for FlatList
+  const ListHeaderComponent = () => (
+    <>
+      {/* Summary Cards */}
+      {showSkeletonLoading ? (
+        <View style={styles.summaryContainer}>
+          <SkeletonExpenseSummary />
+        </View>
+      ) : (
+        <View style={styles.summaryContainer}>
+          <ExpenseSummary
+            totalExpenses={totalExpenses}
+            totalIncome={0} // Not applicable for group expenses
+            netBalance={totalExpenses}
+          />
+        </View>
+      )}
+
+      {/* Expenses List Header */}
+      <View style={styles.expensesListHeader}>
+        <GlassListCard
+          title="Recent Transactions"
+          subtitle={
+            refreshing 
+              ? "Refreshing..."
+              : showSkeletonLoading 
+                ? "Loading expenses..." 
+                : "View your recent transactions"
+          }
+          contentGap={8}
+          badge={refreshing || showSkeletonLoading ? undefined : (validExpenses.length > 0 ? validExpenses.length : undefined)}
+          style={styles.glassCardHeader}
+        >
+          <View style={styles.headerContent}>
+            {/* Header content only, no list here */}
+          </View>
+        </GlassListCard>
+      </View>
+    </>
+  );
 
   return (
     <>
       <ScreenContainer scrollable={false}>
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          {/* Summary Cards */}
           {showSkeletonLoading ? (
-            <View style={styles.summaryContainer}>
-              <SkeletonExpenseSummary />
-            </View>
+            <SkeletonExpenseList count={5} />
+          ) : expensesError ? (
+            <Text style={[styles.errorText, { color: colors.destructive }]}>{expensesError}</Text>
           ) : (
-            <View style={styles.summaryContainer}>
-              <ExpenseSummary
-                totalExpenses={totalExpenses}
-                totalIncome={0} // Not applicable for group expenses
-                netBalance={totalExpenses}
-              />
-            </View>
+            <FlatList
+              data={validExpenses}
+              renderItem={({ item: expense }) => (
+                <ExpenseItem 
+                  item={expense} 
+                  groupName={groupMap.get(expense.groupId) || 'Unknown Group'}
+                  onEditExpense={setEditingExpense}
+                  onDeleteExpense={handleDeleteExpense}
+                  onActionExecuted={() => {
+                    console.log('ExpenseItem action executed, closing swipe actions with animation frames');
+                    // Use requestAnimationFrame to ensure modal has time to render
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        setActiveSwipeId(null);
+                      });
+                    });
+                  }}
+                />
+              )}
+              keyExtractor={(expense, index) => `${expense.id}-${index}`}
+              onEndReached={() => {
+                if (expensesHasMore && !expensesLoadingMore) {
+                  expensesLoadMore();
+                }
+              }}
+              onEndReachedThreshold={0.1}
+              showsVerticalScrollIndicator={false}
+              style={styles.expensesList}
+              contentContainerStyle={styles.expensesListContent}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              ListHeaderComponent={ListHeaderComponent}
+              ListFooterComponent={() => {
+                if (expensesLoadingMore) {
+                  return (
+                    <View style={styles.loadingMore}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={[styles.loadingMoreText, { color: colors.mutedForeground }]}>
+                        Loading more...
+                      </Text>
+                    </View>
+                  );
+                }
+                return null;
+              }}
+            />
           )}
-
-          {/* Expenses List Header */}
-          <View style={styles.expensesListHeader}>
-            <GlassListCard
-              title="Recent Transactions"
-              subtitle={
-                refreshing 
-                  ? "Refreshing..."
-                  : showSkeletonLoading 
-                    ? "Loading expenses..." 
-                    : "View your recent transactions"
-              }
-              contentGap={8}
-              badge={refreshing || showSkeletonLoading ? undefined : (expenses.length > 0 ? expenses.length : undefined)}
-              style={styles.glassCardHeader}
-            >
-              <View style={styles.headerContent}>
-                {/* Header content only, no list here */}
-              </View>
-            </GlassListCard>
-          </View>
-
-          {/* Expenses List - Full Height */}
-          <View style={styles.expensesListContainer}>
-            {showSkeletonLoading ? (
-              <SkeletonExpenseList count={5} />
-            ) : expensesError ? (
-              <Text style={[styles.errorText, { color: colors.destructive }]}>{expensesError}</Text>
-            ) : (
-              <FlatList
-                data={expenses}
-                renderItem={({ item: expense }) => (
-                  <ExpenseItem 
-                    item={expense} 
-                    groupName={groupMap.get(expense.groupId)}
-                    onEditExpense={setEditingExpense}
-                    onDeleteExpense={handleDeleteExpense}
-                  />
-                )}
-                keyExtractor={(expense, index) => `${expense.id}-${index}`}
-                onEndReached={() => {
-                  if (expensesHasMore && !expensesLoadingMore) {
-                    expensesLoadMore();
-                  }
-                }}
-                onEndReachedThreshold={0.1}
-                showsVerticalScrollIndicator={false}
-                style={styles.expensesList}
-                contentContainerStyle={styles.expensesListContent}
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                ListHeaderComponent={() => (
-                  <View style={styles.listHeader}>
-                    {/* Add any header content here if needed */}
-                  </View>
-                )}
-                ListFooterComponent={() => {
-                  if (expensesLoadingMore) {
-                    return (
-                      <View style={styles.loadingMore}>
-                        <ActivityIndicator size="small" color={colors.primary} />
-                        <Text style={[styles.loadingMoreText, { color: colors.mutedForeground }]}>
-                          Loading more...
-                        </Text>
-                      </View>
-                    );
-                  }
-                  return null;
-                }}
-              />
-            )}
-          </View>
         </View>
       </ScreenContainer>
 

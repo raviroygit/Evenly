@@ -189,7 +189,11 @@ export class GroupService {
         throw new ForbiddenError('Only group admins can delete the group');
       }
 
+      // Delete group - cascade will handle related expenses, splits, balances, etc.
+      // The database schema has onDelete: 'cascade' for all related tables
       await db.delete(groups).where(eq(groups.id, groupId));
+      
+      console.log(`Group ${groupId} deleted successfully with all related data`);
     } catch (error) {
       if (error instanceof ForbiddenError) {
         throw error;

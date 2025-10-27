@@ -21,7 +21,8 @@
     "db:cleanup": "tsx scripts/cleanup-data.ts",
     "db:reset": "npm run db:init && npm run dev",
     "dev:migrate": "npm run db:init && npm run dev",
-    "start:migrate": "npm run db:init && npm start"
+    "start:migrate": "npm run db:init && npm start",
+    "deploy": "node scripts/deploy.js"
   },
   "keywords": [
     "splitwise",

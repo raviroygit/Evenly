@@ -15,6 +15,9 @@ import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { useSearch } from '../../hooks/useSearch';
 import { useApiError } from '../../hooks/useApiError';
 import ErrorHandler from '../../utils/ErrorHandler';
+import { Group } from '../../types';
+import { useSwipeAction } from '../../contexts/SwipeActionContext';
+import { emitGroupDeleted } from '../../utils/groupEvents';
 
 export const GroupsScreen: React.FC = () => {
   const { 
@@ -39,6 +42,7 @@ export const GroupsScreen: React.FC = () => {
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const { showErrorWithRetry } = useApiError();
+  const { setActiveSwipeId } = useSwipeAction();
 
   // Search functionality
   const {
@@ -77,6 +81,10 @@ export const GroupsScreen: React.FC = () => {
   const [processingToken, setProcessingToken] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 
+  // Note: Removed useFocusEffect to prevent infinite loops
+  // Groups will refresh via pull-to-refresh
+
+  // Note: Swipe actions are now closed via onActionExecuted callback instead of useEffect
 
   const handleCreateGroup = async (groupData: {
     name: string;
@@ -108,7 +116,7 @@ export const GroupsScreen: React.FC = () => {
   const handleDeleteGroup = async (groupId: string, groupName: string) => {
     Alert.alert(
       'Delete Group',
-      `Are you sure you want to delete "${groupName}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${groupName}"? This will also delete all expenses in this group. This action cannot be undone.`,
       [
         {
           text: 'Cancel',
@@ -120,7 +128,11 @@ export const GroupsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteGroup(groupId);
-              Alert.alert('Success', 'Group deleted successfully!');
+              Alert.alert('Success', 'Group and all related expenses deleted successfully!');
+              // Refresh groups to update the list
+              await refresh();
+              // Emit event to notify other screens
+              emitGroupDeleted(groupId);
             } catch (err) {
               Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete group');
             }
@@ -133,8 +145,16 @@ export const GroupsScreen: React.FC = () => {
 
 
   const handleInviteUser = (groupId: string, groupName: string) => {
+    console.log('=== GroupsScreen: handleInviteUser called ===');
+    console.log('GroupId:', groupId, 'GroupName:', groupName);
+    console.log('Before setState - showInviteModal:', showInviteModal);
+    console.log('Before setState - selectedGroupForInvite:', selectedGroupForInvite);
+    
     setSelectedGroupForInvite({ id: groupId, name: groupName });
     setShowInviteModal(true);
+    
+    console.log('After setState calls');
+    console.log('=== GroupsScreen: handleInviteUser completed ===');
   };
 
   const handleSendInvitation = async (email: string) => {
@@ -220,15 +240,37 @@ export const GroupsScreen: React.FC = () => {
     );
   }
 
-  const renderGroupItem = ({ item: group }: { item: any }) => (
-    <GroupItem 
-      key={group.id} 
-      group={group} 
-      onInviteUser={handleInviteUser}
-      onEditGroup={setEditingGroup}
-      onDeleteGroup={handleDeleteGroup}
-    />
-  );
+  const renderGroupItem = ({ item: group }: { item: any }) => {
+    const handleEditGroup = (group: any) => {
+      console.log('=== GroupsScreen: handleEditGroup called ===');
+      console.log('Group:', group.name, group.id);
+      console.log('Before setState - editingGroup:', editingGroup);
+      
+      setEditingGroup(group);
+      
+      console.log('After setState call');
+      console.log('=== GroupsScreen: handleEditGroup completed ===');
+    };
+
+    return (
+      <GroupItem 
+        key={group.id} 
+        group={group} 
+        onInviteUser={handleInviteUser}
+        onEditGroup={handleEditGroup}
+        onDeleteGroup={handleDeleteGroup}
+        onActionExecuted={() => {
+          console.log('GroupItem action executed, closing swipe actions with animation frames');
+          // Use requestAnimationFrame to ensure modal has time to render
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setActiveSwipeId(null);
+            });
+          });
+        }}
+      />
+    );
+  };
 
   const ListHeaderComponent = () => (
     <View style={styles.headerContainer}>

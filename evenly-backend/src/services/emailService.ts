@@ -249,8 +249,123 @@ export async function sendSupportEmail(
     console.log('Sending support email with subject:', emailSubject);
     await sendEmail(config.email.supportEmail || 'support@evenly.com', emailSubject, htmlBody);
     console.log('Support email sent successfully');
+    
+    // Send confirmation email to user
+    await sendSupportConfirmationEmail(userEmail, userName, subject, message, priority, category);
   } catch (error) {
     console.error('Error in sendSupportEmail:', error);
     throw error;
+  }
+}
+
+/**
+ * Send support confirmation email to user.
+ * @param userEmail - User's email address
+ * @param userName - User's name
+ * @param subject - Support request subject
+ * @param message - Support request message
+ * @param priority - Priority level (low, medium, high)
+ * @param category - Support category (technical, billing, feature, other)
+ */
+async function sendSupportConfirmationEmail(
+  userEmail: string,
+  userName: string,
+  subject: string,
+  message: string,
+  priority: 'low' | 'medium' | 'high' = 'medium',
+  category: 'technical' | 'billing' | 'feature' | 'other' = 'other'
+): Promise<void> {
+  console.log('Sending support confirmation email to:', userEmail);
+
+  try {
+    // Create HTML body for confirmation email
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Support Request Confirmation - Evenly</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+          .info-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          .info-table th, .info-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          .info-table th { background-color: #f5f5f5; font-weight: bold; }
+          .message-box { background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; margin: 15px 0; }
+          .priority-high { color: #e74c3c; font-weight: bold; }
+          .priority-medium { color: #f39c12; font-weight: bold; }
+          .priority-low { color: #27ae60; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          .success-message { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #28a745; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>✅ Support Request Received</h2>
+          <p>Thank you for contacting Evenly support!</p>
+        </div>
+        
+        <div class="content">
+          <div class="success-message">
+            <strong>Your support request has been successfully submitted!</strong><br>
+            We'll get back to you as soon as possible.
+          </div>
+          
+          <h3>Request Summary</h3>
+          <table class="info-table">
+            <tr>
+              <th>Name:</th>
+              <td>${userName}</td>
+            </tr>
+            <tr>
+              <th>Email:</th>
+              <td>${userEmail}</td>
+            </tr>
+            <tr>
+              <th>Subject:</th>
+              <td>${subject}</td>
+            </tr>
+            <tr>
+              <th>Priority:</th>
+              <td><span class="priority-${priority}">${priority.toUpperCase()}</span></td>
+            </tr>
+            <tr>
+              <th>Category:</th>
+              <td>${category.charAt(0).toUpperCase() + category.slice(1)}</td>
+            </tr>
+            <tr>
+              <th>Submitted:</th>
+              <td>${new Date().toLocaleString()}</td>
+            </tr>
+          </table>
+          
+          <h3>Your Message</h3>
+          <div class="message-box">
+            ${message.replace(/\n/g, '<br>')}
+          </div>
+          
+          <div class="footer">
+            <p><strong>What happens next?</strong></p>
+            <p>Our support team will review your request and respond within 24-48 hours.</p>
+            <p>For urgent issues, please contact us directly at support@evenly.com</p>
+            <br>
+            <p>Thank you for using Evenly! 🎉</p>
+            <p>© ${new Date().getFullYear()} Evenly. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const confirmationSubject = `Support Request Confirmation: ${subject}`;
+    
+    console.log('Sending confirmation email with subject:', confirmationSubject);
+    await sendEmail(userEmail, confirmationSubject, htmlBody);
+    console.log('Support confirmation email sent successfully to:', userEmail);
+  } catch (error) {
+    console.error('Error in sendSupportConfirmationEmail:', error);
+    // Don't throw error - confirmation email failure shouldn't break the main flow
   }
 }
