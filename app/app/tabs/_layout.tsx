@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Tabs } from 'expo-router';
-import { NativeTabs, Icon, Label, Badge } from 'expo-router/unstable-native-tabs';
+import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
 import { ProtectedRoute } from '../../src/components/auth/ProtectedRoute';
 import { StatusBar } from 'expo-status-bar';
@@ -56,7 +56,6 @@ function TabLayoutContent() {
             <NativeTabs.Trigger name="expenses">
               <Label>Expenses</Label>
               <Icon sf="doc.text.fill" />
-              <Badge>+9</Badge>
             </NativeTabs.Trigger>
             
             <NativeTabs.Trigger name="groups">

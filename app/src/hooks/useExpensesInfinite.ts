@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { useGroups } from './useGroups';
+import { emitExpenseCreated } from '../utils/groupEvents';
 
 export const useExpensesInfinite = () => {
   const { groups, loading: groupsLoading } = useGroups();
@@ -16,10 +17,27 @@ export const useExpensesInfinite = () => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch expenses from all groups
-      const allExpensesPromises = groups.map(group => 
-        EvenlyBackendService.getGroupExpenses(group.id)
-      );
+      
+      // Filter out any groups that might be invalid (defensive programming)
+      const validGroups = groups.filter(group => group && group.id);
+      
+      if (validGroups.length === 0) {
+        setExpenses([]);
+        setPage(1);
+        setHasMore(false);
+        return;
+      }
+      
+      // Fetch expenses from all valid groups with individual error handling
+      const allExpensesPromises = validGroups.map(async (group) => {
+        try {
+          return await EvenlyBackendService.getGroupExpenses(group.id);
+        } catch (error) {
+          console.warn(`[useExpensesInfinite] Failed to fetch expenses for group ${group.id}:`, error);
+          // Return empty result for failed groups instead of throwing
+          return { expenses: [], total: 0 };
+        }
+      });
       
       const allExpensesResults = await Promise.all(allExpensesPromises);
       
@@ -46,8 +64,16 @@ export const useExpensesInfinite = () => {
 
   // Load expenses when groups are loaded
   useEffect(() => {
-    if (!groupsLoading && groups.length > 0) {
-      loadAllExpenses();
+    if (!groupsLoading) {
+      if (groups.length > 0) {
+        loadAllExpenses();
+      } else {
+        // No groups available, set empty expenses and stop loading
+        setExpenses([]);
+        setLoading(false);
+        setError(null);
+        setHasMore(false);
+      }
     }
   }, [groups, groupsLoading, loadAllExpenses]);
 
@@ -64,10 +90,25 @@ export const useExpensesInfinite = () => {
 
   const loadAllExpensesForPage = useCallback(async (pageNum: number) => {
     try {
-      // Fetch expenses from all groups
-      const allExpensesPromises = groups.map(group => 
-        EvenlyBackendService.getGroupExpenses(group.id)
-      );
+      // Filter out any groups that might be invalid (defensive programming)
+      const validGroups = groups.filter(group => group && group.id);
+      
+      if (validGroups.length === 0) {
+        setExpenses([]);
+        setHasMore(false);
+        return;
+      }
+      
+      // Fetch expenses from all valid groups with individual error handling
+      const allExpensesPromises = validGroups.map(async (group) => {
+        try {
+          return await EvenlyBackendService.getGroupExpenses(group.id);
+        } catch (error) {
+          console.warn(`[useExpensesInfinite] Failed to fetch expenses for group ${group.id}:`, error);
+          // Return empty result for failed groups instead of throwing
+          return { expenses: [], total: 0 };
+        }
+      });
       
       const allExpensesResults = await Promise.all(allExpensesPromises);
       
@@ -97,10 +138,24 @@ export const useExpensesInfinite = () => {
 
   const addExpense = useCallback(async (expenseData: any) => {
     try {
-      const newExpense = await EvenlyBackendService.addExpense(expenseData);
-      setExpenses(prev => [newExpense, ...prev]);
+      console.log('[useExpensesInfinite] Creating expense:', expenseData);
+      const newExpense = await EvenlyBackendService.createExpense(expenseData);
+      console.log('[useExpensesInfinite] Expense created successfully:', newExpense);
+      
+      // Add the new expense to the beginning of the list
+      setExpenses(prev => {
+        console.log('[useExpensesInfinite] Previous expenses count:', prev.length);
+        const updated = [newExpense, ...prev];
+        console.log('[useExpensesInfinite] Updated expenses count:', updated.length);
+        return updated;
+      });
+      
+      // Emit event to notify other screens
+      emitExpenseCreated(newExpense);
+      
       return newExpense;
     } catch (error) {
+      console.error('[useExpensesInfinite] Error creating expense:', error);
       throw error;
     }
   }, []);

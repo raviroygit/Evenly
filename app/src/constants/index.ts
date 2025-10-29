@@ -61,7 +61,6 @@ export const TAB_CONFIG = [
     title: 'Expenses',
     icon: 'gearshape.arrow.trianglehead.2.clockwise.rotate.90',
     drawable: 'ic_menu_manage',
-    badge: '+9',
   },
   {
     name: 'groups',

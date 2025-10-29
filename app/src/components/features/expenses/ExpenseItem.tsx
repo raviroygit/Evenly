@@ -86,7 +86,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
         large: 20,
         tablet: 24,
       }}
-      marginBottom={8}
+      marginBottom={4}
       borderRadius={{
         small: 12,
         medium: 14,
@@ -98,54 +98,53 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       style={styles.expenseCardOverrides}
     >
       <View style={styles.content}>
-        {/* Row 1: Title and Status Text */}
-        <View style={styles.row}>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {item.title}
-          </Text>
+        {/* Main Content Row */}
+        <View style={styles.mainRow}>
+          {/* Left Section */}
+          <View style={styles.leftSection}>
+            <Text style={[styles.title, { color: colors.foreground }]}>
+              {item.title}
+            </Text>
+            <Text style={[styles.paidBy, { color: colors.mutedForeground }]}>
+              {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} ₹{item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount).toFixed(2) : '0.00'}
+            </Text>
+            {/* Group Badge */}
+            {groupName && (
+              <View style={styles.groupBadgeContainer}>
+                <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}>
+                  <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}>
+                    {groupName}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+          
+          {/* Right Section */}
           <View style={styles.rightSection}>
             {item.netBalance ? (
-              <Text style={[styles.statusText, { color: item.netBalance.color }]}>
-                {item.netBalance.text.includes('you lent') ? 'You Lent' : 
-                 item.netBalance.text.includes('you borrowed') ? 'You Borrowed' : 
-                 item.netBalance.text}
-              </Text>
+              <>
+                <Text style={[styles.statusText, { color: item.netBalance.color }]}>
+                  {item.netBalance.text.includes('you lent') ? 'You Lent' : 
+                   item.netBalance.text.includes('you borrowed') ? 'You Borrowed' : 
+                   item.netBalance.text}
+                </Text>
+                <Text style={[styles.amountText, { color: item.netBalance.color }]}>
+                  ₹{item.netBalance.amount.toFixed(2)}
+                </Text>
+              </>
             ) : (
-              <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
-                Even
-              </Text>
+              <>
+                <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
+                  Even
+                </Text>
+                <Text style={[styles.amountText, { color: colors.mutedForeground }]}>
+                  ₹0.00
+                </Text>
+              </>
             )}
           </View>
         </View>
-        
-        {/* Row 2: Paid By and Amount */}
-        <View style={styles.row}>
-          <Text style={[styles.paidBy, { color: colors.mutedForeground }]}>
-            {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} ₹{item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount).toFixed(2) : '0.00'}
-          </Text>
-          <View style={styles.rightSection}>
-            {item.netBalance ? (
-              <Text style={[styles.amountText, { color: item.netBalance.color }]}>
-                ₹{item.netBalance.amount.toFixed(2)}
-              </Text>
-            ) : (
-              <Text style={[styles.amountText, { color: colors.mutedForeground }]}>
-                ₹0.00
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Row 3: Group Badge */}
-        {groupName && (
-          <View style={styles.groupBadgeContainer}>
-            <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}>
-              <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}>
-                {groupName}
-              </Text>
-            </View>
-          </View>
-        )}
       </View>
     </ResponsiveLiquidGlassCard>
   );
@@ -174,26 +173,31 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: 'column',
-    gap: 8,
   },
-  row: {
+  mainRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' for better alignment
+  },
+  leftSection: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 4,
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    flexDirection: 'column',
+    gap: 2,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
   },
   paidBy: {
     fontSize: 14,
     fontWeight: '500',
     opacity: 0.8,
-    flex: 1,
-  },
-  rightSection: {
-    alignItems: 'flex-end',
   },
   statusText: {
     fontSize: 14,
@@ -206,7 +210,6 @@ const styles = StyleSheet.create({
   groupBadgeContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginTop: 4,
   },
   groupBadge: {
     paddingHorizontal: 8,

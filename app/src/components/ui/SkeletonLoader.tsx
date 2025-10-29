@@ -356,7 +356,7 @@ export const SkeletonExpenseSummary: React.FC = () => {
   
   // Calculate EXACT same card width as actual ExpenseSummary
   const screenWidth = Dimensions.get('window').width;
-  const horizontalPadding = 40; // 20px on each side (handled by parent container)
+  const horizontalPadding = 40; // 20px on each side (total screen padding)
   const cardGaps = 24; // 12px gap between each card (2 gaps for 3 cards)
   const availableWidth = screenWidth - horizontalPadding - cardGaps;
   const cardWidth = Math.floor(availableWidth / 3); // Divide by 3 for 3 cards

@@ -19,7 +19,7 @@ import { EnhancedExpense } from '../../types';
 import { groupEvents, GROUP_EVENTS } from '../../utils/groupEvents';
 
 export const ExpensesScreen: React.FC = () => {
-  const { groups, refreshGroups } = useGroups();
+  const { groups, refreshGroups, loading: groupsLoading } = useGroups();
   const { user, isAuthenticated } = useAuth();
   const { colors } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -27,7 +27,8 @@ export const ExpensesScreen: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<EnhancedExpense | null>(null);
   const { setActiveSwipeId } = useSwipeAction();
 
-  // Note: Swipe actions are now closed via onActionExecuted callback instead of useEffect
+  // Note: Removed useEffect to prevent infinite loops
+  // Groups will be refreshed only when needed (button press or events)
 
   // Use infinite scroll expenses hook
   const {
@@ -44,8 +45,8 @@ export const ExpensesScreen: React.FC = () => {
     deleteExpense,
   } = useExpensesInfinite();
 
-  // Note: Removed useFocusEffect to prevent infinite loops
-  // Groups and expenses will refresh via pull-to-refresh and event system
+  // Note: Removed useEffect to prevent infinite loops
+  // Groups will be refreshed when user clicks add expense button
 
   // Listen for group deletion events with debouncing
   useEffect(() => {
@@ -66,7 +67,7 @@ export const ExpensesScreen: React.FC = () => {
           refreshGroups();
         }
         expensesRefresh();
-      }, 500); // 500ms debounce
+      }, 2000); // Increased debounce time to 2 seconds
     };
 
     groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupDeleted);
@@ -139,8 +140,12 @@ export const ExpensesScreen: React.FC = () => {
       
       await addExpense(fullExpenseData);
       
-      // Refresh the expenses list to show the new expense
-      await expensesRefresh();
+      // Refresh both expenses and groups to show the new expense
+      console.log('Expense added successfully, refreshing data...');
+      await Promise.all([
+        expensesRefresh(),
+        refreshGroups ? refreshGroups() : Promise.resolve()
+      ]);
       
       Alert.alert('Success', 'Expense added successfully!');
       setShowAddModal(false); // Close modal after success
@@ -228,7 +233,7 @@ export const ExpensesScreen: React.FC = () => {
           <ExpenseSummary
             totalExpenses={totalExpenses}
             totalIncome={0} // Not applicable for group expenses
-            netBalance={totalExpenses}
+            netBalance={0} // Show 0 when no expenses
           />
         </View>
       )}
@@ -247,6 +252,7 @@ export const ExpensesScreen: React.FC = () => {
           contentGap={8}
           badge={refreshing || showSkeletonLoading ? undefined : (validExpenses.length > 0 ? validExpenses.length : undefined)}
           style={styles.glassCardHeader}
+          marginBottom={8}
         >
           <View style={styles.headerContent}>
             {/* Header content only, no list here */}
@@ -274,7 +280,6 @@ export const ExpensesScreen: React.FC = () => {
                   onEditExpense={setEditingExpense}
                   onDeleteExpense={handleDeleteExpense}
                   onActionExecuted={() => {
-                    console.log('ExpenseItem action executed, closing swipe actions with animation frames');
                     // Use requestAnimationFrame to ensure modal has time to render
                     requestAnimationFrame(() => {
                       requestAnimationFrame(() => {
@@ -297,6 +302,13 @@ export const ExpensesScreen: React.FC = () => {
               refreshing={refreshing}
               onRefresh={onRefresh}
               ListHeaderComponent={ListHeaderComponent}
+              ListEmptyComponent={() => (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyStateText, { color: colors.mutedForeground }]}>
+                    No expenses found. Create a group and add some expenses to get started!
+                  </Text>
+                </View>
+              )}
               ListFooterComponent={() => {
                 if (expensesLoadingMore) {
                   return (
@@ -357,11 +369,34 @@ export const ExpensesScreen: React.FC = () => {
             id: 'add-expense',
             title: 'Add Expense',
             icon: '💰',
-            onPress: () => {
-              if (groups.length === 0) {
-                Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+            onPress: async () => {
+              console.log('Add expense pressed - groups:', groups.length, groups, 'loading:', groupsLoading);
+              
+              // Always try to refresh groups first to ensure we have latest data
+              if (refreshGroups) {
+                console.log('Add expense: Refreshing groups to get latest data...');
+                try {
+                  await refreshGroups();
+                  // Wait a moment for groups to update
+                  setTimeout(() => {
+                    console.log('After refresh - groups:', groups.length, groups);
+                    if (groups.length === 0) {
+                      Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+                    } else {
+                      setShowAddModal(true);
+                    }
+                  }, 500);
+                } catch (error) {
+                  console.error('Error refreshing groups:', error);
+                  Alert.alert('Error', 'Failed to load groups. Please try again.');
+                }
               } else {
-                setShowAddModal(true);
+                // Fallback if refreshGroups is not available
+                if (groups.length === 0) {
+                  Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+                } else {
+                  setShowAddModal(true);
+                }
               }
             },
           },
@@ -387,13 +422,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20, // Changed from 40 to match other cards
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   summaryContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   expensesListHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   glassCardHeader: {
     // Header card doesn't need flex
@@ -402,13 +447,13 @@ const styles = StyleSheet.create({
     height: 0, // No content in header card
   },
   expensesListContainer: {
-    paddingHorizontal: 20,
     flex: 1,
   },
   expensesList: {
     flex: 1,
   },
   expensesListContent: {
+    paddingHorizontal: 20, // Add horizontal padding to match header
     paddingBottom: 100, // Add padding to prevent items from being hidden behind bottom tabs
   },
   listHeader: {

@@ -33,6 +33,10 @@ export const GROUP_EVENTS = {
   GROUP_CREATED: 'group_created',
   GROUP_UPDATED: 'group_updated',
   GROUPS_REFRESH_NEEDED: 'groups_refresh_needed',
+  EXPENSE_CREATED: 'expense_created',
+  EXPENSE_UPDATED: 'expense_updated',
+  EXPENSE_DELETED: 'expense_deleted',
+  EXPENSES_REFRESH_NEEDED: 'expenses_refresh_needed',
 } as const;
 
 // Helper functions to emit events
@@ -57,4 +61,28 @@ export const emitGroupUpdated = (group: any) => {
 export const emitGroupsRefreshNeeded = () => {
   console.log('[GroupEvents] Emitting groups refresh needed event');
   groupEvents.emit(GROUP_EVENTS.GROUPS_REFRESH_NEEDED);
+};
+
+// Expense event helpers
+export const emitExpenseCreated = (expense: any) => {
+  console.log(`[GroupEvents] Emitting expense created event for expense: ${expense.id}`);
+  groupEvents.emit(GROUP_EVENTS.EXPENSE_CREATED, { expense });
+  groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
+};
+
+export const emitExpenseUpdated = (expense: any) => {
+  console.log(`[GroupEvents] Emitting expense updated event for expense: ${expense.id}`);
+  groupEvents.emit(GROUP_EVENTS.EXPENSE_UPDATED, { expense });
+  groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
+};
+
+export const emitExpenseDeleted = (expenseId: string) => {
+  console.log(`[GroupEvents] Emitting expense deleted event for expense: ${expenseId}`);
+  groupEvents.emit(GROUP_EVENTS.EXPENSE_DELETED, { expenseId });
+  groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
+};
+
+export const emitExpensesRefreshNeeded = () => {
+  console.log('[GroupEvents] Emitting expenses refresh needed event');
+  groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
 };
