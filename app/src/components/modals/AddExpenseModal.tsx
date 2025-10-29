@@ -59,7 +59,13 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setTitle(editExpense.title);
       setSelectedGroupId(editExpense.groupId);
       setTotalAmount(editExpense.totalAmount.toString());
-      setDate(editExpense.date instanceof Date ? editExpense.date.toISOString().split('T')[0] : editExpense.date);
+      // Normalize to YYYY-MM-DD regardless of incoming format
+      try {
+        const normalized = new Date(editExpense.date as any).toISOString().split('T')[0];
+        setDate(normalized);
+      } catch {
+        setDate(new Date().toISOString().split('T')[0]);
+      }
     } else {
       // Reset form when creating
       setTitle('');
@@ -250,10 +256,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             backgroundColor: colors.background,
             borderColor: colors.border 
           }]}>
-            <TextInput
+          <TextInput
               style={[styles.textInput, { color: colors.foreground }]}
-              value={date}
-              placeholder="YYYY-MM-DD"
+            value={new Date(date).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+            placeholder="DD Mon YYYY, HH:MM AM/PM"
               placeholderTextColor={colors.mutedForeground}
               editable={false}
             />

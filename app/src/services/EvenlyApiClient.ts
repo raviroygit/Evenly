@@ -31,41 +31,40 @@ class EvenlyApiClient {
         try {
           // Get auth data from storage
           const authData = await AuthStorage.getAuthData();
-          const ssoToken = authData?.ssoToken;
+          let ssoToken = authData?.ssoToken;
 
           if (ssoToken) {
-            // Add sso_token to cookies (ensure it's properly decoded)
+            // Normalize accidental double-encoding (e.g., %253A -> %3A)
+            try {
+              if (typeof ssoToken === 'string' && ssoToken.includes('%253A')) {
+                ssoToken = decodeURIComponent(ssoToken);
+              }
+            } catch {}
+            // Add sso_token to cookies
             config.headers = config.headers || {};
-            const decodedToken = decodeURIComponent(ssoToken);
+            // Remove any pre-existing cookie headers to avoid duplication
+            if (config.headers['Cookie']) delete (config.headers as any)['Cookie'];
+            if (config.headers['cookie']) delete (config.headers as any)['cookie'];
             
-            // Handle existing cookies properly
-            const existingCookie = config.headers['Cookie'] || config.headers['cookie'];
-            if (existingCookie) {
-              // Split by semicolon (standard cookie separator), filter out sso_token entries, then rejoin
-              const cookieParts = existingCookie
-                .split(';')
-                .map((part: string) => part.trim())
-                .filter((part: string) => !part.startsWith('sso_token='))
-                .filter((part: string) => part.length > 0); // Remove empty parts
-              
-              // Add the new sso_token
-              cookieParts.push(`sso_token=${decodedToken}`);
-              
-              const finalCookie = cookieParts.join('; ');
-              
-              config.headers['Cookie'] = finalCookie;
-            } else {
-              config.headers['Cookie'] = `sso_token=${decodedToken}`;
+            // Set the cookie
+            const cookieVal = `sso_token=${ssoToken}`;
+            config.headers['Cookie'] = cookieVal;
+            
+            // Single log for sso token (full value)
+            console.log(`[${Platform.OS}] SSO Token: ${ssoToken}`);
+            
+            if (Platform.OS === 'ios') {
+              (config as any).withCredentials = true;
             }
           }
           return config;
         } catch (error) {
-          console.error('[EvenlyApiClient] Request interceptor error:', error);
+          console.error('Request interceptor error:', error);
           return config;
         }
       },
       (error) => {
-        console.error('[EvenlyApiClient] Request interceptor error:', error);
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
       }
     );
@@ -109,7 +108,7 @@ class EvenlyApiClient {
 
                 // Retry the original request with new token
                 const originalRequest = error.config;
-                const decodedToken = authData.ssoToken ? decodeURIComponent(authData.ssoToken) : '';
+                const rawToken = authData.ssoToken || '';
                 
                 // Handle existing cookies properly
                 const existingCookie = originalRequest.headers['Cookie'] || originalRequest.headers['cookie'];
@@ -121,12 +120,12 @@ class EvenlyApiClient {
                     .filter((part: string) => !part.startsWith('sso_token='))
                     .filter((part: string) => part.length > 0); // Remove empty parts
                   
-                  // Add the new sso_token
-                  cookieParts.push(`sso_token=${decodedToken}`);
+                  // Add the new sso_token (use raw token to match Android)
+                  cookieParts.push(`sso_token=${rawToken}`);
                   
                   originalRequest.headers['Cookie'] = cookieParts.join('; ');
                 } else {
-                  originalRequest.headers['Cookie'] = `sso_token=${decodedToken}`;
+                  originalRequest.headers['Cookie'] = `sso_token=${rawToken}`;
                 }
                 
                 return this.client(originalRequest);

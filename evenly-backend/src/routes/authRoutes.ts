@@ -246,6 +246,30 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   }, AuthController.getCurrentUser);
 
+  // Update Current User
+  fastify.put('/me', {
+    schema: {
+      description: 'Update current authenticated user info',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          email: { type: 'string' },
+        },
+        additionalProperties: false,
+      },
+    },
+  }, AuthController.updateCurrentUser);
+
+  // Delete Current User
+  fastify.delete('/me', {
+    schema: {
+      description: 'Delete current authenticated user',
+      tags: ['Authentication'],
+    },
+  }, AuthController.deleteCurrentUser);
+
   // Logout
   fastify.post('/logout', {
     schema: {

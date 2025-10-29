@@ -46,7 +46,7 @@ export const InvitationItem: React.FC<InvitationItemProps> = ({
   const { colors, theme } = useTheme();
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   const isExpired = new Date() > new Date(invitation.expiresAt);

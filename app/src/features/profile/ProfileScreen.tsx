@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, Alert, Text, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { useUserBalances } from '../../hooks/useBalances';
 import { useGroups } from '../../hooks/useGroups';
 import { PlatformActionButton } from '../../components/ui/PlatformActionButton';
@@ -14,6 +15,7 @@ import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { AboutModal } from '../../components/modals/AboutModal';
 import { SupportModal } from '../../components/modals/SupportModal';
 import { PrivacySecurityModal } from '../../components/modals/PrivacySecurityModal';
+import { PersonalInfoModal } from '../../components/modals/PersonalInfoModal';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
@@ -25,6 +27,7 @@ export const ProfileScreen: React.FC = () => {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showPrivacySecurityModal, setShowPrivacySecurityModal] = useState(false);
+  const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -78,6 +81,33 @@ export const ProfileScreen: React.FC = () => {
             }
           },
         },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data. This action cannot be undone. Do you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await EvenlyBackendService.deleteCurrentUser();
+              if (res.success) {
+                await logout();
+                Alert.alert('Account Deleted', res.message || 'Your account has been deleted.');
+              } else {
+                Alert.alert('Error', res.message || 'Failed to delete account');
+              }
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Failed to delete account');
+            }
+          }
+        }
       ]
     );
   };
@@ -177,7 +207,7 @@ export const ProfileScreen: React.FC = () => {
             title: "Personal Information",
             subtitle: "Update your details",
             onPress: () => {
-              // Handle personal info
+              setShowPersonalInfoModal(true);
             },
           },
           {
@@ -198,6 +228,11 @@ export const ProfileScreen: React.FC = () => {
             title: "Privacy & Security",
             subtitle: "Control your data",
             onPress: () => setShowPrivacySecurityModal(true),
+          },
+          {
+            title: "Delete Account",
+            subtitle: "Permanently remove your account",
+            onPress: handleDeleteAccount,
           },
         ]}
       />
@@ -248,6 +283,12 @@ export const ProfileScreen: React.FC = () => {
       <PrivacySecurityModal
         visible={showPrivacySecurityModal}
         onClose={() => setShowPrivacySecurityModal(false)}
+      />
+
+      {/* Personal Info Modal */}
+      <PersonalInfoModal
+        visible={showPersonalInfoModal}
+        onClose={() => setShowPersonalInfoModal(false)}
       />
     </>
   );

@@ -231,6 +231,102 @@ export class AuthService {
   }
 
   /**
+   * Update current user profile via auth service
+   */
+  static async updateUser(request: FastifyRequest, data: { name?: string; email?: string }): Promise<AuthResponse> {
+    try {
+      let ssoToken = request.cookies?.sso_token;
+      // Minimal diagnostics: inbound cookie and token presence
+      console.log('[evenly-backend] /auth/me PUT inbound Cookie:', (request.headers as any)?.cookie);
+      // Fallback: parse from raw Cookie header if not populated by cookie parser
+      if (!ssoToken && (request.headers as any)?.cookie) {
+        const raw = String((request.headers as any).cookie);
+        const parts = raw.split(';').map(p => p.trim());
+        const ssoPart = parts.find(p => p.startsWith('sso_token='));
+        if (ssoPart) ssoToken = ssoPart.substring('sso_token='.length);
+      }
+      console.log('[evenly-backend] /auth/me PUT sso_token present:', !!ssoToken, 'len:', ssoToken?.length);
+
+      if (!ssoToken) {
+        return {
+          success: false,
+          message: 'No authentication token provided',
+        };
+      }
+      
+      const response = await axios.put(`${this.AUTH_SERVICE_URL}/me`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cookie': `sso_token=${ssoToken}`,
+        },
+        timeout: 30000,
+      });
+      console.log('[evenly-backend] /auth/me PUT auth-service response success:', !!response.data?.success, 'message:', response.data?.message);
+
+      const respData = response.data;
+      if (respData?.success) {
+        // Optionally sync with local DB if auth returns user
+        if (respData.user) {
+          await UserService.createOrUpdateUser({
+            id: respData.user.id,
+            email: respData.user.email,
+            name: respData.user.name,
+            avatar: respData.user.avatar,
+          });
+        }
+        return {
+          success: true,
+          message: respData.message || 'User updated successfully',
+          user: respData.user,
+        };
+      }
+
+      return {
+        success: false,
+        message: respData?.message || 'Failed to update user',
+      };
+    } catch (error: any) {
+      console.error('[evenly-backend] /auth/me PUT error:', error?.response?.status, error?.response?.data || error?.message);
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Failed to update user',
+      };
+    }
+  }
+
+  /**
+   * Delete current user via auth service
+   */
+  static async deleteUser(request: FastifyRequest): Promise<AuthResponse> {
+    try {
+      const ssoToken = request.cookies?.sso_token;
+      
+      if (!ssoToken) {
+        return { success: false, message: 'No authentication token provided' };
+      }
+
+      const response = await axios.delete(`${this.AUTH_SERVICE_URL}/me`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cookie': `sso_token=${ssoToken}`,
+        },
+        timeout: 30000,
+      });
+
+      const respData = response.data;
+      if (respData?.success) {
+        return { success: true, message: respData.message || 'Account deleted' };
+      }
+      return { success: false, message: respData?.message || 'Failed to delete account' };
+    } catch (error: any) {
+      console.error('Auth service delete user error:', error);
+      return { success: false, message: error.response?.data?.message || 'Failed to delete account' };
+    }
+  }
+
+  /**
    * Logout user
    */
   static async logout(request: FastifyRequest): Promise<AuthResponse> {

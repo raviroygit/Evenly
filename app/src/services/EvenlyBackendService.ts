@@ -1,6 +1,7 @@
 import { Group, Expense, EnhancedExpense } from '../types';
 import { ENV } from '../config/env';
 import { evenlyApiClient } from './EvenlyApiClient';
+import { AppCache, defaultCacheKeyFromRequest } from '../utils/cache';
 
 const EVENLY_BACKEND_URL = ENV.EVENLY_BACKEND_URL;
 
@@ -131,7 +132,7 @@ export class EvenlyBackendService {
   static async testConnection(): Promise<boolean> {
     try {
       // Health endpoint is at root level, not under /api
-      const baseUrl = EVENLY_BACKEND_URL.replace('/api', '');
+      const baseUrl = EVENLY_BACKEND_URL?.replace('/api', '') || '';
       
       // Use Axios for consistency
       const response = await evenlyApiClient.getInstance().request({
@@ -150,9 +151,26 @@ export class EvenlyBackendService {
     }
   }
 
+  // User API
+  static async updateCurrentUser(update: { name?: string; email?: string }): Promise<ApiResponse<any>> {
+    const response = await this.makeRequest<any>('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(update),
+      invalidatePrefixes: ['/auth/me', '/balances', '/groups', '/expenses']
+    });
+    return response;
+  }
+
+  static async deleteCurrentUser(): Promise<ApiResponse<null>> {
+    return await this.makeRequest<null>('/auth/me', {
+      method: 'DELETE',
+      invalidatePrefixes: ['/auth/me', '/balances', '/groups', '/expenses', '/payments']
+    });
+  }
+
   private static async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[] } = {},
     retryCount: number = 0
   ): Promise<ApiResponse<T>> {
     try {
@@ -167,13 +185,40 @@ export class EvenlyBackendService {
         axiosConfig.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
       }
 
+      // Optional GET cache lookup
+      const methodUpper = (axiosConfig.method || 'GET').toUpperCase();
+      const cacheTTLMs = options.cacheTTLMs;
+      const bodyForKey = options.body
+        ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body)
+        : undefined;
+      const computedCacheKey = options.cacheKey || defaultCacheKeyFromRequest(methodUpper, endpoint, bodyForKey);
+
+      if (methodUpper === 'GET' && cacheTTLMs && cacheTTLMs > 0) {
+        const cached = await AppCache.get<ApiResponse<T>>(computedCacheKey);
+        if (cached) {
+          return cached;
+        }
+      }
+
       // Use the Axios client with automatic authentication
       const response = await evenlyApiClient.getInstance().request<ApiResponse<T>>({
         url: endpoint,
         ...axiosConfig,
       });
 
-      return response.data;
+      const data = response.data;
+
+      // Optional GET cache write
+      if (methodUpper === 'GET' && cacheTTLMs && cacheTTLMs > 0) {
+        await AppCache.set<ApiResponse<T>>(computedCacheKey, data, cacheTTLMs);
+      }
+
+      // Optional cache invalidation on writes
+      if (methodUpper !== 'GET' && options.invalidatePrefixes && options.invalidatePrefixes.length) {
+        await AppCache.invalidateByPrefixes(options.invalidatePrefixes);
+      }
+
+      return data;
     } catch (error: any) {
       console.error(`API request failed for ${endpoint}:`, error);
       throw error;
@@ -182,8 +227,10 @@ export class EvenlyBackendService {
 
 
   // Groups API
-  static async getGroups(): Promise<Group[]> {
-    const response = await this.makeRequest<GroupResponse[]>('/groups');
+  static async getGroups(options: { cacheTTLMs?: number } = {}): Promise<Group[]> {
+    const response = await this.makeRequest<GroupResponse[]>('/groups', {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return response.data.map(this.mapGroupResponse);
   }
 
@@ -196,12 +243,15 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<GroupResponse>('/groups', {
       method: 'POST',
       body: JSON.stringify(groupData),
+      invalidatePrefixes: ['/groups', '/balances']
     });
     return this.mapGroupResponse(response.data);
   }
 
-  static async getGroupById(groupId: string): Promise<Group> {
-    const response = await this.makeRequest<GroupResponse>(`/groups/${groupId}`);
+  static async getGroupById(groupId: string, options: { cacheTTLMs?: number } = {}): Promise<Group> {
+    const response = await this.makeRequest<GroupResponse>(`/groups/${groupId}`, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return this.mapGroupResponse(response.data);
   }
 
@@ -214,6 +264,7 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<GroupResponse>(`/groups/${groupId}`, {
       method: 'PUT',
       body: JSON.stringify(groupData),
+      invalidatePrefixes: ['/groups', '/balances']
     });
     return this.mapGroupResponse(response.data);
   }
@@ -221,6 +272,7 @@ export class EvenlyBackendService {
   static async deleteGroup(groupId: string): Promise<void> {
     await this.makeRequest(`/groups/${groupId}`, {
       method: 'DELETE',
+      invalidatePrefixes: ['/groups', '/balances', '/expenses']
     });
   }
 
@@ -233,6 +285,7 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<any>(`/groups/${groupId}/members`, {
       method: 'POST',
       body: JSON.stringify({ email, role }),
+      invalidatePrefixes: ['/groups']
     });
     return response.data;
   }
@@ -240,6 +293,7 @@ export class EvenlyBackendService {
   static async removeGroupMember(groupId: string, userId: string): Promise<void> {
     await this.makeRequest(`/groups/${groupId}/members/${userId}`, {
       method: 'DELETE',
+      invalidatePrefixes: ['/groups']
     });
   }
 
@@ -248,6 +302,7 @@ export class EvenlyBackendService {
     page?: number;
     limit?: number;
     sortOrder?: 'asc' | 'desc';
+    cacheTTLMs?: number;
   } = {}): Promise<{ expenses: EnhancedExpense[]; pagination: any }> {
     const params = new URLSearchParams();
     if (options.page) params.append('page', options.page.toString());
@@ -257,7 +312,9 @@ export class EvenlyBackendService {
     const queryString = params.toString();
     const endpoint = `/expenses/group/${groupId}${queryString ? `?${queryString}` : ''}`;
     
-    const response = await this.makeRequest<EnhancedExpense[]>(endpoint);
+    const response = await this.makeRequest<EnhancedExpense[]>(endpoint, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return {
       expenses: response.data, // Backend already returns enhanced data, no mapping needed
       pagination: response.pagination,
@@ -268,6 +325,7 @@ export class EvenlyBackendService {
     page?: number;
     limit?: number;
     sortOrder?: 'asc' | 'desc';
+    cacheTTLMs?: number;
   } = {}): Promise<{ expenses: EnhancedExpense[]; pagination: any }> {
     const params = new URLSearchParams();
     if (options.page) params.append('page', options.page.toString());
@@ -277,7 +335,9 @@ export class EvenlyBackendService {
     const queryString = params.toString();
     const endpoint = `/expenses/user${queryString ? `?${queryString}` : ''}`;
     
-    const response = await this.makeRequest<EnhancedExpense[]>(endpoint);
+    const response = await this.makeRequest<EnhancedExpense[]>(endpoint, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return {
       expenses: response.data,
       pagination: response.pagination,
@@ -304,12 +364,15 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<ExpenseResponse>('/expenses', {
       method: 'POST',
       body: JSON.stringify(expenseData),
+      invalidatePrefixes: ['/expenses', '/balances']
     });
     return this.mapExpenseResponse(response.data);
   }
 
-  static async getExpenseById(expenseId: string): Promise<Expense> {
-    const response = await this.makeRequest<ExpenseResponse>(`/expenses/${expenseId}`);
+  static async getExpenseById(expenseId: string, options: { cacheTTLMs?: number } = {}): Promise<Expense> {
+    const response = await this.makeRequest<ExpenseResponse>(`/expenses/${expenseId}`, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return this.mapExpenseResponse(response.data);
   }
 
@@ -330,6 +393,7 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<ExpenseResponse>(`/expenses/${expenseId}`, {
       method: 'PUT',
       body: JSON.stringify(expenseData),
+      invalidatePrefixes: ['/expenses', '/balances']
     });
     return this.mapExpenseResponse(response.data);
   }
@@ -337,26 +401,33 @@ export class EvenlyBackendService {
   static async deleteExpense(expenseId: string): Promise<void> {
     await this.makeRequest(`/expenses/${expenseId}`, {
       method: 'DELETE',
+      invalidatePrefixes: ['/expenses', '/balances']
     });
   }
 
   // Balances API
-  static async getGroupBalances(groupId: string): Promise<BalanceResponse[]> {
-    const response = await this.makeRequest<BalanceResponse[]>(`/balances/group/${groupId}`);
+  static async getGroupBalances(groupId: string, options: { cacheTTLMs?: number } = {}): Promise<BalanceResponse[]> {
+    const response = await this.makeRequest<BalanceResponse[]>(`/balances/group/${groupId}`, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return response.data;
   }
 
-  static async getSimplifiedDebts(groupId: string): Promise<SimplifiedDebt[]> {
-    const response = await this.makeRequest<SimplifiedDebt[]>(`/balances/group/${groupId}/simplified-debts`);
+  static async getSimplifiedDebts(groupId: string, options: { cacheTTLMs?: number } = {}): Promise<SimplifiedDebt[]> {
+    const response = await this.makeRequest<SimplifiedDebt[]>(`/balances/group/${groupId}/simplified-debts`, {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return response.data;
   }
 
-  static async getUserBalances(): Promise<BalanceResponse[]> {
-    const response = await this.makeRequest<BalanceResponse[]>('/balances/user');
+  static async getUserBalances(options: { cacheTTLMs?: number } = {}): Promise<BalanceResponse[]> {
+    const response = await this.makeRequest<BalanceResponse[]>('/balances/user', {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return response.data;
   }
 
-  static async getUserNetBalance(): Promise<{
+  static async getUserNetBalance(options: { cacheTTLMs?: number } = {}): Promise<{
     totalOwed: number;
     totalOwing: number;
     netBalance: number;
@@ -365,7 +436,9 @@ export class EvenlyBackendService {
       totalOwed: number;
       totalOwing: number;
       netBalance: number;
-    }>('/balances/user/net');
+    }>('/balances/user/net', {
+      cacheTTLMs: options.cacheTTLMs,
+    });
     return response.data;
   }
 
@@ -422,6 +495,7 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<PaymentResponse>('/payments', {
       method: 'POST',
       body: JSON.stringify(paymentData),
+      invalidatePrefixes: ['/payments', '/balances']
     });
     return response.data;
   }
@@ -430,6 +504,7 @@ export class EvenlyBackendService {
     const response = await this.makeRequest<PaymentResponse>(`/payments/${paymentId}`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+      invalidatePrefixes: ['/payments', '/balances']
     });
     return response.data;
   }

@@ -58,9 +58,13 @@ export class AuthService {
       if (setCookieHeader) {
         // Handle both string and array cases
         const cookieString = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
+        
         const ssoTokenMatch = cookieString.match(/sso_token=([^;]+)/);
         if (ssoTokenMatch) {
-          extractedSsoToken = decodeURIComponent(ssoTokenMatch[1]);
+          const rawToken = ssoTokenMatch[1];
+          
+          // Store the raw token (URL-encoded) to match Android behavior
+          extractedSsoToken = rawToken;
         }
       }
 
@@ -165,9 +169,10 @@ export class AuthService {
         ssoToken, // Still return the ssoToken even if login failed
       };
     } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
       return {
         success: false,
-        message: error.message || 'Invalid OTP',
+        message: serverMsg || error.message || 'Invalid OTP',
       };
     }
   }
@@ -188,8 +193,30 @@ export class AuthService {
       }
       return null;
     } catch (error) {
-      console.log('Get current user failed:', error);
+      console.error('Get current user failed:', error);
       return null;
+    }
+  }
+
+  async updateUserProfile(update: { name?: string; email?: string }): Promise<{ success: boolean; message: string; user?: User }> {
+    try {
+      const { data: response } = await this.makeRequest('/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(update),
+      });
+
+      if (response && response.success) {
+        const updatedUser: User | undefined = response.user
+          ? { id: response.user.id, email: response.user.email, name: response.user.name, stats: { groups: 0, totalSpent: 0, owed: 0 } }
+          : undefined;
+        return { success: true, message: response.message || 'Updated', user: updatedUser };
+      }
+      return { success: false, message: response?.message || 'Failed to update user' };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Failed to update user' };
     }
   }
 

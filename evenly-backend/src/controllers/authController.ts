@@ -54,6 +54,53 @@ export class AuthController {
   }
 
   /**
+   * Update current user profile (proxy to auth service)
+   */
+  static async updateCurrentUser(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const body = request.body as { name?: string; email?: string };
+      const result = await AuthService.updateUser(request, body);
+
+      if (result.success) {
+        return reply.status(200).send({
+          success: true,
+          message: result.message || 'User updated successfully',
+          data: {
+            user: result.user,
+          },
+        });
+      }
+
+      return reply.status(400).send({
+        success: false,
+        message: result.message || 'Failed to update user',
+      });
+    } catch (error: any) {
+      console.error('Update user error:', error);
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to update user',
+      });
+    }
+  }
+
+  /**
+   * Delete current user (proxy to auth service)
+   */
+  static async deleteCurrentUser(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const result = await AuthService.deleteUser(request);
+      if (result.success) {
+        return reply.status(200).send({ success: true, message: result.message || 'Account deleted', data: null });
+      }
+      return reply.status(400).send({ success: false, message: result.message || 'Failed to delete account' });
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      return reply.status(500).send({ success: false, message: error.message || 'Failed to delete account' });
+    }
+  }
+
+  /**
    * Send OTP for login
    */
   static async requestOTP(request: FastifyRequest, reply: FastifyReply) {

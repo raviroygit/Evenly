@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { formatHumanDateTime } from '../../../utils/date';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { Group } from '../../../types';
@@ -136,6 +137,13 @@ export const GroupItem: React.FC<GroupItemProps> = ({
           <Text style={[styles.amountText, { color: colors.foreground }]}>
             {group.defaultSplitType}
           </Text>
+          {!!(group as any).updatedAt || !!(group as any).createdAt ? (
+            <View style={[styles.metaBadge, { backgroundColor: colors.border + '20' }]}>
+              <Text style={[styles.metaBadgeText, { color: colors.mutedForeground }]}>
+                {formatHumanDateTime((group as any).updatedAt || (group as any).createdAt)}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </ResponsiveLiquidGlassCard>
@@ -199,10 +207,21 @@ const styles = StyleSheet.create({
   },
   amount: {
     alignItems: 'flex-end',
+    gap: 4,
   },
   amountText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  metaBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-end',
+  },
+  metaBadgeText: {
+    fontSize: 9,
+    fontWeight: '500',
   },
 });
 

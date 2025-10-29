@@ -163,7 +163,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                             Created
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                            {new Date(group.createdAt).toLocaleDateString()}
+                            {new Date(group.createdAt).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                           </Text>
                         </View>
                       </View>

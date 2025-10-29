@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { EnhancedExpense } from '../../../types';
+import { formatHumanDateTime } from '../../../utils/date';
 
 interface ExpenseItemProps {
   item: EnhancedExpense;
@@ -108,16 +109,23 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
             <Text style={[styles.paidBy, { color: colors.mutedForeground }]}>
               {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} ₹{item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount).toFixed(2) : '0.00'}
             </Text>
-            {/* Group Badge */}
-            {groupName && (
-              <View style={styles.groupBadgeContainer}>
-                <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}>
-                  <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}>
+            {/* Badges Row: Group + Date-Time */}
+            <View style={styles.groupBadgeContainer}>
+              {groupName && (
+                <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}> 
+                  <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}> 
                     {groupName}
                   </Text>
                 </View>
-              </View>
-            )}
+              )}
+              {!!item.date && (
+                <View style={[styles.groupBadge, { backgroundColor: '#6B7280' + '20' }]}> 
+                  <Text style={[styles.groupBadgeText, { color: '#6B7280' }]}> 
+                    {formatHumanDateTime(item.date as any)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           
           {/* Right Section */}

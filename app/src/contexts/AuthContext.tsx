@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { AuthService } from '../services/AuthService';
+import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 
 interface User {
@@ -44,6 +45,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (authData && authData.user && authData.ssoToken) {
           setUser(authData.user);
+          // Warm cache after restoring session
+          warmAppCache().catch(() => {});
         } else {
           setUser(null);
         }
@@ -57,6 +60,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
+  const warmAppCache = useCallback(async () => {
+    const TTL = 3 * 60 * 1000; // 3 minutes
+    try {
+      await Promise.all([
+        EvenlyBackendService.getGroups({ cacheTTLMs: TTL }),
+        EvenlyBackendService.getAllExpenses({ page: 1, limit: 20, sortOrder: 'desc', cacheTTLMs: TTL }),
+        EvenlyBackendService.getUserBalances({ cacheTTLMs: TTL }),
+        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: TTL }),
+      ]);
+    } catch {
+      // ignore warmup errors
+    }
+  }, []);
+
   const login = useCallback(async (email: string, otp: string) => {
     try {
       const result = await authService.verifyOTP(email, otp);
@@ -65,6 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (result.success && result.user) {
         setUser(result.user);
         await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken, result.ssoToken);
+        warmAppCache().catch(() => {});
         
         return { success: true, message: 'Login successful!' };
       }
@@ -78,6 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (currentUser) {
             setUser(currentUser);
             await AuthStorage.saveAuthData(currentUser, result.accessToken, result.refreshToken, result.ssoToken);
+            warmAppCache().catch(() => {});
             
             return { success: true, message: 'Login successful!' };
           } else {

@@ -35,7 +35,7 @@ export const useActivitiesInfinite = () => {
           title: group.name,
           description: 'Group activity',
           memberCount: group.memberCount,
-          date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toLocaleString(),
           status: 'completed',
         });
       });
@@ -48,7 +48,7 @@ export const useActivitiesInfinite = () => {
           title: expense.description || expense.title || 'Untitled Expense',
           description: 'Expense added',
           amount: `₹${expense.amount?.toFixed(2) || '0.00'}`,
-          date: new Date(Date.now() - (index + groups.length) * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          date: new Date(Date.now() - (index + groups.length) * 24 * 60 * 60 * 1000).toLocaleString(),
           status: 'completed',
         });
       });
@@ -105,7 +105,7 @@ export const useActivitiesInfinite = () => {
           title: group.name,
           description: 'Group activity',
           memberCount: group.memberCount,
-          date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toLocaleString(),
           status: 'completed',
         });
       });
@@ -118,7 +118,7 @@ export const useActivitiesInfinite = () => {
           title: expense.description || expense.title || 'Untitled Expense',
           description: 'Expense added',
           amount: `₹${expense.amount?.toFixed(2) || '0.00'}`,
-          date: new Date(Date.now() - (index + groups.length) * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          date: new Date(Date.now() - (index + groups.length) * 24 * 60 * 60 * 1000).toLocaleString(),
           status: 'completed',
         });
       });
