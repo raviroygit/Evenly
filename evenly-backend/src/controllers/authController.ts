@@ -283,4 +283,43 @@ export class AuthController {
       });
     }
   }
+
+  /**
+   * Google social login: verify idToken, upsert user, create session cookie
+   */
+  static async googleLogin(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { idToken } = request.body as { idToken: string };
+      if (!idToken) return reply.status(400).send({ success: false, message: 'Missing idToken' });
+
+      const result = await AuthService.socialLoginGoogle(idToken);
+      if (result.success && result.user) {
+        if (result.ssoToken) {
+          reply.setCookie('sso_token', result.ssoToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' || request.protocol === 'https',
+            sameSite: 'none',
+            domain: process.env.DOMAIN || 'localhost',
+            path: '/',
+            maxAge: 86400,
+          });
+        }
+
+        return reply.status(200).send({
+          success: true,
+          message: result.message || 'Login successful',
+          data: {
+            user: result.user,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+          },
+          ssoToken: result.ssoToken,
+        });
+      }
+
+      return reply.status(400).send({ success: false, message: result.message || 'Google login failed' });
+    } catch (err: any) {
+      return reply.code(500).send({ success: false, message: err.message || 'Google login failed' });
+    }
+  }
 }

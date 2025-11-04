@@ -138,6 +138,42 @@ export class AuthService {
   }
 
   /**
+   * Google social login - proxy to auth service
+   */
+  static async socialLoginGoogle(idToken: string): Promise<AuthResponse> {
+    try {
+      const response = await axios.post(`${this.AUTH_SERVICE_URL}/social/google`, { idToken }, {
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        timeout: 30000,
+      });
+
+      // Extract sso_token from response headers
+      const setCookieHeader = response.headers['set-cookie'];
+      let ssoToken: string | undefined;
+      if (setCookieHeader) {
+        const cookieString = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
+        const match = cookieString.match(/sso_token=([^;]+)/);
+        if (match) ssoToken = match[1];
+      }
+
+      if (response.data?.user && response.data?.accessToken) {
+        return {
+          success: true,
+          message: response.data.message || 'Login successful!',
+          user: response.data.user,
+          ssoToken,
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken,
+        };
+      }
+      return { success: false, message: response.data?.message || 'Google login failed' };
+    } catch (error: any) {
+      console.error('Auth service social google error:', error);
+      return { success: false, message: error.response?.data?.message || 'Google login failed' };
+    }
+  }
+
+  /**
    * Refresh access token
    */
   static async refreshToken(refreshToken: string): Promise<AuthResponse> {

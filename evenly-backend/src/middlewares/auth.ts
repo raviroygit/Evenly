@@ -9,6 +9,7 @@ export const authenticateToken = async (
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> => {
+  void _reply;
   try {
     // Extract token from cookies (sso_token)
     const cookies = request.cookies;
@@ -33,62 +34,30 @@ export const authenticateToken = async (
       throw new UnauthorizedError('No authentication token provided');
     }
 
-    // Validate token with auth service
-    console.log('🔍 Validating token with auth service...');
+    // Validate token with external auth service first; fall back to local session
     const authResult = await AuthService.validateToken(token);
-    console.log('🔍 Auth service validation result:', {
-      success: authResult.success,
-      error: authResult.error,
-      hasUser: !!authResult.user,
-      userEmail: authResult.user?.email
-    });
-
-    if (!authResult.success || !authResult.user) {
-      // If auth service is unavailable or returns 500, throw error
-      if (authResult.error === 'Auth service unavailable' || authResult.error === 'Token validation failed') {
-        console.log('❌ Auth service unavailable or failed - this is likely a 500 error from the external auth service');
-        console.log('💡 Suggestion: Check the external auth service logs for the 500 error');
-        throw new UnauthorizedError('Authentication service unavailable');
-      }
-      
-      console.log('❌ Token validation failed:', authResult.error);
-      throw new UnauthorizedError('Invalid or expired token');
+    if (authResult.success && authResult.user) {
+      const syncedUser = await UserService.createOrUpdateUser({
+        id: authResult.user.id,
+        email: authResult.user.email,
+        name: authResult.user.name,
+        avatar: authResult.user.avatar,
+      });
+      (request as AuthenticatedRequest).user = { ...syncedUser, avatar: syncedUser.avatar || undefined };
+      return;
     }
 
-    // Log user info from auth service
-    console.log('🔐 Auth Service User Info:', {
-      id: authResult.user.id,
-      email: authResult.user.email,
-      name: authResult.user.name,
-      avatar: authResult.user.avatar,
-      tokenPrefix: token.substring(0, 8)
-    });
+    const { validateSession } = await import('../utils/localSession');
+    const local = validateSession(token);
+    if (local.valid && local.userId) {
+      const user = await UserService.getUserById(local.userId);
+      if (user) {
+        (request as AuthenticatedRequest).user = { ...user, avatar: user.avatar || undefined } as any;
+        return;
+      }
+    }
 
-    // Sync user with local database
-    console.log('💾 Syncing user with evenly database...');
-    const syncedUser = await UserService.createOrUpdateUser({
-      id: authResult.user.id,
-      email: authResult.user.email,
-      name: authResult.user.name,
-      avatar: authResult.user.avatar,
-    });
-
-    // Log synced user info
-    console.log('✅ User synced to evenly database:', {
-      evenlyId: syncedUser.id,
-      authServiceId: syncedUser.authServiceId,
-      email: syncedUser.email,
-      name: syncedUser.name,
-      avatar: syncedUser.avatar,
-      createdAt: syncedUser.createdAt,
-      updatedAt: syncedUser.updatedAt
-    });
-
-    // Attach synced user to request
-    (request as AuthenticatedRequest).user = {
-      ...syncedUser,
-      avatar: syncedUser.avatar || undefined
-    };
+    throw new UnauthorizedError('Invalid or expired token');
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       throw error;
@@ -104,6 +73,7 @@ export const optionalAuth = async (
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> => {
+  void _reply;
   try {
     // Extract token from cookies (sso_token)
     const cookies = request.cookies;
@@ -126,6 +96,7 @@ export const requireGroupMember = async (
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> => {
+  void _reply;
   const authenticatedRequest = request as AuthenticatedRequest;
   
   if (!authenticatedRequest.user) {
@@ -150,6 +121,7 @@ export const requireGroupAdmin = async (
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> => {
+  void _reply;
   const authenticatedRequest = request as AuthenticatedRequest;
   
   if (!authenticatedRequest.user) {

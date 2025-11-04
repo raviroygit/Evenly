@@ -270,6 +270,21 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   }, AuthController.deleteCurrentUser);
 
+  // Social Login - Google
+  fastify.post('/social/google', {
+    schema: {
+      description: 'Login/signup via Google ID token',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['idToken'],
+        properties: {
+          idToken: { type: 'string' },
+        },
+      },
+    },
+  }, AuthController.googleLogin);
+
   // Logout
   fastify.post('/logout', {
     schema: {
