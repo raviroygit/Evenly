@@ -27,14 +27,31 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ravi9344.evenly"
+      "bundleIdentifier": "com.evenly.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.ravi9344.evenly"
+      "package": "com.evenly.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "evenly" },
+            { "scheme": "com.evenly.app" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fc0aacb4-e183-4e83-ab94-5f8a8cc427f6"
+      }
     }
   }
 }

@@ -127,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService]);
 
+
   const requestOTP = useCallback(async (email: string) => {
     try {
       const result = await authService.requestOTP(email);

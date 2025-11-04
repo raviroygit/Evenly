@@ -27,6 +27,7 @@ export class AuthService {
     }
   }
 
+
   private async makeRequest(
     endpoint: string,
     options: RequestInit = {},
