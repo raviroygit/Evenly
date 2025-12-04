@@ -12,6 +12,7 @@ export function Navigation() {
   const navItems = [
     { label: 'Features', href: '#features' },
     { label: 'Privacy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
     { label: 'Support', href: '/support' },
   ];
 
