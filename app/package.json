@@ -9,7 +9,9 @@
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "android:apk": "cd android && rm -rf app/.cxx app/build build .gradle && ./gradlew assembleRelease && cd ..",
+    "android:bundle": "cd android && rm -rf app/.cxx app/build build .gradle && ./gradlew bundleRelease && cd .."
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
