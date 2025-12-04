@@ -15,6 +15,10 @@ interface SupportFormData {
   category: 'technical' | 'billing' | 'feature' | 'other';
 }
 
+interface SupportFormErrors extends Partial<SupportFormData> {
+  captcha?: string;
+}
+
 interface SupportFormProps {
   onClose?: () => void;
 }
@@ -22,7 +26,7 @@ interface SupportFormProps {
 export function SupportForm({ onClose }: SupportFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Partial<SupportFormData>>({});
+  const [errors, setErrors] = useState<SupportFormErrors>({});
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [formData, setFormData] = useState<SupportFormData>({
     userName: '',
@@ -42,7 +46,7 @@ export function SupportForm({ onClose }: SupportFormProps) {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<SupportFormData> = {};
+    const newErrors: SupportFormErrors = {};
 
     if (!formData.userName.trim()) {
       newErrors.userName = 'Name is required';
