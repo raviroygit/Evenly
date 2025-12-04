@@ -14,12 +14,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Evenly - Split Bills Effortlessly",
+  title: "EvenlySplit - Split Bills Effortlessly",
   description: "The smartest way to split expenses with friends, roommates, and groups. Track who owes what, settle up instantly, and never lose track of shared costs.",
   keywords: ["expense splitting", "bill splitting", "group expenses", "roommate expenses", "shared costs"],
-  authors: [{ name: "Evenly Team" }],
+  authors: [{ name: "EvenlySplit Team" }],
   openGraph: {
-    title: "Evenly - Split Bills Effortlessly",
+    title: "EvenlySplit - Split Bills Effortlessly",
     description: "The smartest way to split expenses with friends, roommates, and groups.",
     type: "website",
   },

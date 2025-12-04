@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Evenly",
-    "slug": "evenly",
+    "name": "EvenlySplit",
+    "slug": "evenly-split",
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -9,7 +9,7 @@
     "experiments": {
       "tsconfigPaths": true
     },
-    "scheme": "evenly",
+    "scheme": "evenly-split",
     "plugins": [
       "expo-asset",
       "expo-router"
@@ -27,21 +27,21 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.evenly.app"
+      "bundleIdentifier": "com.nxtgenaidev.evenly"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.evenly.app",
+      "package": "com.nxtgenaidev.evenly",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             { "scheme": "evenly" },
-            { "scheme": "com.evenly.app" }
+            { "scheme": "com.nxtgenaidev.evenly" }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }

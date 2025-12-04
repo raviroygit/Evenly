@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Linking, Dimensions, Image } from 'react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,6 +13,7 @@ export const SignupScreen: React.FC = () => {
   const { colors } = useTheme();
   const { signup } = useAuth();
   const router = useRouter();
+  const { width } = Dimensions.get('window');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
@@ -84,9 +86,36 @@ export const SignupScreen: React.FC = () => {
         style={styles.container}
         keyboardVerticalOffset={Platform.OS === 'android' ? -50 : 0}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingHorizontal: width > 600 ? 40 : 20 }]}>
           {/* Header */}
           <View style={styles.header}>
+            <Image 
+              source={require('../../../assets/icon.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.appNameContainer}>
+              <Svg height="36" width="200">
+                <Defs>
+                  <SvgLinearGradient id="gradientSignup" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="1" />
+                    <Stop offset="100%" stopColor="#3B82F6" stopOpacity="1" />
+                  </SvgLinearGradient>
+                </Defs>
+                <SvgText
+                  fill="url(#gradientSignup)"
+                  fontSize="28"
+                  fontWeight="700"
+                  x="50%"
+                  y="28"
+                  textAnchor="middle"
+                  letterSpacing="0.5"
+                  fontFamily="System"
+                >
+                  EvenlySplit
+                </SvgText>
+              </Svg>
+            </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
               {isEmailSent ? 'Check Your Email' : 'Create Account'}
             </Text>
@@ -215,6 +244,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
+  appNameContainer: {
+    marginBottom: 8,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
@@ -225,6 +265,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     textAlign: 'center',
     lineHeight: 24,
+    paddingHorizontal: 20,
   },
   emailDisplay: {
     alignItems: 'center',

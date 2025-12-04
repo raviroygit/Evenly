@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image } from 'react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, TSpan } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,7 +10,7 @@ import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 
 export const LoginScreen: React.FC = () => {
-  const { colors, theme, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const { login, requestOTP } = useAuth();
   const router = useRouter();
   const { width } = Dimensions.get('window');
@@ -131,17 +132,6 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <ScreenContainer>
-      {/* Theme Toggle Button */}
-      <TouchableOpacity 
-        style={[styles.themeToggle, { backgroundColor: colors.card }]}
-        onPress={toggleTheme}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.themeToggleText, { color: colors.foreground }]}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </Text>
-      </TouchableOpacity>
-
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         style={styles.container}
@@ -150,6 +140,33 @@ export const LoginScreen: React.FC = () => {
         <View style={[styles.content, { paddingHorizontal: width > 600 ? 40 : 20 }]}>
           {/* Header */}
           <View style={styles.header}>
+            <Image 
+              source={require('../../../assets/icon.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View style={styles.appNameContainer}>
+              <Svg height="36" width="200">
+                <Defs>
+                  <SvgLinearGradient id="gradientLogin" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="1" />
+                    <Stop offset="100%" stopColor="#3B82F6" stopOpacity="1" />
+                  </SvgLinearGradient>
+                </Defs>
+                <SvgText
+                  fill="url(#gradientLogin)"
+                  fontSize="28"
+                  fontWeight="700"
+                  x="50%"
+                  y="28"
+                  textAnchor="middle"
+                  letterSpacing="0.5"
+                  fontFamily="System"
+                >
+                  EvenlySplit
+                </SvgText>
+              </Svg>
+            </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
               Welcome Back
             </Text>
@@ -274,28 +291,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  themeToggle: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    zIndex: 1000,
-  },
-  themeToggleText: {
-    fontSize: 24,
-  },
   header: {
     alignItems: 'center',
     marginBottom: 32,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
+  appNameContainer: {
+    marginBottom: 8,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,

@@ -20,7 +20,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="About Evenly"
+      title="About EvenlySplit"
       showCloseButton={true}
     >
       <View style={styles.content}>
@@ -29,7 +29,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
             <Text style={styles.logoText}>E</Text>
           </View>
-          <Text style={[styles.appName, { color: colors.foreground }]}>Evenly</Text>
+          <Text style={[styles.appName, { color: colors.foreground }]}>EvenlySplit</Text>
           <Text style={[styles.appTagline, { color: colors.mutedForeground }]}>
             Split expenses, share memories
           </Text>
@@ -40,7 +40,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About the App</Text>
           <TouchableOpacity style={styles.descriptionContainer} activeOpacity={0.7}>
             <Text style={[styles.description, { color: colors.mutedForeground }]}>
-              Evenly is a modern expense splitting application designed to make sharing costs with friends, 
+              EvenlySplit is a modern expense splitting application designed to make sharing costs with friends, 
               family, and colleagues effortless. Track expenses, manage groups, and settle balances with ease.
             </Text>
           </TouchableOpacity>
@@ -158,7 +158,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             Made with ❤️ for better expense sharing
           </Text>
           <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>
-            © 2024 Evenly. All rights reserved.
+            © 2024 EvenlySplit. All rights reserved.
           </Text>
         </View>
       </View>

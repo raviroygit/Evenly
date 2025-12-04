@@ -1,6 +1,6 @@
 // App Constants
 export const APP_CONFIG = {
-  name: 'Evenly',
+  name: 'EvenlySplit',
   version: '1.0.0',
   description: 'Manage your finances with style',
 } as const;
