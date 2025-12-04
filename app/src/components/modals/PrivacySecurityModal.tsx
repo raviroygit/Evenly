@@ -24,7 +24,7 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
   };
 
   const handlePrivacyPolicy = () => {
-    handleOpenLink('https://evenly.app/privacy');
+    handleOpenLink('https://evenlysplit.nxtgenaidev.com/privacy');
   };
 
   const handleTermsOfService = () => {

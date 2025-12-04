@@ -131,9 +131,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           <View style={styles.legalList}>
             <TouchableOpacity 
               style={styles.legalItem}
-              onPress={() => {
-                // Handle privacy policy
-              }}
+              onPress={() => handleOpenLink('https://evenlysplit.nxtgenaidev.com/privacy')}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
                 Privacy Policy
