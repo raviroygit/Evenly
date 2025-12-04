@@ -14,7 +14,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = '@theme_mode';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light'); // Default to light
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark'); // Default to dark
   const systemColorScheme = useColorScheme();
 
   // Get current colors based on theme
@@ -28,13 +28,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
           setTheme(savedTheme as 'light' | 'dark');
         } else {
-          // If no saved theme, use light as default (not system theme)
-          setTheme('light');
+          // If no saved theme, use dark as default (not system theme)
+          setTheme('dark');
         }
       } catch (error) {
         console.log('Error loading theme:', error);
-        // On error, default to light theme
-        setTheme('light');
+        // On error, default to dark theme
+        setTheme('dark');
       }
     };
     loadTheme();

@@ -1,7 +1,7 @@
 // Environment configuration for Evenly app
 export const ENV = {
   // API URLs
-  AUTH_SERVICE_URL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL,
+  // AUTH_SERVICE_URL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL,
   EVENLY_BACKEND_URL: process.env.EXPO_PUBLIC_EVENLY_BACKEND_URL,
   VOAGENTS_API_URL: process.env.EXPO_PUBLIC_VOAGENTS_API_URL,
   VOAGENTS_AGENT_ID: process.env.EXPO_PUBLIC_VOAGENTS_AGENT_ID,
@@ -25,9 +25,9 @@ const isDevelopment = () => {
 const validateEnvironment = () => {
   const missingVars: string[] = [];
   
-  if (!ENV.AUTH_SERVICE_URL) {
-    missingVars.push('EXPO_PUBLIC_AUTH_SERVICE_URL');
-  }
+  // if (!ENV.AUTH_SERVICE_URL) {
+  //   missingVars.push('EXPO_PUBLIC_AUTH_SERVICE_URL');
+  // }
   
   if (!ENV.EVENLY_BACKEND_URL) {
     missingVars.push('EXPO_PUBLIC_EVENLY_BACKEND_URL');
@@ -45,7 +45,6 @@ const validateEnvironment = () => {
     const errorMessage = `Missing required environment variables: ${missingVars.join(', ')}\n\n` +
       `Please create a .env file in the app root with these variables.\n` +
       `Example:\n` +
-      `EXPO_PUBLIC_AUTH_SERVICE_URL=https://your-auth-service.com\n` +
       `EXPO_PUBLIC_EVENLY_BACKEND_URL=https://your-backend.com\n` +
       `EXPO_PUBLIC_VOAGENTS_API_URL=https://your-voagents-api.com\n` +
       `EXPO_PUBLIC_VOAGENTS_AGENT_ID=your-agent-id`;
