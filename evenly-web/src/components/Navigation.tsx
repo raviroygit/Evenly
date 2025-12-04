@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Download, Menu, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 
 export function Navigation() {
@@ -24,11 +25,16 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">E</span>
-            </div>
-            <span className="text-xl font-bold text-foreground">Evenly</span>
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/icon.png"
+              alt="EvenlySplit"
+              width={32}
+              height={32}
+              className="rounded-lg"
+              priority
+            />
+            <span className="text-xl font-bold text-foreground">EvenlySplit</span>
           </Link>
 
           {/* Desktop Navigation */}

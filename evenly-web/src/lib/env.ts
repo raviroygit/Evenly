@@ -8,7 +8,7 @@ export const ENV = {
   RECAPTCHA_ENABLED: process.env.NEXT_PUBLIC_RECAPTCHA_ENABLED === 'true' || false,
   
   // App Configuration
-  APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Evenly',
+  APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'EvenlySplit',
   APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
   
   // Environment

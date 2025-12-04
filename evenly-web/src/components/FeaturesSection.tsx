@@ -144,7 +144,7 @@ export function FeaturesSection() {
         >
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-foreground mb-4">
-              Why choose Evenly?
+              Why choose EvenlySplit?
             </h3>
             <p className="text-muted-foreground text-lg">
               Join thousands of users who have simplified their shared expenses

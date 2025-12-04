@@ -136,7 +136,7 @@ export default function SupportPage() {
             {[
               {
                 question: "How do I reset my password?",
-                answer: "Evenly uses passwordless authentication. Simply request a magic link or OTP to your email address."
+                answer: "EvenlySplit uses passwordless authentication. Simply request a magic link or OTP to your email address."
               },
               {
                 question: "Can I change my email address?",
@@ -155,8 +155,8 @@ export default function SupportPage() {
                 answer: "Go to your group settings and tap 'Invite Members'. Share the invite link or send invitations via email."
               },
               {
-                question: "Can I use Evenly internationally?",
-                answer: "Yes, Evenly supports multiple currencies and works worldwide. Exchange rates are updated in real-time."
+                question: "Can I use EvenlySplit internationally?",
+                answer: "Yes, EvenlySplit supports multiple currencies and works worldwide. Exchange rates are updated in real-time."
               }
             ].map((faq, index) => (
               <motion.div

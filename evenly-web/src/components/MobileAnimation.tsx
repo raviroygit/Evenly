@@ -17,16 +17,16 @@ function SplashScreen() {
         <meshStandardMaterial color="#6366f1" />
       </mesh>
       
-      {/* Evenly Logo */}
+      {/* EvenlySplit Logo */}
       <Text
         position={[0, 0.5, 0.177]}
-        fontSize={0.3}
+        fontSize={0.25}
         color="#ffffff"
         anchorX="center"
         anchorY="middle"
         fontWeight="bold"
       >
-        Evenly
+        EvenlySplit
       </Text>
       
       <Text

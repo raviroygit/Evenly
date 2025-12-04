@@ -43,7 +43,7 @@ export function HeroSection() {
             >
               Split bills{' '}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                evenly
+                EvenlySplit
               </span>
             </motion.h1>
             
