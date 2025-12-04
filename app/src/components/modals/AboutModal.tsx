@@ -139,9 +139,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.legalItem}
-              onPress={() => {
-                // Handle terms of service
-              }}
+              onPress={() => handleOpenLink('https://evenlysplit.nxtgenaidev.com/terms')}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
                 Terms of Service
