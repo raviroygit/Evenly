@@ -60,7 +60,8 @@ const TabBarButton: React.FC<TabBarButtonProps> = (props) => {
       <View style={styles.iconContainer}>
         <Animated.View style={[animatedIconStyle]}>
           {icons[routeName as keyof typeof icons]({
-            color
+            color,
+            isFocused
           })}
         </Animated.View>
         

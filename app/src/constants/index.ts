@@ -69,6 +69,12 @@ export const TAB_CONFIG = [
     drawable: 'ic_menu_share',
   },
   {
+    name: 'books',
+    title: 'Khata',
+    icon: 'book.fill',
+    drawable: 'ic_menu_book',
+  },
+  {
     name: 'profile',
     title: 'Profile',
     icon: 'person.circle.fill',

@@ -40,6 +40,12 @@ function TabLayoutContent() {
               }}
             />
             <Tabs.Screen
+              name="books"
+              options={{
+                title: "Khata"
+              }}
+            />
+            <Tabs.Screen
               name="profile"
               options={{
                 title: "Profile"
@@ -61,6 +67,11 @@ function TabLayoutContent() {
             <NativeTabs.Trigger name="groups">
               <Label>Groups</Label>
               <Icon sf="person.3.fill" />
+            </NativeTabs.Trigger>
+            
+            <NativeTabs.Trigger name="books">
+              <Label>Khata</Label>
+              <Icon sf="book.fill" />
             </NativeTabs.Trigger>
             
             <NativeTabs.Trigger name="profile">
