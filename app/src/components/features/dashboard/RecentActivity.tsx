@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { SkeletonActivityList } from '../../ui/SkeletonLoader';
@@ -22,12 +22,14 @@ interface RecentActivityProps {
   onViewAll?: () => void;
   refreshing?: boolean;
   onRefresh?: () => void;
+  onRefreshRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export const RecentActivity: React.FC<RecentActivityProps> = ({ 
   onViewAll,
   refreshing = false,
-  onRefresh
+  onRefresh,
+  onRefreshRef
 }) => {
   const {
     activities,
@@ -35,7 +37,29 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
     loadingMore,
     hasMore,
     loadMore,
+    refresh: refreshActivities,
   } = useActivitiesInfinite();
+  
+  // Expose refresh function to parent component
+  useEffect(() => {
+    if (onRefreshRef) {
+      onRefreshRef.current = refreshActivities;
+    }
+    return () => {
+      if (onRefreshRef) {
+        onRefreshRef.current = null;
+      }
+    };
+  }, [refreshActivities, onRefreshRef]);
+  
+  // Log when activities change to debug
+  useEffect(() => {
+    console.log('[RecentActivity] Activities changed:', {
+      count: activities.length,
+      activities: activities.map(a => ({ id: a.id, title: a.title }))
+    });
+  }, [activities]);
+  
   const { colors, theme } = useTheme();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
@@ -232,6 +256,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         ) : (
           <FlatList
             data={activities}
+            extraData={`${activities.length}-${activities.map(a => a.id).join(',')}`} // Force re-render when activities change
             renderItem={({ item: activity }) => (
               <ActivityItemComponent key={activity.id} activity={activity} />
             )}
@@ -241,7 +266,16 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             style={styles.activitiesList}
             contentContainerStyle={styles.activitiesContainer}
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={async () => {
+              // Call parent's onRefresh if provided, which will refresh all data
+              // Otherwise use local refresh
+              if (onRefresh) {
+                await onRefresh();
+              } else {
+                // If no parent refresh, just refresh activities
+                refreshActivities();
+              }
+            }}
             onEndReached={() => {
               if (hasMore && !loadingMore) {
                 loadMore();
@@ -264,11 +298,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             maxToRenderPerBatch={10}
             windowSize={10}
             initialNumToRender={5}
-            getItemLayout={(data, index) => ({
-              length: 100, // Approximate height of each item
-              offset: 100 * index,
-              index,
-            })}
+            // Removed getItemLayout to allow dynamic heights and better updates
           />
         )}
       </GlassListCard>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, FlatList, Alert } from 'react-native';
 import { useExpensesInfinite } from '../../hooks/useExpensesInfinite';
 import { useGroups } from '../../hooks/useGroups';
 import { useAuth } from '../../contexts/AuthContext';
@@ -25,6 +25,8 @@ export const ExpensesScreen: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<EnhancedExpense | null>(null);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [isUpdatingExpense, setIsUpdatingExpense] = useState(false);
   const { setActiveSwipeId } = useSwipeAction();
 
   // Note: Removed useEffect to prevent infinite loops
@@ -120,9 +122,10 @@ export const ExpensesScreen: React.FC = () => {
     try {
       // Check if user is authenticated
       if (!user) {
-        Alert.alert('Error', 'You must be logged in to add expenses');
         return;
       }
+      
+      setIsAddingExpense(true);
       
       // Convert simplified expense data to full expense data
       // Backend will automatically handle user information from sso_token
@@ -139,18 +142,19 @@ export const ExpensesScreen: React.FC = () => {
       };
       
       await addExpense(fullExpenseData);
+      setShowAddModal(false); // Close modal immediately
       
       // Refresh both expenses and groups to show the new expense
-      console.log('Expense added successfully, refreshing data...');
+      console.log('[ExpensesScreen] Expense added successfully, refreshing data...');
       await Promise.all([
         expensesRefresh(),
         refreshGroups ? refreshGroups() : Promise.resolve()
       ]);
-      
-      Alert.alert('Success', 'Expense added successfully!');
-      setShowAddModal(false); // Close modal after success
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add expense');
+      console.error('[ExpensesScreen] Error adding expense:', error);
+      // Silent error - user can see it in the UI state
+    } finally {
+      setIsAddingExpense(false);
     }
   };
 
@@ -160,11 +164,16 @@ export const ExpensesScreen: React.FC = () => {
     date: string;
   }) => {
     try {
+      setIsUpdatingExpense(true);
       await updateExpense(expenseId, expenseData);
-      Alert.alert('Success', 'Expense updated successfully!');
       setEditingExpense(null);
+      // Silently refresh to show updated expense
+      await expensesRefresh();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update expense');
+      console.error('[ExpensesScreen] Error updating expense:', error);
+      // Silent error - user can see it in the UI state
+    } finally {
+      setIsUpdatingExpense(false);
     }
   };
 
@@ -183,9 +192,11 @@ export const ExpensesScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteExpense(expenseId);
-              Alert.alert('Success', 'Expense deleted successfully!');
+              // Silently refresh to show updated list
+              await expensesRefresh();
             } catch (error) {
-              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to delete expense');
+              console.error('Error deleting expense:', error);
+              // Silent error - user can see it in the UI state
             }
           },
         },
@@ -211,8 +222,8 @@ export const ExpensesScreen: React.FC = () => {
     );
   }
 
-  // Show skeleton loading on initial load OR during refresh
-  const showSkeletonLoading = expensesLoading || refreshing;
+  // Show skeleton loading on initial load OR during refresh OR when adding/updating expense
+  const showSkeletonLoading = expensesLoading || refreshing || isAddingExpense || isUpdatingExpense;
 
   // Create a map of group IDs to group names for quick lookup
   const groupMap = new Map(groups.map(group => [group.id, group.name]));
@@ -266,8 +277,11 @@ export const ExpensesScreen: React.FC = () => {
     <>
       <ScreenContainer scrollable={false}>
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          {showSkeletonLoading ? (
-            <SkeletonExpenseList count={5} />
+          {showSkeletonLoading && !refreshing ? (
+            <>
+              <SkeletonExpenseSummary />
+              <SkeletonExpenseList count={5} />
+            </>
           ) : expensesError ? (
             <Text style={[styles.errorText, { color: colors.destructive }]}>{expensesError}</Text>
           ) : (

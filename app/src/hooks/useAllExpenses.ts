@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Expense, EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { useGroups } from './useGroups';
+import { emitExpenseCreated, emitExpensesRefreshNeeded, groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 
 export const useAllExpenses = () => {
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
@@ -15,18 +16,72 @@ export const useAllExpenses = () => {
     } else if (groups.length > 0) {
       loadAllExpenses();
     } else {
+      setExpenses([]);
       setLoading(false);
     }
-  }, [groups, groupsLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, groupsLoading]); // Depend on groups array to reload when groups change
+
+  // Listen for expense refresh events from other screens
+  useEffect(() => {
+    const handleExpensesRefreshNeeded = async () => {
+      console.log('[useAllExpenses] Expenses refresh needed event received, refreshing...', {
+        groupsCount: groups.length,
+        groupsLoading
+      });
+      // Wait for groups to be loaded if they're still loading
+      if (groupsLoading) {
+        console.log('[useAllExpenses] Groups are loading, waiting...');
+        let attempts = 0;
+        while (groupsLoading && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+      }
+      // Always refresh, even if groups array is empty (groups might be loading)
+      // The loadAllExpenses function will handle empty groups gracefully
+      await loadAllExpenses();
+      console.log('[useAllExpenses] Expenses refresh completed', {
+        expensesCount: expenses.length
+      });
+    };
+
+    groupEvents.on(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
+    groupEvents.on(GROUP_EVENTS.EXPENSE_CREATED, handleExpensesRefreshNeeded);
+    groupEvents.on(GROUP_EVENTS.EXPENSE_UPDATED, handleExpensesRefreshNeeded);
+    groupEvents.on(GROUP_EVENTS.EXPENSE_DELETED, handleExpensesRefreshNeeded);
+
+    return () => {
+      groupEvents.off(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
+      groupEvents.off(GROUP_EVENTS.EXPENSE_CREATED, handleExpensesRefreshNeeded);
+      groupEvents.off(GROUP_EVENTS.EXPENSE_UPDATED, handleExpensesRefreshNeeded);
+      groupEvents.off(GROUP_EVENTS.EXPENSE_DELETED, handleExpensesRefreshNeeded);
+    };
+  }, [groups, groupsLoading, expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAllExpenses = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch expenses from all groups
-      const allExpensesPromises = groups.map(group => 
-        EvenlyBackendService.getGroupExpenses(group.id)
+      // Use the latest groups from the hook
+      const currentGroups = groups;
+      
+      console.log('[useAllExpenses] loadAllExpenses called', {
+        groupsCount: currentGroups.length,
+        groupsLoading
+      });
+      
+      if (currentGroups.length === 0) {
+        console.log('[useAllExpenses] No groups, setting empty expenses');
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch expenses from all groups - force fresh data
+      const allExpensesPromises = currentGroups.map(group => 
+        EvenlyBackendService.getGroupExpenses(group.id, { cacheTTLMs: 0 })
       );
       
       const allExpensesResults = await Promise.all(allExpensesPromises);
@@ -34,7 +89,13 @@ export const useAllExpenses = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
-      setExpenses(allExpenses);
+      console.log('[useAllExpenses] Expenses loaded', {
+        totalExpenses: allExpenses.length,
+        expenses: allExpenses.map(e => ({ id: e.id, title: e.title || e.description }))
+      });
+      
+      // Force update by creating new array reference
+      setExpenses(() => [...allExpenses]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
       console.error('[useAllExpenses] Error loading expenses:', err);
@@ -96,7 +157,10 @@ export const useAllExpenses = () => {
     try {
       setError(null);
       const newExpense = await EvenlyBackendService.createExpense(expenseData);
+      // Force new array reference
       setExpenses(prev => [newExpense, ...prev]);
+      // Emit event to notify other screens
+      emitExpenseCreated(newExpense);
       return newExpense;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create expense';

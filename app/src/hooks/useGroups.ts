@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Group } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
+import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 
 export const useGroups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -17,14 +18,28 @@ export const useGroups = () => {
         setLoading(false);
       }
     });
+    
+    // Listen for group events to refresh when groups are created/updated/deleted from other screens
+    const handleGroupsRefreshNeeded = () => {
+      console.log('[useGroups] Groups refresh needed event received, refreshing...');
+      loadGroups();
+    };
+    
+    groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+    
+    return () => {
+      groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+    };
   }, []);
 
   const loadGroups = async () => {
     try {
       setLoading(true);
       setError(null);
-      const groupsData = await EvenlyBackendService.getGroups();
-      setGroups(groupsData);
+      // Force fresh data by not using cache
+      const groupsData = await EvenlyBackendService.getGroups({ cacheTTLMs: 0 });
+      // Force update by replacing the entire array - this ensures React detects the change
+      setGroups(() => [...groupsData]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load groups';
       setError(errorMessage);

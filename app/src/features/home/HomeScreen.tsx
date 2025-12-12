@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useGroups } from '../../hooks/useGroups';
+import { useAllExpenses } from '../../hooks/useAllExpenses';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
+import { groupEvents, GROUP_EVENTS, emitGroupCreated, emitExpenseCreated } from '../../utils/groupEvents';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { SectionHeader } from '../../components/common/SectionHeader';
@@ -18,18 +20,112 @@ export const HomeScreen: React.FC = () => {
   const { colors, theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const { stats, loading: dashboardLoading, refresh: refreshDashboard } = useDashboard();
-  const { createGroup } = useGroups();
+  const { createGroup, refreshGroups } = useGroups();
+  const { refreshExpenses } = useAllExpenses();
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const activitiesRefreshRef = useRef<(() => void) | null>(null);
 
   // Note: Removed useFocusEffect to prevent infinite loops
   // Dashboard and groups will refresh via pull-to-refresh
 
+  // Listen for group events to refresh when groups are created/updated from other screens
+  useEffect(() => {
+    const handleGroupsRefreshNeeded = async () => {
+      console.log('[HomeScreen] Groups refresh needed event received, refreshing...');
+      try {
+        // Refresh groups first
+        if (refreshGroups) {
+          await refreshGroups();
+        }
+        // Wait for state to propagate
+        await new Promise(resolve => setTimeout(resolve, 200));
+        // Refresh expenses
+        if (refreshExpenses) {
+          await refreshExpenses();
+        }
+        // Wait for state to propagate
+        await new Promise(resolve => setTimeout(resolve, 200));
+        // Refresh dashboard
+        await refreshDashboard();
+        // Wait for all state updates
+        await new Promise(resolve => setTimeout(resolve, 300));
+        // Refresh activities
+        if (activitiesRefreshRef.current) {
+          activitiesRefreshRef.current();
+        }
+      } catch (error) {
+        console.error('[HomeScreen] Error refreshing on event:', error);
+      }
+    };
+    
+    // Listen for expense events to refresh when expenses are created/updated from other screens
+    const handleExpensesRefreshNeeded = async () => {
+      console.log('[HomeScreen] Expenses refresh needed event received, refreshing...');
+      try {
+        // Refresh expenses first - this will trigger useAllExpenses to reload
+        if (refreshExpenses) {
+          await refreshExpenses();
+        }
+        // Wait longer for expenses to fully load and state to propagate
+        await new Promise(resolve => setTimeout(resolve, 800));
+        // Refresh dashboard
+        await refreshDashboard();
+        // Wait for all state updates
+        await new Promise(resolve => setTimeout(resolve, 500));
+        // Refresh activities to show the new expense activity - now async
+        if (activitiesRefreshRef.current) {
+          console.log('[HomeScreen] Calling activities refresh after expense event');
+          await activitiesRefreshRef.current();
+        }
+      } catch (error) {
+        console.error('[HomeScreen] Error refreshing on expense event:', error);
+      }
+    };
+    
+    groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+    groupEvents.on(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
+    
+    return () => {
+      groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+      groupEvents.off(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
+    };
+  }, [refreshGroups, refreshExpenses, refreshDashboard]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Refresh groups first - this will force fresh data from server
+      if (refreshGroups) {
+        await refreshGroups();
+      }
+      
+      // Wait for groups state to propagate (increased wait time)
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Refresh expenses after groups are updated
+      if (refreshExpenses) {
+        await refreshExpenses();
+      }
+      
+      // Wait for expenses state to propagate (increased wait time)
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Refresh dashboard after groups and expenses are updated
       await refreshDashboard();
+      
+      // Wait for all state updates to complete (increased wait time)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Force refresh activities - this will regenerate from fresh data
+      // The refresh function now directly uses current groups/expenses
+      if (activitiesRefreshRef.current) {
+        console.log('[HomeScreen] Calling activities refresh after data refresh');
+        activitiesRefreshRef.current();
+      }
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -44,10 +140,40 @@ export const HomeScreen: React.FC = () => {
     defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
   }) => {
     try {
-      await createGroup(groupData);
+      setIsCreatingGroup(true);
+      const newGroup = await createGroup(groupData);
+      // Emit event to notify other screens (though we're already on HomeScreen)
+      emitGroupCreated(newGroup);
       setShowCreateGroupModal(false);
+      
+      // Force refresh groups first - this will invalidate cache and reload from server
+      if (refreshGroups) {
+        await refreshGroups();
+      }
+      
+      // Wait a bit for state to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Refresh expenses
+      if (refreshExpenses) {
+        await refreshExpenses();
+      }
+      
+      // Refresh dashboard after groups are refreshed
+      await refreshDashboard();
+      
+      // Wait a bit more for all state updates
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Refresh activities to show the new group activity
+      if (activitiesRefreshRef.current) {
+        activitiesRefreshRef.current();
+      }
     } catch (error) {
       console.error('Error creating group:', error);
+      // Silent error - user can see it in the UI state
+    } finally {
+      setIsCreatingGroup(false);
     }
   };
 
@@ -60,9 +186,10 @@ export const HomeScreen: React.FC = () => {
     try {
       // Check if user is authenticated
       if (!user) {
-        Alert.alert('Error', 'You must be logged in to add expenses');
         return;
       }
+      
+      setIsAddingExpense(true);
       
       // Convert simplified expense data to full expense data
       const fullExpenseData = {
@@ -76,15 +203,33 @@ export const HomeScreen: React.FC = () => {
         description: expenseData.title,
       };
       
-      await EvenlyBackendService.createExpense(fullExpenseData);
-      
-      Alert.alert('Success', 'Expense added successfully!');
+      const newExpense = await EvenlyBackendService.createExpense(fullExpenseData);
+      // Emit event to notify other screens
+      emitExpenseCreated(newExpense);
       setShowAddExpenseModal(false);
       
-      // Refresh dashboard data to show updated stats
+      // Refresh all data to show the new expense - wait for all to complete
+      await Promise.all([
+        refreshGroups ? refreshGroups() : Promise.resolve(),
+        refreshExpenses ? refreshExpenses() : Promise.resolve(),
+      ]);
+      
+      // Refresh dashboard after expenses are refreshed
       await refreshDashboard();
+      
+      // Wait for all state updates
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Refresh activities to show the new expense activity
+      if (activitiesRefreshRef.current) {
+        console.log('[HomeScreen] Calling activities refresh after expense creation');
+        activitiesRefreshRef.current();
+      }
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add expense');
+      console.error('Error adding expense:', error);
+      // Silent error - user can see it in the UI state
+    } finally {
+      setIsAddingExpense(false);
     }
   };
 
@@ -201,7 +346,7 @@ export const HomeScreen: React.FC = () => {
         </ResponsiveLiquidGlassCard>
 
         {/* Dashboard Stats */}
-        <DashboardStats stats={dashboardStats} loading={dashboardLoading} />
+        <DashboardStats stats={dashboardStats} loading={dashboardLoading || isCreatingGroup || isAddingExpense} />
 
         {/* Recent Activity */}
         <RecentActivity
@@ -210,6 +355,7 @@ export const HomeScreen: React.FC = () => {
           }}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          onRefreshRef={activitiesRefreshRef}
         />
       </View>
 
@@ -244,7 +390,8 @@ export const HomeScreen: React.FC = () => {
             icon: '💰',
             onPress: () => {
               if (stats.totalGroups === 0) {
-                Alert.alert('No Groups', 'Please create a group first before adding expenses.');
+                // Silent - just don't open the modal
+                return;
               } else {
                 setShowAddExpenseModal(true);
               }

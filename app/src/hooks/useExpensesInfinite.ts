@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { useGroups } from './useGroups';
-import { emitExpenseCreated } from '../utils/groupEvents';
+import { emitExpenseCreated, emitExpenseUpdated, emitExpenseDeleted } from '../utils/groupEvents';
 
 export const useExpensesInfinite = () => {
   const { groups, loading: groupsLoading } = useGroups();
@@ -168,6 +168,8 @@ export const useExpensesInfinite = () => {
     try {
       const updatedExpense = await EvenlyBackendService.updateExpense(expenseId, expenseData);
       setExpenses(prev => prev.map(expense => expense.id === expenseId ? updatedExpense : expense));
+      // Emit event to notify other screens
+      emitExpenseUpdated(updatedExpense);
       return updatedExpense;
     } catch (error) {
       throw error;
@@ -178,6 +180,8 @@ export const useExpensesInfinite = () => {
     try {
       await EvenlyBackendService.deleteExpense(expenseId);
       setExpenses(prev => prev.filter(expense => expense.id !== expenseId));
+      // Emit event to notify other screens
+      emitExpenseDeleted(expenseId);
     } catch (error) {
       throw error;
     }

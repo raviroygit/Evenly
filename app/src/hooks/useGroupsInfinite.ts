@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Group } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { useInfiniteScroll } from './useInfiniteScroll';
+import { emitGroupCreated, emitGroupUpdated } from '../utils/groupEvents';
 
 export const useGroupsInfinite = () => {
   const fetchGroups = useCallback(async (page: number, pageSize: number) => {
@@ -52,6 +53,8 @@ export const useGroupsInfinite = () => {
       const newGroup = await EvenlyBackendService.createGroup(groupData);
       // Add the new group to the beginning of the list
       setData([newGroup, ...groups]);
+      // Emit event to notify other screens (like HomeScreen)
+      emitGroupCreated(newGroup);
       return newGroup;
     } catch (error) {
       throw error;
@@ -67,6 +70,8 @@ export const useGroupsInfinite = () => {
       const updatedGroup = await EvenlyBackendService.updateGroup(groupId, groupData);
       // Update the group in the list
       setData(groups.map(group => group.id === groupId ? updatedGroup : group));
+      // Emit event to notify other screens
+      emitGroupUpdated(updatedGroup);
       return updatedGroup;
     } catch (error) {
       throw error;

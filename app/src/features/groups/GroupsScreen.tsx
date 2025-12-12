@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, Platform, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, Platform, TouchableOpacity, Alert } from 'react-native';
 import { useGroupsInfinite } from '../../hooks/useGroupsInfinite';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { GroupItem } from '../../components/features/groups/GroupItem';
@@ -17,7 +17,7 @@ import { useApiError } from '../../hooks/useApiError';
 import ErrorHandler from '../../utils/ErrorHandler';
 import { Group } from '../../types';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
-import { emitGroupDeleted } from '../../utils/groupEvents';
+import { emitGroupDeleted, emitGroupCreated, emitGroupUpdated } from '../../utils/groupEvents';
 
 export const GroupsScreen: React.FC = () => {
   const { 
@@ -92,10 +92,14 @@ export const GroupsScreen: React.FC = () => {
     defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
   }) => {
     try {
-      await createGroup(groupData);
-      Alert.alert('Success', 'Group created successfully!');
+      const newGroup = await createGroup(groupData);
+      // Emit event to notify other screens
+      emitGroupCreated(newGroup);
+      // Silently refresh to show the new group
+      await refresh();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create group');
+      console.error('Error creating group:', err);
+      // Silent error - user can see it in the UI state
     }
   };
 
@@ -105,11 +109,15 @@ export const GroupsScreen: React.FC = () => {
     defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
   }) => {
     try {
-      await updateGroup(groupId, groupData);
-      Alert.alert('Success', 'Group updated successfully!');
+      const updatedGroup = await updateGroup(groupId, groupData);
+      // Emit event to notify other screens
+      emitGroupUpdated(updatedGroup);
       setEditingGroup(null);
+      // Silently refresh to show updated group
+      await refresh();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to update group');
+      console.error('Error updating group:', err);
+      // Silent error - user can see it in the UI state
     }
   };
 
@@ -128,13 +136,13 @@ export const GroupsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deleteGroup(groupId);
-              Alert.alert('Success', 'Group and all related expenses deleted successfully!');
               // Refresh groups to update the list
               await refresh();
               // Emit event to notify other screens
               emitGroupDeleted(groupId);
             } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete group');
+              console.error('Error deleting group:', err);
+              // Silent error - user can see it in the UI state
             }
           },
         },
