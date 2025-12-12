@@ -7,16 +7,16 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useGroups } from '../../hooks/useGroups';
 import { useAllExpenses } from '../../hooks/useAllExpenses';
-import { ExpenseItem } from '../features/expenses/ExpenseItem';
 import { SkeletonExpenseList } from '../ui/SkeletonLoader';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
-import { MemberInfoModal } from './MemberInfoModal';
-import { GroupMember } from '../../types';
+import { MembersModal } from './MembersModal';
 
 interface GroupInfoModalProps {
   visible: boolean;
@@ -29,57 +29,35 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
   onClose,
   groupId,
 }) => {
+  const router = useRouter();
   const { colors, theme } = useTheme();
   const { groups, loading: groupsLoading } = useGroups();
-  const { expenses, loading: expensesLoading } = useAllExpenses();
-  const [members, setMembers] = useState<GroupMember[]>([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const { loading: expensesLoading } = useAllExpenses();
   const [creator, setCreator] = useState<{ name: string; email: string } | null>(null);
   const [loadingCreator, setLoadingCreator] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string } | null>(null);
-  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  
+  // Get screen width for responsive layout
+  const screenWidth = Dimensions.get('window').width;
+  const isLargeScreen = screenWidth >= 600; // Tablet or large phone threshold
 
   // Find the specific group
   const group = groups.find(g => g.id === groupId);
 
-  // Filter expenses for this group
-  const groupExpenses = expenses.filter(expense => expense.groupId === groupId);
-
   useEffect(() => {
     if (visible && groupId) {
-      loadMembers();
       loadCreator();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, groupId]);
 
-  const loadMembers = async () => {
-    if (!groupId) return;
-    
-    try {
-      setLoadingMembers(true);
-      const membersData = await EvenlyBackendService.getGroupMembers(groupId);
-      setMembers(membersData.map((m: any) => ({
-        id: m.id || m.userId,
-        name: m.user?.name || m.name || 'Unknown',
-        email: m.user?.email || m.email || 'Unknown',
-        avatar: m.user?.avatar || m.avatar,
-        role: m.role || 'member',
-      })));
-    } catch (error) {
-      console.error('Error loading group members:', error);
-    } finally {
-      setLoadingMembers(false);
-    }
-  };
-
   const loadCreator = async () => {
-    if (!group?.createdBy) return;
+    if (!group?.createdBy || !groupId) return;
     
     try {
       setLoadingCreator(true);
       // Try to find creator in members first
-      const membersData = await EvenlyBackendService.getGroupMembers(groupId!);
+      const membersData = await EvenlyBackendService.getGroupMembers(groupId);
       const creatorMember = membersData.find((m: any) => (m.userId || m.user?.id) === group.createdBy);
       
       if (creatorMember) {
@@ -109,12 +87,15 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
     onClose();
   };
 
-  const handleMemberPress = (member: GroupMember) => {
-    setSelectedMember({
-      name: member.name,
-      email: member.email,
-    });
-    setShowMemberModal(true);
+  const handleViewMembers = () => {
+    setShowMembersModal(true);
+  };
+
+  const handleViewExpenses = () => {
+    if (groupId) {
+      onClose(); // Close the GroupInfoModal first
+      router.push(`/tabs/groups/${groupId}` as any);
+    }
   };
 
   if (!visible || !groupId) {
@@ -255,86 +236,35 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                       </View>
                     </View>
 
-                    {/* Members List */}
+                    {/* Action Buttons */}
                     <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                        Members ({members.length})
-                      </Text>
-                      {loadingMembers ? (
-                        <View style={styles.emptyState}>
-                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                            Loading members...
+                      <View style={[
+                        styles.buttonsContainer,
+                        isLargeScreen ? styles.buttonsRow : styles.buttonsColumn
+                      ]}>
+                        <TouchableOpacity
+                          style={[
+                            styles.viewButton,
+                            isLargeScreen && styles.viewButtonRow
+                          ]}
+                          onPress={handleViewMembers}
+                        >
+                          <Text style={[styles.viewButtonText, { color: colors.primary }]}>
+                            View members
                           </Text>
-                        </View>
-                      ) : members.length === 0 ? (
-                        <View style={styles.emptyState}>
-                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                            No members found.
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.viewButton,
+                            isLargeScreen && styles.viewButtonRow
+                          ]}
+                          onPress={handleViewExpenses}
+                        >
+                          <Text style={[styles.viewButtonText, { color: colors.primary }]}>
+                            View group expenses
                           </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.membersList}>
-                          {members.map((member) => (
-                            <View
-                              key={member.id}
-                              style={[
-                                styles.memberRow,
-                                {
-                                  backgroundColor: theme === 'dark' 
-                                    ? '#1A1A1A' 
-                                    : '#F8F8F8',
-                                  borderColor: theme === 'dark' 
-                                    ? '#333333' 
-                                    : '#E0E0E0',
-                                },
-                              ]}
-                            >
-                              <View style={styles.memberInfo}>
-                                <View style={[styles.memberAvatar, { backgroundColor: colors.primary + '20' }]}>
-                                  <Text style={[styles.memberAvatarText, { color: colors.primary }]}>
-                                    {member.name.charAt(0).toUpperCase()}
-                                  </Text>
-                                </View>
-                                <View style={styles.memberDetails}>
-                                  <Text style={[styles.memberName, { color: colors.foreground }]}>
-                                    {member.name}
-                                  </Text>
-                                  <Text style={[styles.memberRole, { color: colors.mutedForeground }]}>
-                                    {member.role === 'admin' ? 'Admin' : 'Member'}
-                                  </Text>
-                                </View>
-                              </View>
-                              <TouchableOpacity
-                                style={styles.memberEyeButton}
-                                onPress={() => handleMemberPress(member)}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              >
-                                <Ionicons name="eye-outline" size={20} color={colors.foreground} />
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Group Expenses */}
-                    <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                        Group Expenses ({groupExpenses.length})
-                      </Text>
-                      {groupExpenses.length === 0 ? (
-                        <View style={styles.emptyState}>
-                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                            No expenses in this group yet.
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.expensesList}>
-                          {groupExpenses.map((expense) => (
-                            <ExpenseItem key={expense.id} item={expense} />
-                          ))}
-                        </View>
-                      )}
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </>
                 ) : (
@@ -349,15 +279,12 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
           </View>
         </View>
       </View>
-
-      {/* Member Info Modal */}
-      <MemberInfoModal
-        visible={showMemberModal}
-        onClose={() => {
-          setShowMemberModal(false);
-          setSelectedMember(null);
-        }}
-        member={selectedMember}
+      
+      {/* Members Modal */}
+      <MembersModal
+        visible={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+        groupId={groupId}
       />
     </Modal>
   );
@@ -513,5 +440,31 @@ const styles = StyleSheet.create({
   },
   memberEyeButton: {
     padding: 8,
+  },
+  buttonsContainer: {
+    gap: 12,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  buttonsColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  viewButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    minWidth: 160,
+  },
+  viewButtonRow: {
+    flex: 1,
+    maxWidth: 200,
+  },
+  viewButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
