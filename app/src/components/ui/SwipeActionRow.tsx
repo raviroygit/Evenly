@@ -27,6 +27,7 @@ interface SwipeActionRowProps {
   disabled?: boolean;
   swipeId: string; // Unique identifier for this swipe row
   onActionExecuted?: () => void; // Callback after action is executed
+  onPress?: () => void; // Callback when content is pressed (when swipe is closed)
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -38,6 +39,7 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   disabled = false,
   swipeId,
   onActionExecuted,
+  onPress,
 }) => {
   const { colors } = useTheme();
   const { activeSwipeId, setActiveSwipeId } = useSwipeAction();
@@ -115,7 +117,8 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
       }
     });
 
-  // Tap gesture to close when tapping on the main content
+  // Tap gesture to close when tapping on the main content (when open)
+  // or trigger onPress when closed
   const tapGesture = Gesture.Tap()
     .onEnd(() => {
       if (isOpen) {
@@ -123,11 +126,15 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
         translateX.value = withSpring(0);
         runOnJS(setIsOpen)(false);
         runOnJS(setActiveSwipeId)(null);
+      } else if (onPress) {
+        // When closed, trigger onPress if provided
+        console.log('Tap gesture triggered - calling onPress');
+        runOnJS(onPress)();
       }
     })
-    .enabled(isOpen); // Only enable tap gesture when swipe actions are open
+    .enabled(true); // Always enabled
 
-  // Combined gesture - use Simultaneous for better tap detection
+  // Combined gesture - use Simultaneous to allow both gestures
   const combinedGesture = Gesture.Simultaneous(panGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => {

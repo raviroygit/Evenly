@@ -171,13 +171,16 @@ export const SkeletonExpenseItem: React.FC = () => {
 };
 
 // Skeleton for expense list
-export const SkeletonExpenseList: React.FC<{ count?: number }> = ({ count = 5 }) => (
-  <View style={styles.expenseList}>
-    {Array.from({ length: count }).map((_, index) => (
-      <SkeletonExpenseItem key={index} />
-    ))}
-  </View>
-);
+export const SkeletonExpenseList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.expenseList, { backgroundColor: colors.background }]}>
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonExpenseItem key={index} />
+      ))}
+    </View>
+  );
+};
 
 // Skeleton for group items - EXACT match to GroupItem structure
 export const SkeletonGroupItem: React.FC = () => {

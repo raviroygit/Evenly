@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatHumanDateTime } from '../../../utils/date';
@@ -27,6 +27,23 @@ export const GroupItem: React.FC<GroupItemProps> = ({
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
+
+  const handlePress = () => {
+    console.log('GroupItem handlePress called for group:', group.name, group.id);
+    if (onPress) {
+      console.log('Calling custom onPress handler');
+      onPress();
+    } else {
+      // Navigate to group details screen
+      console.log('Navigating to group details:', `/tabs/groups/${group.id}`);
+      try {
+        router.push(`/tabs/groups/${group.id}` as any);
+      } catch (error) {
+        console.error('Navigation error:', error);
+      }
+    }
+  };
 
   // Check if current user is the creator of the group
   const isCreator = user && group.createdBy === user.id;
@@ -109,9 +126,6 @@ export const GroupItem: React.FC<GroupItemProps> = ({
         large: 16,
         tablet: 18,
       }}
-      glassEffectStyle="thick"
-      isInteractive={true}
-      onPress={onPress}
       style={styles.groupCardOverrides}
     >
       <View style={styles.header}>
@@ -156,13 +170,22 @@ export const GroupItem: React.FC<GroupItemProps> = ({
         actions={swipeActions} 
         swipeId={`group-${group.id}`}
         onActionExecuted={onActionExecuted}
+        onPress={handlePress}
       >
         {content}
       </SwipeActionRow>
     );
   }
 
-  return content;
+  // If no swipe actions, wrap in TouchableOpacity
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={handlePress}
+    >
+      {content}
+    </TouchableOpacity>
+  );
 };
 
 const styles = StyleSheet.create({

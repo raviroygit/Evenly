@@ -14,6 +14,9 @@ import { useGroups } from '../../hooks/useGroups';
 import { useAllExpenses } from '../../hooks/useAllExpenses';
 import { ExpenseItem } from '../features/expenses/ExpenseItem';
 import { SkeletonExpenseList } from '../ui/SkeletonLoader';
+import { EvenlyBackendService } from '../../services/EvenlyBackendService';
+import { MemberInfoModal } from './MemberInfoModal';
+import { GroupMember } from '../../types';
 
 interface GroupInfoModalProps {
   visible: boolean;
@@ -29,6 +32,12 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
   const { colors, theme } = useTheme();
   const { groups, loading: groupsLoading } = useGroups();
   const { expenses, loading: expensesLoading } = useAllExpenses();
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [creator, setCreator] = useState<{ name: string; email: string } | null>(null);
+  const [loadingCreator, setLoadingCreator] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string } | null>(null);
+  const [showMemberModal, setShowMemberModal] = useState(false);
 
   // Find the specific group
   const group = groups.find(g => g.id === groupId);
@@ -36,8 +45,76 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
   // Filter expenses for this group
   const groupExpenses = expenses.filter(expense => expense.groupId === groupId);
 
+  useEffect(() => {
+    if (visible && groupId) {
+      loadMembers();
+      loadCreator();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, groupId]);
+
+  const loadMembers = async () => {
+    if (!groupId) return;
+    
+    try {
+      setLoadingMembers(true);
+      const membersData = await EvenlyBackendService.getGroupMembers(groupId);
+      setMembers(membersData.map((m: any) => ({
+        id: m.id || m.userId,
+        name: m.user?.name || m.name || 'Unknown',
+        email: m.user?.email || m.email || 'Unknown',
+        avatar: m.user?.avatar || m.avatar,
+        role: m.role || 'member',
+      })));
+    } catch (error) {
+      console.error('Error loading group members:', error);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const loadCreator = async () => {
+    if (!group?.createdBy) return;
+    
+    try {
+      setLoadingCreator(true);
+      // Try to find creator in members first
+      const membersData = await EvenlyBackendService.getGroupMembers(groupId!);
+      const creatorMember = membersData.find((m: any) => (m.userId || m.user?.id) === group.createdBy);
+      
+      if (creatorMember) {
+        setCreator({
+          name: creatorMember.user?.name || creatorMember.name || 'Unknown',
+          email: creatorMember.user?.email || creatorMember.email || 'Unknown',
+        });
+      } else {
+        // If not found in members, we'll just show the ID or try to get from auth
+        setCreator({
+          name: 'Unknown',
+          email: 'Unknown',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading creator:', error);
+      setCreator({
+        name: 'Unknown',
+        email: 'Unknown',
+      });
+    } finally {
+      setLoadingCreator(false);
+    }
+  };
+
   const handleClose = () => {
     onClose();
+  };
+
+  const handleMemberPress = (member: GroupMember) => {
+    setSelectedMember({
+      name: member.name,
+      email: member.email,
+    });
+    setShowMemberModal(true);
   };
 
   if (!visible || !groupId) {
@@ -133,6 +210,15 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                         
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
+                            Created By
+                          </Text>
+                          <Text style={[styles.infoValue, { color: colors.foreground }]}>
+                            {loadingCreator ? 'Loading...' : (creator?.name || 'Unknown')}
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.infoRow}>
+                          <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
                             Members
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
@@ -169,6 +255,68 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                       </View>
                     </View>
 
+                    {/* Members List */}
+                    <View style={styles.section}>
+                      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                        Members ({members.length})
+                      </Text>
+                      {loadingMembers ? (
+                        <View style={styles.emptyState}>
+                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                            Loading members...
+                          </Text>
+                        </View>
+                      ) : members.length === 0 ? (
+                        <View style={styles.emptyState}>
+                          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                            No members found.
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.membersList}>
+                          {members.map((member) => (
+                            <View
+                              key={member.id}
+                              style={[
+                                styles.memberRow,
+                                {
+                                  backgroundColor: theme === 'dark' 
+                                    ? '#1A1A1A' 
+                                    : '#F8F8F8',
+                                  borderColor: theme === 'dark' 
+                                    ? '#333333' 
+                                    : '#E0E0E0',
+                                },
+                              ]}
+                            >
+                              <View style={styles.memberInfo}>
+                                <View style={[styles.memberAvatar, { backgroundColor: colors.primary + '20' }]}>
+                                  <Text style={[styles.memberAvatarText, { color: colors.primary }]}>
+                                    {member.name.charAt(0).toUpperCase()}
+                                  </Text>
+                                </View>
+                                <View style={styles.memberDetails}>
+                                  <Text style={[styles.memberName, { color: colors.foreground }]}>
+                                    {member.name}
+                                  </Text>
+                                  <Text style={[styles.memberRole, { color: colors.mutedForeground }]}>
+                                    {member.role === 'admin' ? 'Admin' : 'Member'}
+                                  </Text>
+                                </View>
+                              </View>
+                              <TouchableOpacity
+                                style={styles.memberEyeButton}
+                                onPress={() => handleMemberPress(member)}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              >
+                                <Ionicons name="eye-outline" size={20} color={colors.foreground} />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
                     {/* Group Expenses */}
                     <View style={styles.section}>
                       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
@@ -201,6 +349,16 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
           </View>
         </View>
       </View>
+
+      {/* Member Info Modal */}
+      <MemberInfoModal
+        visible={showMemberModal}
+        onClose={() => {
+          setShowMemberModal(false);
+          setSelectedMember(null);
+        }}
+        member={selectedMember}
+      />
     </Modal>
   );
 };
@@ -312,5 +470,48 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     opacity: 0.3,
+  },
+  membersList: {
+    gap: 8,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  memberAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  memberDetails: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  memberRole: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  memberEyeButton: {
+    padding: 8,
   },
 });
