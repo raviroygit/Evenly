@@ -152,11 +152,11 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     // Remove shadow from inner button since glass background has it
   };
 
-  const actionButtonStyle = {
+  const getActionButtonStyle = (action: ActionItem) => ({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.card,
+    backgroundColor: action.color || colors.card,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
     marginBottom: 12,
@@ -166,8 +166,8 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     shadowRadius: 8,
     elevation:Platform.OS === 'ios' ? 8 : 0, // Increased elevation
     borderWidth: 1,
-    borderColor: colors.border,
-  };
+    borderColor: action.color ? 'rgba(255, 255, 255, 0.3)' : colors.border,
+  });
 
   const actionTextStyle = {
     color: colors.foreground,
@@ -247,14 +247,14 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
               ]}
             >
               <TouchableOpacity
-                style={actionButtonStyle}
+                style={getActionButtonStyle(action)}
                 onPress={() => {
                   action.onPress();
                   toggleMenu();
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={actionIconStyle}>{action.icon}</Text>
+                <Text style={[actionIconStyle, action.color && { color: '#FFFFFF', fontSize: 24 }]}>{action.icon}</Text>
               </TouchableOpacity>
               <Text style={actionTextStyle}>{action.title}</Text>
             </Animated.View>

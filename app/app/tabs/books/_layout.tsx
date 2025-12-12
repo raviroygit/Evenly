@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import React from 'react';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 
-export default function GroupsLayout() {
+export default function BooksLayout() {
   const { colors } = useTheme();
   
   return (
@@ -24,7 +24,7 @@ export default function GroupsLayout() {
         }}
       />
       <Stack.Screen 
-        name="[groupId]"
+        name="[customerId]"
         options={{
           contentStyle: {
             backgroundColor: colors.background,

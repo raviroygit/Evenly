@@ -4,3 +4,5 @@ import { GroupDetailsScreen } from '../../../src/features/groups/GroupDetailsScr
 export default function GroupDetailsPage() {
   return <GroupDetailsScreen />;
 }
+
+
