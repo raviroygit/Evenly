@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,18 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
 import { CustomerFilterModal, FilterType, SortType } from '../../components/modals/CustomerFilterModal';
+import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { useRouter } from 'expo-router';
+import { EvenlyBackendService } from '../../services/EvenlyBackendService';
+import { SkeletonCustomerList } from '../../components/ui/SkeletonLoader';
 
 interface Customer {
   id: string;
@@ -20,125 +25,110 @@ interface Customer {
   initials: string;
   amount: string;
   timestamp: string;
-  type: 'give' | 'get';
+  type: 'give' | 'get' | 'settled';
+  balance: string;
 }
-
-const dummyCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'Sujeet Mistri Bengha',
-    initials: 'SM',
-    amount: '1,95,000',
-    timestamp: '2 hours ago',
-    type: 'get',
-  },
-  {
-    id: '2',
-    name: 'Deepak',
-    initials: 'D',
-    amount: '11,15,000',
-    timestamp: '1 years ago',
-    type: 'get',
-  },
-  {
-    id: '3',
-    name: 'Rajesh Kumar',
-    initials: 'RK',
-    amount: '50,000',
-    timestamp: '3 days ago',
-    type: 'give',
-  },
-  {
-    id: '4',
-    name: 'Priya Sharma',
-    initials: 'PS',
-    amount: '2,00,000',
-    timestamp: '1 week ago',
-    type: 'get',
-  },
-  {
-    id: '5',
-    name: 'Amit Patel',
-    initials: 'AP',
-    amount: '75,000',
-    timestamp: '2 weeks ago',
-    type: 'give',
-  },
-];
 
 export const BooksScreen: React.FC = () => {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortType, setSortType] = useState<SortType>('most-recent');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [summary, setSummary] = useState({ totalGive: '0.00', totalGet: '0.00' });
 
-  // Filter customers
-  let filteredCustomers = dummyCustomers.filter(customer => {
-    const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (filterType === 'all') {
-      return matchesSearch;
-    } else if (filterType === 'get') {
-      return matchesSearch && customer.type === 'get';
-    } else if (filterType === 'give') {
-      return matchesSearch && customer.type === 'give';
-    } else if (filterType === 'settled') {
-      // For now, we'll treat settled as customers with 0 amount
-      return matchesSearch && customer.amount === '0';
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const formatTimeAgo = (date: string): string => {
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) {
+      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffDays < 30) {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+    } else {
+      return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
-    return matchesSearch;
-  });
+  };
 
-  // Sort customers
-  filteredCustomers = [...filteredCustomers].sort((a, b) => {
-    if (sortType === 'most-recent') {
-      // Sort by timestamp (most recent first) - dummy implementation
-      return 0;
-    } else if (sortType === 'oldest') {
-      // Sort by timestamp (oldest first) - dummy implementation
-      return 0;
-    } else if (sortType === 'highest-amount') {
-      const amountA = parseInt(a.amount.replace(/,/g, ''));
-      const amountB = parseInt(b.amount.replace(/,/g, ''));
-      return amountB - amountA;
-    } else if (sortType === 'least-amount') {
-      const amountA = parseInt(a.amount.replace(/,/g, ''));
-      const amountB = parseInt(b.amount.replace(/,/g, ''));
-      return amountA - amountB;
-    } else if (sortType === 'name-az') {
-      return a.name.localeCompare(b.name);
+  const loadCustomers = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const [customersData, summaryData] = await Promise.all([
+        EvenlyBackendService.getKhataCustomers({
+          search: searchQuery || undefined,
+          filterType,
+          sortType,
+        }),
+        EvenlyBackendService.getKhataFinancialSummary(),
+      ]);
+
+      const formattedCustomers: Customer[] = customersData.map((c) => ({
+        id: c.id,
+        name: c.name,
+        initials: getInitials(c.name),
+        amount: parseFloat(c.balance).toFixed(2),
+        timestamp: formatTimeAgo(c.updatedAt),
+        type: c.type,
+        balance: c.balance,
+      }));
+
+      setCustomers(formattedCustomers);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    return 0;
-  });
+  }, [searchQuery, filterType, sortType]);
 
-  const totalGive = dummyCustomers
-    .filter(c => c.type === 'give')
-    .reduce((sum, c) => sum + parseInt(c.amount.replace(/,/g, '')), 0);
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
 
-  const totalGet = dummyCustomers
-    .filter(c => c.type === 'get')
-    .reduce((sum, c) => sum + parseInt(c.amount.replace(/,/g, '')), 0);
-
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-IN').format(amount);
+  const formatAmount = (amount: number | string) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-IN').format(numAmount);
   };
 
   const handleAddCustomer = () => {
-    // TODO: Implement add customer functionality
-    console.log('Add customer');
+    setShowAddCustomerModal(true);
   };
 
-  const handleViewReport = () => {
-    // TODO: Implement view report functionality
-    console.log('View report');
+  const handleCustomerAdded = () => {
+    // Refresh the customer list after adding a new customer
+    loadCustomers();
   };
 
-  const handleOpenCashbook = () => {
-    // TODO: Implement open cashbook functionality
-    console.log('Open cashbook');
-  };
+  const onRefresh = useCallback(async () => {
+    console.log('BooksScreen: onRefresh called');
+    await loadCustomers(true);
+  }, [loadCustomers]);
+
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -146,6 +136,21 @@ export const BooksScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={Platform.OS === 'ios'}
+        alwaysBounceVertical={Platform.OS === 'ios'}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+        scrollIndicatorInsets={{ right: 1 }}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Platform.OS === 'ios' ? colors.primary : undefined}
+            colors={Platform.OS === 'android' ? [colors.primary] : undefined}
+            enabled={true}
+          />
+        }
       >
         {/* Financial Summary Cards */}
         <View style={styles.summaryContainer}>
@@ -158,10 +163,10 @@ export const BooksScreen: React.FC = () => {
               style={styles.summaryCard}
             >
               <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-                You will give
+                You will get
               </Text>
               <Text style={[styles.summaryAmount, { color: colors.foreground }]}>
-                ₹{formatAmount(totalGive)}
+                ₹{formatAmount(summary.totalGive)}
               </Text>
             
             </ResponsiveLiquidGlassCard>
@@ -176,10 +181,10 @@ export const BooksScreen: React.FC = () => {
               style={styles.summaryCard}
             >
               <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-                You will get
+                You will give
               </Text>
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
-                ₹{formatAmount(totalGet)}
+                ₹{formatAmount(summary.totalGet)}
               </Text>
             
             </ResponsiveLiquidGlassCard>
@@ -213,51 +218,62 @@ export const BooksScreen: React.FC = () => {
 
         {/* Customer List */}
         <View style={styles.listContainer}>
-          {filteredCustomers.map((customer) => (
-            <TouchableOpacity
-              key={customer.id}
-              onPress={() => {
-                router.push({
-                  pathname: '/tabs/books/[customerId]',
-                  params: {
-                    customerName: customer.name,
-                    customerInitials: customer.initials,
-                  },
-                } as any);
-              }}
-              activeOpacity={0.7}
-            >
-              <ResponsiveLiquidGlassCard
-                padding={{ small: 12, medium: 16, large: 20 }}
-                marginBottom={8}
-                borderRadius={{ small: 12, medium: 14, large: 16 }}
+          {loading ? (
+            <SkeletonCustomerList count={5} />
+          ) : customers.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                No customers found
+              </Text>
+            </View>
+          ) : (
+            customers.map((customer) => (
+              <TouchableOpacity
+                key={customer.id}
+                onPress={() => {
+                  router.push({
+                    pathname: '/tabs/books/[customerId]',
+                    params: {
+                      customerId: customer.id,
+                      customerName: customer.name,
+                      customerInitials: customer.initials,
+                    },
+                  } as any);
+                }}
+                activeOpacity={0.7}
               >
-                <View style={styles.customerRow}>
-                  <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[styles.avatarText, { color: colors.primary }]}>
-                      {customer.initials}
-                    </Text>
+                <ResponsiveLiquidGlassCard
+                  padding={{ small: 12, medium: 16, large: 20 }}
+                  marginBottom={8}
+                  borderRadius={{ small: 12, medium: 14, large: 16 }}
+                >
+                  <View style={styles.customerRow}>
+                    <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[styles.avatarText, { color: colors.primary }]}>
+                        {customer.initials}
+                      </Text>
+                    </View>
+                    <View style={styles.customerInfo}>
+                      <Text style={[styles.customerName, { color: colors.foreground }]}>
+                        {customer.name}
+                      </Text>
+                      <Text style={[styles.customerTimestamp, { color: colors.mutedForeground }]}>
+                        {customer.timestamp}
+                      </Text>
+                    </View>
+                    <View style={styles.customerAmount}>
+                      <Text style={[styles.amountText, { color: '#FF3B30' }]}>
+                        ₹{formatAmount(Math.abs(parseFloat(customer.balance)))}
+                      </Text>
+                      <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
+                        You&apos;ll {customer.type === 'get' ? 'Give' : customer.type === 'give' ? 'Get' : 'Settled'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.customerInfo}>
-                    <Text style={[styles.customerName, { color: colors.foreground }]}>
-                      {customer.name}
-                    </Text>
-                    <Text style={[styles.customerTimestamp, { color: colors.mutedForeground }]}>
-                      {customer.timestamp}
-                    </Text>
-                  </View>
-                  <View style={styles.customerAmount}>
-                    <Text style={[styles.amountText, { color: '#FF3B30' }]}>
-                      ₹{customer.amount}
-                    </Text>
-                    <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
-                      You&apos;ll {customer.type === 'get' ? 'Get' : 'Give'}
-                    </Text>
-                  </View>
-                </View>
-              </ResponsiveLiquidGlassCard>
-            </TouchableOpacity>
-          ))}
+                </ResponsiveLiquidGlassCard>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -281,9 +297,17 @@ export const BooksScreen: React.FC = () => {
         onApply={(filter, sort) => {
           setFilterType(filter);
           setSortType(sort);
+          setShowFilterModal(false);
         }}
         currentFilter={filterType}
         currentSort={sortType}
+      />
+
+      {/* Add Customer Modal */}
+      <AddCustomerModal
+        visible={showAddCustomerModal}
+        onClose={() => setShowAddCustomerModal(false)}
+        onSuccess={handleCustomerAdded}
       />
     </View>
   );
@@ -298,6 +322,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+    flexGrow: 1,
   },
   summaryContainer: {
     flexDirection: 'row',
@@ -395,6 +420,15 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 12,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 

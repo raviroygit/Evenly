@@ -182,7 +182,12 @@ export class EvenlyBackendService {
 
       // Handle body for POST/PUT requests
       if (options.body) {
-        axiosConfig.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+        // If it's FormData, pass it directly to axios
+        if (options.body instanceof FormData) {
+          axiosConfig.data = options.body;
+        } else {
+          axiosConfig.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+        }
       }
 
       // Optional GET cache lookup
@@ -561,5 +566,251 @@ export class EvenlyBackendService {
         },
       })),
     };
+  }
+
+  // Khata API
+  static async getKhataCustomers(options: {
+    search?: string;
+    filterType?: 'all' | 'give' | 'get' | 'settled';
+    sortType?: 'most-recent' | 'oldest' | 'highest-amount' | 'least-amount' | 'name-az';
+    cacheTTLMs?: number;
+  } = {}): Promise<Array<{
+    id: string;
+    userId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+    balance: string;
+    type: 'give' | 'get' | 'settled';
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (options.search) queryParams.append('search', options.search);
+    if (options.filterType) queryParams.append('filterType', options.filterType);
+    if (options.sortType) queryParams.append('sortType', options.sortType);
+
+    const response = await this.makeRequest<Array<{
+      id: string;
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      avatar?: string;
+      notes?: string;
+      createdAt: string;
+      updatedAt: string;
+      balance: string;
+      type: 'give' | 'get' | 'settled';
+    }>>(
+      `/khata/customers?${queryParams.toString()}`,
+      {
+        method: 'GET',
+        cacheTTLMs: options.cacheTTLMs || 30000,
+      }
+    );
+
+    return response.data;
+  }
+
+  static async getKhataCustomerById(customerId: string): Promise<{
+    id: string;
+    userId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+    balance: string;
+    type: 'give' | 'get' | 'settled';
+  }> {
+    const response = await this.makeRequest<{
+      id: string;
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      avatar?: string;
+      notes?: string;
+      createdAt: string;
+      updatedAt: string;
+      balance: string;
+      type: 'give' | 'get' | 'settled';
+    }>(`/khata/customers/${customerId}`, {
+      method: 'GET',
+      cacheTTLMs: 30000,
+    });
+
+    return response.data;
+  }
+
+  static async createKhataCustomer(data: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+  }): Promise<{
+    id: string;
+    userId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const response = await this.makeRequest<{
+      id: string;
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      avatar?: string;
+      notes?: string;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      '/khata/customers',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        invalidatePrefixes: ['/khata'],
+      }
+    );
+
+    return response.data;
+  }
+
+  static async getKhataCustomerTransactions(customerId: string): Promise<Array<{
+    id: string;
+    customerId: string;
+    userId: string;
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    imageUrl?: string;
+    balance: string;
+    transactionDate: string;
+    createdAt: string;
+    updatedAt: string;
+  }>> {
+    const response = await this.makeRequest<Array<{
+      id: string;
+      customerId: string;
+      userId: string;
+      type: 'give' | 'get';
+      amount: string;
+      currency: string;
+      description?: string;
+      imageUrl?: string;
+      balance: string;
+      transactionDate: string;
+      createdAt: string;
+      updatedAt: string;
+    }>>(`/khata/customers/${customerId}/transactions`, {
+      method: 'GET',
+      cacheTTLMs: 30000,
+    });
+
+    return response.data;
+  }
+
+  static async createKhataTransaction(
+    data: FormData | {
+      customerId: string;
+      type: 'give' | 'get';
+      amount: string;
+      currency?: string;
+      description?: string;
+      imageUrl?: string;
+      transactionDate?: string;
+    }
+  ): Promise<{
+    id: string;
+    customerId: string;
+    userId: string;
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    imageUrl?: string;
+    balance: string;
+    transactionDate: string;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const isFormData = data instanceof FormData;
+    
+    // If FormData, send as multipart/form-data, otherwise send as JSON
+    const requestConfig = isFormData
+      ? {
+          headers: {
+            'Accept': 'application/json',
+            // Don't set Content-Type - axios will set it automatically with boundary for FormData
+          },
+        }
+      : {};
+
+    const response = await this.makeRequest<{
+      id: string;
+      customerId: string;
+      userId: string;
+      type: 'give' | 'get';
+      amount: string;
+      currency: string;
+      description?: string;
+      imageUrl?: string;
+      balance: string;
+      transactionDate: string;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      '/khata/transactions',
+      {
+        method: 'POST',
+        body: isFormData ? data : JSON.stringify(data as {
+          customerId: string;
+          type: 'give' | 'get';
+          amount: string;
+          currency?: string;
+          description?: string;
+          imageUrl?: string;
+          transactionDate?: string;
+        }),
+        ...requestConfig,
+        invalidatePrefixes: ['/khata'],
+      }
+    );
+
+    return response.data;
+  }
+
+  static async getKhataFinancialSummary(): Promise<{
+    totalGive: string;
+    totalGet: string;
+  }> {
+    const response = await this.makeRequest<{
+      totalGive: string;
+      totalGet: string;
+    }>('/khata/summary', {
+      method: 'GET',
+      cacheTTLMs: 30000,
+    });
+
+    return response.data;
   }
 }

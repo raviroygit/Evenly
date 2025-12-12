@@ -29,6 +29,14 @@ class EvenlyApiClient {
     this.client.interceptors.request.use(
       async (config) => {
         try {
+          // For FormData, don't set Content-Type - let axios handle it automatically
+          if (config.data instanceof FormData) {
+            // Remove Content-Type header if it exists, axios will set it with boundary
+            if (config.headers) {
+              delete (config.headers as any)['Content-Type'];
+            }
+          }
+
           // Get auth data from storage
           const authData = await AuthStorage.getAuthData();
           let ssoToken = authData?.ssoToken;

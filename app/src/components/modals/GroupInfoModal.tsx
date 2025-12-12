@@ -251,7 +251,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                         >
                           <Text style={[styles.viewButtonText, { color: colors.primary }]}>
                             View members
-                          </Text>
+                      </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
@@ -264,7 +264,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                             View group expenses
                           </Text>
                         </TouchableOpacity>
-                      </View>
+                        </View>
                     </View>
                   </>
                 ) : (

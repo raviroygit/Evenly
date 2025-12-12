@@ -182,6 +182,103 @@ export const SkeletonExpenseList: React.FC<{ count?: number }> = ({ count = 5 })
   );
 };
 
+// Skeleton for transaction items - EXACT match to CustomerDetailScreen transaction layout
+export const SkeletonTransactionItem: React.FC = () => {
+  const { colors, theme } = useTheme();
+  return (
+    <ResponsiveLiquidGlassCard
+      padding={{ small: 10, medium: 12, large: 14 }}
+      marginBottom={8}
+      borderRadius={{ small: 12, medium: 14, large: 16 }}
+    >
+      <View style={styles.transactionRow}>
+        {/* Image Container with badges */}
+        <View style={styles.imageContainer}>
+          {/* Image thumbnail skeleton */}
+          <View style={styles.attachmentThumbnail}>
+            <SkeletonLoader width={50} height={50} borderRadius={8} />
+          </View>
+          {/* Badges row */}
+          <View style={styles.badgesRow}>
+            {/* Date/Time badge skeleton */}
+            <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
+              <SkeletonLoader width={60} height={11} borderRadius={6} />
+              <SkeletonLoader width={50} height={11} borderRadius={6} />
+            </View>
+            {/* Balance badge skeleton */}
+            <View style={[styles.balanceBadge, { 
+              backgroundColor: theme === 'dark' 
+                ? 'rgba(255, 59, 48, 0.15)' 
+                : 'rgba(255, 59, 48, 0.1)',
+              borderColor: 'rgba(255, 59, 48, 0.4)',
+              borderWidth: 1,
+            }]}>
+              <SkeletonLoader width={70} height={11} borderRadius={6} />
+            </View>
+          </View>
+        </View>
+        {/* Amount on right side */}
+        <View style={styles.transactionRight}>
+          <SkeletonLoader width={80} height={16} borderRadius={8} />
+        </View>
+      </View>
+    </ResponsiveLiquidGlassCard>
+  );
+};
+
+// Skeleton for transaction list
+export const SkeletonTransactionList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.transactionList, { backgroundColor: colors.background }]}>
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonTransactionItem key={index} />
+      ))}
+    </View>
+  );
+};
+
+// Skeleton for customer items - EXACT match to BooksScreen customer layout
+export const SkeletonCustomerItem: React.FC = () => {
+  const { colors, theme } = useTheme();
+  return (
+    <ResponsiveLiquidGlassCard
+      padding={{ small: 12, medium: 16, large: 20 }}
+      marginBottom={8}
+      borderRadius={{ small: 12, medium: 14, large: 16 }}
+    >
+      <View style={styles.customerRow}>
+        {/* Avatar skeleton */}
+        <View style={[styles.customerAvatar, { backgroundColor: colors.primary + '20' }]}>
+          <SkeletonLoader width={24} height={24} borderRadius={12} />
+        </View>
+        {/* Customer info skeleton */}
+        <View style={styles.customerInfo}>
+          <SkeletonLoader width={150} height={16} borderRadius={8} style={styles.customerNameSkeleton} />
+          <SkeletonLoader width={100} height={12} borderRadius={6} />
+        </View>
+        {/* Amount skeleton */}
+        <View style={styles.customerAmount}>
+          <SkeletonLoader width={70} height={18} borderRadius={8} style={styles.amountTextSkeleton} />
+          <SkeletonLoader width={60} height={12} borderRadius={6} />
+        </View>
+      </View>
+    </ResponsiveLiquidGlassCard>
+  );
+};
+
+// Skeleton for customer list
+export const SkeletonCustomerList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.customerList, { backgroundColor: colors.background }]}>
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonCustomerItem key={index} />
+      ))}
+    </View>
+  );
+};
+
 // Skeleton for group items - EXACT match to GroupItem structure
 export const SkeletonGroupItem: React.FC = () => {
   return (
@@ -862,6 +959,79 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   expenseList: {
+    gap: 8,
+  },
+  // Transaction skeleton styles - EXACT match to CustomerDetailScreen transaction layout
+  transactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  imageContainer: {
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  attachmentThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateTimeBadge: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 6,
+  },
+  balanceBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  transactionRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  transactionList: {
+    gap: 8,
+  },
+  // Customer skeleton styles - EXACT match to BooksScreen customer layout
+  customerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  customerNameSkeleton: {
+    marginBottom: 4,
+  },
+  customerAmount: {
+    alignItems: 'flex-end',
+  },
+  amountTextSkeleton: {
+    marginBottom: 4,
+  },
+  customerList: {
     gap: 8,
   },
   // Group skeleton styles - EXACT match to GroupItem
