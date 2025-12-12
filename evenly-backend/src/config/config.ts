@@ -20,6 +20,7 @@ export const config = {
   },
   cors: {
     origin: process.env.CORS_ORIGIN || '',
+    CORS_ORIGIN1: process.env.CORS_ORIGIN1 || '',
   },
   rateLimit: {
     max: parseInt(process.env.RATE_LIMIT_MAX || '10000', 10), // Increased from 100 to 10000

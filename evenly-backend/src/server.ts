@@ -82,7 +82,7 @@ async function registerPlugins() {
 
   // CORS
   await fastify.register(cors, {
-    origin: config.cors.origin,
+    origin: [config.cors.origin, config.cors.CORS_ORIGIN1],
     credentials: true,
   });
 
