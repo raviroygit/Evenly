@@ -2,8 +2,8 @@
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Text, Float, OrbitControls, Environment, ContactShadows, useTexture } from '@react-three/drei';
-import { Mesh, Group, BoxGeometry, CylinderGeometry, SphereGeometry } from 'three';
+import { Text, Float, OrbitControls, Environment, ContactShadows, useTexture, RoundedBox } from '@react-three/drei';
+import { Mesh, Group, BoxGeometry, CylinderGeometry, SphereGeometry, PlaneGeometry } from 'three';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 
@@ -703,6 +703,11 @@ function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
   useEffect(() => {
     if (currentTexture) {
       currentTexture.flipY = false; // Prevent image from being flipped
+      currentTexture.wrapS = THREE.ClampToEdgeWrapping;
+      currentTexture.wrapT = THREE.ClampToEdgeWrapping;
+      // Ensure texture repeats once to fill the entire plane
+      currentTexture.repeat.set(1, 1);
+      currentTexture.offset.set(0, 0);
     }
   }, [currentTexture]);
   
@@ -710,7 +715,7 @@ function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
   
   return (
     <mesh position={[0, 0, 0.175]}>
-      <boxGeometry args={[1.6, 3.3, 0.001]} />
+      <planeGeometry args={[1.65, 3.4]} />
       <meshStandardMaterial map={currentTexture} />
     </mesh>
   );
@@ -745,28 +750,41 @@ function PhoneModel() {
   return (
     <Float speed={2} rotationIntensity={0.1} floatIntensity={0.3}>
       <group ref={groupRef}>
-        {/* iPhone Body - More realistic proportions (iPhone 15 Pro) */}
-        <mesh ref={meshRef} position={[0, 0, 0]}>
-          <boxGeometry args={[1.9, 3.8, 0.3]} />
+        {/* iPhone Body - More realistic proportions (iPhone 15 Pro) with rounded corners */}
+        <RoundedBox
+          ref={meshRef}
+          args={[1.9, 3.8, 0.3]}
+          radius={0.15}
+          smoothness={4}
+          position={[0, 0, 0]}
+        >
           <meshStandardMaterial 
             color="#1d1d1f" 
             metalness={0.95} 
             roughness={0.05}
             envMapIntensity={1.2}
           />
-        </mesh>
+        </RoundedBox>
         
-        {/* Screen Bezel */}
-        <mesh position={[0, 0, 0.16]}>
-          <boxGeometry args={[1.75, 3.6, 0.01]} />
+        {/* Screen Bezel with rounded corners */}
+        <RoundedBox
+          args={[1.75, 3.6, 0.01]}
+          radius={0.12}
+          smoothness={4}
+          position={[0, 0, 0.16]}
+        >
           <meshStandardMaterial color="#000000" />
-        </mesh>
+        </RoundedBox>
         
-        {/* Screen */}
-        <mesh position={[0, 0, 0.17]}>
-          <boxGeometry args={[1.65, 3.4, 0.005]} />
+        {/* Screen with rounded corners */}
+        <RoundedBox
+          args={[1.65, 3.4, 0.005]}
+          radius={0.11}
+          smoothness={4}
+          position={[0, 0, 0.17]}
+        >
           <meshStandardMaterial color="#000000" />
-        </mesh>
+        </RoundedBox>
         
         {/* Dynamic Screen Content - Using actual screenshots */}
         <ScreenshotScreen screenshotNumber={currentScreen} />
