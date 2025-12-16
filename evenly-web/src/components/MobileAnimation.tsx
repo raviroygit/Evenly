@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Text, Float, OrbitControls, Environment, ContactShadows, useTexture, RoundedBox } from '@react-three/drei';
+import { Text, Float, OrbitControls, Environment, ContactShadows, useTexture } from '@react-three/drei';
 import { Mesh, Group, BoxGeometry, CylinderGeometry, SphereGeometry } from 'three';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
@@ -687,7 +687,7 @@ function ProfileScreen() {
   );
 }
 
-// Screen component that uses actual screenshot images - optimized to prevent blinking
+// Screen component that uses actual screenshot images
 function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
   const textures = useTexture([
     '/screenshots/1.png',
@@ -697,72 +697,21 @@ function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
     '/screenshots/5.png',
   ]);
   
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
-  const textureIndexRef = useRef(screenshotNumber - 1);
-  const isUpdatingRef = useRef(false);
+  const currentTexture = textures[screenshotNumber - 1];
   
-  // Configure all textures upfront - ensure they're ready
+  // Ensure texture is properly configured
   useEffect(() => {
-    textures.forEach((texture, index) => {
-      if (texture) {
-        texture.flipY = true;
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.generateMipmaps = true;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        // Ensure texture is fully loaded
-        if (texture.image && texture.image.complete) {
-          texture.needsUpdate = true;
-        } else if (texture.image) {
-          texture.image.onload = () => {
-            texture.needsUpdate = true;
-          };
-        }
-      }
-    });
-  }, [textures]);
-  
-  // Update texture index ref - don't trigger immediate update
-  useEffect(() => {
-    textureIndexRef.current = screenshotNumber - 1;
-  }, [screenshotNumber]);
-  
-  // Update texture in render loop only when ready - prevents blinking
-  useFrame(() => {
-    if (!materialRef.current || isUpdatingRef.current) return;
-    
-    const targetIndex = textureIndexRef.current;
-    const targetTexture = textures[targetIndex];
-    
-    if (targetTexture && materialRef.current.map !== targetTexture) {
-      // Only update if texture is ready
-      if (targetTexture.image && targetTexture.image.complete) {
-        isUpdatingRef.current = true;
-        materialRef.current.map = targetTexture;
-        materialRef.current.needsUpdate = true;
-        // Reset flag after a frame
-        setTimeout(() => {
-          isUpdatingRef.current = false;
-        }, 0);
-      }
+    if (currentTexture) {
+      currentTexture.flipY = false; // Prevent image from being flipped
     }
-  });
+  }, [currentTexture]);
   
-  // Use first texture as initial - mesh never recreates
-  const initialTexture = textures[0];
-  if (!initialTexture) return null;
+  if (!currentTexture) return null;
   
   return (
-    <mesh ref={meshRef} position={[0, 0, 0.15]}>
-      <planeGeometry args={[1.88, 3.78]} />
-      <meshStandardMaterial 
-        ref={materialRef}
-        map={initialTexture} 
-        transparent={false}
-        side={THREE.FrontSide}
-      />
+    <mesh position={[0, 0, 0.175]}>
+      <boxGeometry args={[1.6, 3.3, 0.001]} />
+      <meshStandardMaterial map={currentTexture} />
     </mesh>
   );
 }
@@ -771,52 +720,20 @@ function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
 function PhoneModel() {
   const meshRef = useRef<Mesh>(null);
   const groupRef = useRef<Group>(null);
-  const screenMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
-  const screenMeshRef = useRef<THREE.Mesh>(null);
-  const currentScreenRef = useRef(1);
+  const [currentScreen, setCurrentScreen] = useState(1);
   
   const screenshots = [1, 2, 3, 4, 5];
-  const textures = useTexture([
-    '/screenshots/1.png',
-    '/screenshots/2.png',
-    '/screenshots/3.png',
-    '/screenshots/4.png',
-    '/screenshots/5.png',
-  ]);
   
-  // Configure all textures upfront
-  useEffect(() => {
-    textures.forEach((texture) => {
-      if (texture) {
-        texture.flipY = true;
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.generateMipmaps = true;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-      }
-    });
-  }, [textures]);
-  
-  // Update screen index using ref to prevent re-renders
   useEffect(() => {
     const interval = setInterval(() => {
-      currentScreenRef.current = currentScreenRef.current >= screenshots.length ? 1 : currentScreenRef.current + 1;
+      setCurrentScreen((prev) => {
+        const next = prev >= screenshots.length ? 1 : prev + 1;
+        return next;
+      });
     }, 3000); // Change screen every 3 seconds
     
     return () => clearInterval(interval);
   }, []);
-  
-  // Update texture in render loop - prevents blinking, no re-renders
-  useFrame(() => {
-    if (screenMaterialRef.current && textures[currentScreenRef.current - 1]) {
-      const newTexture = textures[currentScreenRef.current - 1];
-      if (screenMaterialRef.current.map !== newTexture) {
-        screenMaterialRef.current.map = newTexture;
-        screenMaterialRef.current.needsUpdate = true;
-      }
-    }
-  });
 
   useFrame((state) => {
     // Gentle floating animation instead of rotation
@@ -828,36 +745,31 @@ function PhoneModel() {
   return (
     <Float speed={2} rotationIntensity={0.1} floatIntensity={0.3}>
       <group ref={groupRef}>
-        {/* iPhone Body - Single unified phone model with rounded corners */}
-        <RoundedBox
-          ref={meshRef}
-          args={[1.9, 3.8, 0.3]}
-          radius={0.25}
-          smoothness={4}
-          position={[0, 0, 0]}
-        >
+        {/* iPhone Body - More realistic proportions (iPhone 15 Pro) */}
+        <mesh ref={meshRef} position={[0, 0, 0]}>
+          <boxGeometry args={[1.9, 3.8, 0.3]} />
           <meshStandardMaterial 
             color="#1d1d1f" 
             metalness={0.95} 
             roughness={0.05}
             envMapIntensity={1.2}
           />
-        </RoundedBox>
+        </mesh>
         
-        {/* Dynamic Screen Content - Screenshot on same layer as body surface */}
-        {textures[0] && (
-          <mesh ref={screenMeshRef} position={[0, 0, 0.15]}>
-            <planeGeometry args={[1.88, 3.78]} />
-            <meshStandardMaterial 
-              ref={screenMaterialRef}
-              map={textures[0]} 
-              transparent={false}
-              side={THREE.FrontSide}
-              depthWrite={true}
-              depthTest={true}
-            />
-          </mesh>
-        )}
+        {/* Screen Bezel */}
+        <mesh position={[0, 0, 0.16]}>
+          <boxGeometry args={[1.75, 3.6, 0.01]} />
+          <meshStandardMaterial color="#000000" />
+        </mesh>
+        
+        {/* Screen */}
+        <mesh position={[0, 0, 0.17]}>
+          <boxGeometry args={[1.65, 3.4, 0.005]} />
+          <meshStandardMaterial color="#000000" />
+        </mesh>
+        
+        {/* Dynamic Screen Content - Using actual screenshots */}
+        <ScreenshotScreen screenshotNumber={currentScreen} />
         
         {/* Side Buttons - Volume */}
         <mesh position={[1.0, 0.9, 0]}>
