@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Download, Smartphone, Users, CreditCard, Shield, Zap } from 'lucide-react';
+import { Download, Smartphone, Users, CreditCard, Shield, Zap, Apple, Play } from 'lucide-react';
 import { MobileAnimation } from './MobileAnimation';
 import { cn } from '@/lib/utils';
 
@@ -89,16 +89,33 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.7 }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col gap-4"
             >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors"
-              >
-                <Download className="w-5 h-5" />
-                Download App
-              </motion.button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <motion.a
+                  href="https://apps.apple.com/us/app/evenlysplit/id6756101586"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Apple className="w-5 h-5 text-white" />
+                  Download for iOS
+                </motion.a>
+                
+                <motion.a
+                  href="https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly&hl=en_IN"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Play className="w-5 h-5 text-[#00D9FF]" />
+                  Download for Android
+                </motion.a>
+              </div>
               
               <motion.button
                 whileHover={{ scale: 1.05 }}

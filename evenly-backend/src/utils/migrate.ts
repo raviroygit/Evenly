@@ -479,4 +479,44 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS user_balances_group_id_idx ON user_balances(group_id)`;
   await sql`CREATE INDEX IF NOT EXISTS payments_group_id_idx ON payments(group_id)`;
   await sql`CREATE INDEX IF NOT EXISTS notifications_user_id_idx ON notifications(user_id)`;
+
+  // Create Khata tables
+  await sql`
+    CREATE TABLE IF NOT EXISTS khata_customers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      address TEXT,
+      avatar TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS khata_transactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      customer_id UUID NOT NULL REFERENCES khata_customers(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      amount DECIMAL(10,2) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      description TEXT,
+      image_url TEXT,
+      balance DECIMAL(10,2) NOT NULL,
+      transaction_date TIMESTAMP DEFAULT NOW() NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `;
+
+  // Create indexes for Khata tables
+  await sql`CREATE INDEX IF NOT EXISTS khata_customers_user_id_idx ON khata_customers(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS khata_customers_email_idx ON khata_customers(email)`;
+  await sql`CREATE INDEX IF NOT EXISTS khata_transactions_customer_id_idx ON khata_transactions(customer_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS khata_transactions_user_id_idx ON khata_transactions(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS khata_transactions_transaction_date_idx ON khata_transactions(transaction_date)`;
 }

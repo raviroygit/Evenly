@@ -113,7 +113,11 @@ export const manualHealthCheckController = async (req: FastifyRequest, res: Fast
     const responseTime = Date.now() - startTime;
     
     if (response.ok) {
-      const data = await response.json();
+      const data = await response.json() as {
+        status?: string;
+        database?: string;
+        version?: string;
+      };
       
       res.status(200).send({
         success: true,

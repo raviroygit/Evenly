@@ -43,4 +43,9 @@ export const config = {
   app: {
     baseUrl: process.env.APP_BASE_URL || 'https://b98351f842e5.ngrok-free.app',
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  },
 };

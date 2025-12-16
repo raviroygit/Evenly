@@ -16,6 +16,7 @@ import { paymentRoutes } from './routes/paymentRoutes';
 import { groupInvitationRoutes } from './routes/groupInvitationRoutes';
 import { authRoutes } from './routes/authRoutes';
 import supportRoutes from './routes/supportRoutes';
+import { khataRoutes } from './routes/khataRoutes';
 // Health check routes removed - using simple background service instead
 import { handleError } from './utils/errors';
 // Simple health check service that runs in the main process
@@ -205,6 +206,7 @@ async function registerRoutes() {
     await fastify.register(paymentRoutes, { prefix: '/api/payments' });
     await fastify.register(groupInvitationRoutes, { prefix: '/api/invitations' });
     await fastify.register(supportRoutes, { prefix: '/api/support' });
+    await fastify.register(khataRoutes, { prefix: '/api/khata' });
     console.log('✅ All API routes registered successfully');
   } catch (error) {
     console.warn('⚠️  Some API routes failed to register:', error);
@@ -214,7 +216,7 @@ async function registerRoutes() {
 }
 
 // Error handler
-fastify.setErrorHandler((error, request, reply) => {
+fastify.setErrorHandler((error: Error, request, reply) => {
   handleError(error, reply);
 });
 

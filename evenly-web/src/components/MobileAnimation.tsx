@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Text, Float, OrbitControls, Environment, ContactShadows } from '@react-three/drei';
+import { Text, Float, OrbitControls, Environment, ContactShadows, useTexture } from '@react-three/drei';
 import { Mesh, Group, BoxGeometry, CylinderGeometry, SphereGeometry } from 'three';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
@@ -687,17 +687,49 @@ function ProfileScreen() {
   );
 }
 
+// Screen component that uses actual screenshot images
+function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
+  const textures = useTexture([
+    '/screenshots/1.png',
+    '/screenshots/2.png',
+    '/screenshots/3.png',
+    '/screenshots/4.png',
+    '/screenshots/5.png',
+  ]);
+  
+  const currentTexture = textures[screenshotNumber - 1];
+  
+  // Ensure texture is properly configured
+  useEffect(() => {
+    if (currentTexture) {
+      currentTexture.flipY = false; // Prevent image from being flipped
+    }
+  }, [currentTexture]);
+  
+  if (!currentTexture) return null;
+  
+  return (
+    <mesh position={[0, 0, 0.175]}>
+      <boxGeometry args={[1.6, 3.3, 0.001]} />
+      <meshStandardMaterial map={currentTexture} />
+    </mesh>
+  );
+}
+
 // 3D iPhone Model Component with realistic proportions and Evenly app screen
 function PhoneModel() {
   const meshRef = useRef<Mesh>(null);
   const groupRef = useRef<Group>(null);
-  const [currentScreen, setCurrentScreen] = useState(0);
+  const [currentScreen, setCurrentScreen] = useState(1);
   
-  const screens = ['splash', 'main', 'expenses', 'groups', 'profile'];
+  const screenshots = [1, 2, 3, 4, 5];
   
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentScreen((prev) => (prev + 1) % screens.length);
+      setCurrentScreen((prev) => {
+        const next = prev >= screenshots.length ? 1 : prev + 1;
+        return next;
+      });
     }, 3000); // Change screen every 3 seconds
     
     return () => clearInterval(interval);
@@ -709,23 +741,6 @@ function PhoneModel() {
       groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
     }
   });
-
-  const renderCurrentScreen = () => {
-    switch (screens[currentScreen]) {
-      case 'splash':
-        return <SplashScreen />;
-      case 'main':
-        return <MainAppScreen />;
-      case 'expenses':
-        return <ExpensesScreen />;
-      case 'groups':
-        return <GroupsScreen />;
-      case 'profile':
-        return <ProfileScreen />;
-      default:
-        return <SplashScreen />;
-    }
-  };
 
   return (
     <Float speed={2} rotationIntensity={0.1} floatIntensity={0.3}>
@@ -753,61 +768,8 @@ function PhoneModel() {
           <meshStandardMaterial color="#000000" />
         </mesh>
         
-        {/* Dynamic Screen Content */}
-        {renderCurrentScreen()}
-        
-        {/* Dynamic Island - Pill Shape */}
-        <group position={[0, 1.4, 0.18]}>
-          {/* Main Dynamic Island Body - Pill Shape */}
-          <mesh>
-            <cylinderGeometry args={[0.11, 0.11, 0.015, 16]} />
-            <meshStandardMaterial 
-              color="#000000" 
-              metalness={0.9} 
-              roughness={0.05}
-              envMapIntensity={0.8}
-            />
-          </mesh>
-          
-          {/* Dynamic Island Content */}
-          <group position={[0, 0, 0.008]}>
-            {/* Time Display */}
-            <Text
-              position={[-0.15, 0, 0]}
-              fontSize={0.05}
-              color="#ffffff"
-              anchorX="center"
-              anchorY="middle"
-              fontWeight="600"
-            >
-              5:53
-            </Text>
-            
-            {/* Battery Indicator */}
-            <mesh position={[0.15, 0, 0]}>
-              <boxGeometry args={[0.06, 0.03, 0.001]} />
-              <meshStandardMaterial color="#ffffff" />
-            </mesh>
-            
-            {/* Signal/WiFi Indicators */}
-            <mesh position={[0.08, 0, 0]}>
-              <boxGeometry args={[0.04, 0.02, 0.001]} />
-              <meshStandardMaterial color="#ffffff" />
-            </mesh>
-          </group>
-          
-          {/* Dynamic Island Glow Effect */}
-          <mesh position={[0, 0, -0.002]}>
-            <cylinderGeometry args={[0.12, 0.12, 0.005, 16]} />
-            <meshStandardMaterial 
-              color="#000000" 
-              opacity={0.2} 
-              transparent 
-              emissive="#000000"
-              emissiveIntensity={0.1}
-            />
-          </mesh>
-        </group>
+        {/* Dynamic Screen Content - Using actual screenshots */}
+        <ScreenshotScreen screenshotNumber={currentScreen} />
         
         {/* Home Indicator */}
         <mesh position={[0, -1.5, 0.18]}>

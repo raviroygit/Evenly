@@ -369,3 +369,98 @@ async function sendSupportConfirmationEmail(
     // Don't throw error - confirmation email failure shouldn't break the main flow
   }
 }
+
+/**
+ * Send Khata transaction notification email to customer.
+ * @param customerEmail - Customer's email address
+ * @param customerName - Customer's name
+ * @param userName - User's name (who made the transaction)
+ * @param transaction - Transaction data
+ */
+export async function sendKhataTransactionEmail(
+  customerEmail: string,
+  customerName: string,
+  userName: string,
+  transaction: {
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    balance: string;
+    date: string;
+  }
+): Promise<void> {
+  console.log('sendKhataTransactionEmail called with:', {
+    to: customerEmail,
+    customerName,
+    userName,
+    transactionType: transaction.type,
+    amount: transaction.amount,
+  });
+
+  try {
+    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
+    const balanceNum = parseFloat(transaction.balance);
+    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Khata Transaction - ${transactionType}</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }
+          .transaction-card { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid ${transactionColor}; }
+          .amount { font-size: 28px; font-weight: bold; color: ${transactionColor}; margin: 10px 0; }
+          .balance { font-size: 20px; font-weight: bold; color: ${balanceColor}; margin: 10px 0; }
+          .info-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          .info-table th, .info-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+          .info-table th { background-color: #f5f5f5; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>📝 Khata Transaction Update</h2>
+          <p>New transaction recorded by ${userName}</p>
+        </div>
+        
+        <div class="content">
+          <h3>Hello ${customerName},</h3>
+          <p>A new transaction has been recorded in your Khata:</p>
+          
+          <div class="transaction-card">
+            <h3 style="margin-top: 0; color: ${transactionColor};">${transactionType}</h3>
+            <div class="amount">₹${transaction.amount}</div>
+            ${transaction.description ? `<p><strong>Description:</strong> ${transaction.description}</p>` : ''}
+            <p><strong>Date:</strong> ${new Date(transaction.date).toLocaleString('en-IN')}</p>
+          </div>
+          
+          <h3>Current Balance</h3>
+          <div class="balance">${balanceType}: ₹${Math.abs(balanceNum).toFixed(2)}</div>
+          
+          <div class="footer">
+            <p>This is an automated notification from Evenly Khata.</p>
+            <p>© ${new Date().getFullYear()} Evenly. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const subject = `Khata Transaction: ${transactionType} ₹${transaction.amount}`;
+    
+    console.log('Sending Khata transaction email with subject:', subject);
+    await sendEmail(customerEmail, subject, htmlBody);
+    console.log('Khata transaction email sent successfully to:', customerEmail);
+  } catch (error) {
+    console.error('Error in sendKhataTransactionEmail:', error);
+    throw error;
+  }
+}

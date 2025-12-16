@@ -127,6 +127,43 @@ export const payments = pgTable('payments', {
   toUserIdIdx: index('payments_to_user_id_idx').on(table.toUserId),
 }));
 
+// Khata Customers table
+export const khataCustomers = pgTable('khata_customers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  address: text('address'),
+  avatar: text('avatar'), // Cloudinary URL
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('khata_customers_user_id_idx').on(table.userId),
+  emailIdx: index('khata_customers_email_idx').on(table.email),
+}));
+
+// Khata Transactions table
+export const khataTransactions = pgTable('khata_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  customerId: uuid('customer_id').notNull().references(() => khataCustomers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'give' or 'get'
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  currency: text('currency').notNull().default('INR'),
+  description: text('description'),
+  imageUrl: text('image_url'), // Cloudinary URL
+  balance: decimal('balance', { precision: 10, scale: 2 }).notNull(), // Running balance after this transaction
+  transactionDate: timestamp('transaction_date').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  customerIdIdx: index('khata_transactions_customer_id_idx').on(table.customerId),
+  userIdIdx: index('khata_transactions_user_id_idx').on(table.userId),
+  transactionDateIdx: index('khata_transactions_transaction_date_idx').on(table.transactionDate),
+}));
+
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -152,6 +189,12 @@ export type NewUserBalance = typeof userBalances.$inferInsert;
 
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+
+export type KhataCustomer = typeof khataCustomers.$inferSelect;
+export type NewKhataCustomer = typeof khataCustomers.$inferInsert;
+
+export type KhataTransaction = typeof khataTransactions.$inferSelect;
+export type NewKhataTransaction = typeof khataTransactions.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

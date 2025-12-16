@@ -1,13 +1,31 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Download, Menu, X } from 'lucide-react';
+import { Download, Menu, X, Apple, Play } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
+        setIsDownloadMenuOpen(false);
+      }
+    };
+
+    if (isDownloadMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDownloadMenuOpen]);
 
   const navItems = [
     { label: 'Features', href: '#features' },
@@ -50,14 +68,53 @@ export function Navigation() {
               </Link>
             ))}
             
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download App
-            </motion.button>
+            <div className="relative" ref={downloadMenuRef}>
+              <motion.button
+                onClick={() => setIsDownloadMenuOpen(!isDownloadMenuOpen)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download App
+              </motion.button>
+              
+              {isDownloadMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg overflow-hidden z-50"
+                >
+                  <a
+                    href="https://apps.apple.com/us/app/evenlysplit/id6756101586"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors"
+                    onClick={() => setIsDownloadMenuOpen(false)}
+                  >
+                    <Apple className="w-5 h-5 text-black dark:text-white" />
+                    <div>
+                      <div className="font-semibold text-foreground">Download for iOS</div>
+                      <div className="text-xs text-muted-foreground">App Store</div>
+                    </div>
+                  </a>
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly&hl=en_IN"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors border-t border-border"
+                    onClick={() => setIsDownloadMenuOpen(false)}
+                  >
+                    <Play className="w-5 h-5 text-[#00D9FF]" />
+                    <div>
+                      <div className="font-semibold text-foreground">Download for Android</div>
+                      <div className="text-xs text-muted-foreground">Google Play</div>
+                    </div>
+                  </a>
+                </motion.div>
+              )}
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
@@ -90,15 +147,31 @@ export function Navigation() {
                 </Link>
               ))}
               
-              <div className="px-4 pt-4 border-t border-border">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <div className="px-4 pt-4 border-t border-border space-y-2">
+                <motion.a
+                  href="https://apps.apple.com/us/app/evenlysplit/id6756101586"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  <Download className="w-4 h-4" />
-                  Download App
-                </motion.button>
+                  <Apple className="w-4 h-4 text-white" />
+                  Download for iOS
+                </motion.a>
+                <motion.a
+                  href="https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly&hl=en_IN"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Play className="w-4 h-4 text-[#00D9FF]" />
+                  Download for Android
+                </motion.a>
               </div>
             </div>
           </motion.div>
