@@ -771,12 +771,6 @@ function PhoneModel() {
         {/* Dynamic Screen Content - Using actual screenshots */}
         <ScreenshotScreen screenshotNumber={currentScreen} />
         
-        {/* Home Indicator */}
-        <mesh position={[0, -1.5, 0.18]}>
-          <boxGeometry args={[0.9, 0.06, 0.01]} />
-          <meshStandardMaterial color="#ffffff" opacity={0.3} transparent />
-        </mesh>
-        
         {/* Side Buttons - Volume */}
         <mesh position={[1.0, 0.9, 0]}>
           <boxGeometry args={[0.06, 0.4, 0.08]} />
