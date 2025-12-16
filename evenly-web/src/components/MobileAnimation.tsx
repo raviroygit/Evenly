@@ -715,7 +715,7 @@ function ScreenshotScreen({ screenshotNumber }: { screenshotNumber: number }) {
   
   return (
     <mesh position={[0, 0, 0.175]}>
-      <planeGeometry args={[1.65, 3.4]} />
+      <planeGeometry args={[1.8, 3.7]} />
       <meshStandardMaterial map={currentTexture} />
     </mesh>
   );
@@ -750,11 +750,11 @@ function PhoneModel() {
   return (
     <Float speed={2} rotationIntensity={0.1} floatIntensity={0.3}>
       <group ref={groupRef}>
-        {/* iPhone Body - More realistic proportions (iPhone 15 Pro) with rounded corners */}
+        {/* iPhone Body - More realistic proportions with more rounded corners */}
         <RoundedBox
           ref={meshRef}
           args={[1.9, 3.8, 0.3]}
-          radius={0.15}
+          radius={0.25}
           smoothness={4}
           position={[0, 0, 0]}
         >
@@ -766,20 +766,20 @@ function PhoneModel() {
           />
         </RoundedBox>
         
-        {/* Screen Bezel with rounded corners */}
+        {/* Screen Bezel with rounded corners - Reduced bezel size */}
         <RoundedBox
-          args={[1.75, 3.6, 0.01]}
-          radius={0.12}
+          args={[1.82, 3.72, 0.01]}
+          radius={0.22}
           smoothness={4}
           position={[0, 0, 0.16]}
         >
           <meshStandardMaterial color="#000000" />
         </RoundedBox>
         
-        {/* Screen with rounded corners */}
+        {/* Screen with rounded corners - Larger screen, less bezel */}
         <RoundedBox
-          args={[1.65, 3.4, 0.005]}
-          radius={0.11}
+          args={[1.8, 3.7, 0.005]}
+          radius={0.21}
           smoothness={4}
           position={[0, 0, 0.17]}
         >
