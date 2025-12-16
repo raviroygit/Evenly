@@ -84,37 +84,12 @@ export function HeroSection() {
               ))}
             </motion.div>
             
-            {/* Stats */}
+            {/* CTA Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-              className="grid grid-cols-3 gap-8 pt-8 border-t border-border"
-            >
-              {[
-                { number: '50K+', label: 'Active Users' },
-                { number: '$2M+', label: 'Split Monthly' },
-                { number: '4.9★', label: 'App Rating' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: 0.9 + index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="text-2xl font-bold text-foreground">{stat.number}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-            
-            {/* CTA Buttons - Moved after stats for better mobile experience */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.0 }}
-              className="flex flex-col gap-4 pt-8"
+              transition={{ duration: 0.8, delay: 0.7 }}
+              className="flex flex-col gap-4"
             >
               <div className="flex flex-col sm:flex-row gap-4">
                 <motion.a
@@ -149,6 +124,31 @@ export function HeroSection() {
               >
                 Learn More
               </motion.button>
+            </motion.div>
+            
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="grid grid-cols-3 gap-8 pt-8 border-t border-border"
+            >
+              {[
+                { number: '50K+', label: 'Active Users' },
+                { number: '$2M+', label: 'Split Monthly' },
+                { number: '4.9★', label: 'App Rating' },
+              ].map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: 0.9 + index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="text-2xl font-bold text-foreground">{stat.number}</div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                </motion.div>
+              ))}
             </motion.div>
           </motion.div>
           
