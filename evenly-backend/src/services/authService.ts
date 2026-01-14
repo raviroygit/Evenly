@@ -394,4 +394,103 @@ export class AuthService {
       };
     }
   }
+
+  /**
+   * Mobile-specific: Silent token refresh (wrapper to auth service mobile endpoint)
+   * Uses refresh token to create new 90-day session - NO OTP required
+   */
+  static async mobileRefresh(refreshToken: string): Promise<AuthResponse> {
+    try {
+      console.log('[evenly-backend] Proxying mobile refresh to auth service');
+
+      const response = await axios.post(
+        `${this.AUTH_SERVICE_URL}/../mobile/refresh`, // Goes to /api/v1/mobile/refresh
+        { refreshToken },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+
+      if (response.data.success && response.data.user) {
+        console.log('[evenly-backend] Mobile refresh successful - syncing user');
+
+        // Sync user with local database
+        const syncedUser = await UserService.createOrUpdateUser({
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar,
+        });
+
+        return {
+          success: true,
+          message: response.data.message || 'Session refreshed successfully',
+          user: {
+            id: syncedUser.id,
+            email: syncedUser.email,
+            name: syncedUser.name,
+            avatar: syncedUser.avatar,
+          },
+          ssoToken: response.data.ssoToken,
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken,
+        };
+      }
+
+      console.log('[evenly-backend] Mobile refresh failed - invalid response');
+      return {
+        success: false,
+        message: response.data.message || 'Failed to refresh session',
+      };
+    } catch (error: any) {
+      console.error('[evenly-backend] Mobile refresh error:', error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to refresh session',
+      };
+    }
+  }
+
+  /**
+   * Mobile-specific: Check session expiry (wrapper to auth service mobile endpoint)
+   * Returns when session expires and whether it should be refreshed soon
+   */
+  static async mobileSessionExpiry(request: FastifyRequest): Promise<any> {
+    try {
+      const ssoToken = request.cookies?.sso_token;
+
+      if (!ssoToken) {
+        return {
+          success: false,
+          message: 'No authentication token provided',
+        };
+      }
+
+      console.log('[evenly-backend] Checking session expiry via auth service');
+
+      const response = await axios.get(
+        `${this.AUTH_SERVICE_URL}/../mobile/session-expiry`, // Goes to /api/v1/mobile/session-expiry
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cookie': `sso_token=${ssoToken}`,
+          },
+          timeout: 30000,
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('[evenly-backend] Session expiry check error:', error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to check session expiry',
+      };
+    }
+  }
 }

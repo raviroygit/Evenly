@@ -24,11 +24,11 @@ const isDevelopment = () => {
 // Validation with better error messages
 const validateEnvironment = () => {
   const missingVars: string[] = [];
-  
+
   // if (!ENV.AUTH_SERVICE_URL) {
   //   missingVars.push('EXPO_PUBLIC_AUTH_SERVICE_URL');
   // }
-  
+
   if (!ENV.EVENLY_BACKEND_URL) {
     missingVars.push('EXPO_PUBLIC_EVENLY_BACKEND_URL');
   }

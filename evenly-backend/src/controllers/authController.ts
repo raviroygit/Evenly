@@ -20,6 +20,10 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const mobileRefreshSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
 export class AuthController {
   /**
    * Send magic link for signup
@@ -320,6 +324,83 @@ export class AuthController {
       return reply.status(400).send({ success: false, message: result.message || 'Google login failed' });
     } catch (err: any) {
       return reply.code(500).send({ success: false, message: err.message || 'Google login failed' });
+    }
+  }
+
+  /**
+   * Mobile-specific: Silent token refresh (wrapper to auth service)
+   * Uses refresh token to create new 90-day session - NO OTP required
+   */
+  static async mobileRefresh(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { refreshToken } = mobileRefreshSchema.parse(request.body);
+
+      const result = await AuthService.mobileRefresh(refreshToken);
+
+      if (result.success && result.user) {
+        // Set the sso_token cookie
+        if (result.ssoToken) {
+          reply.setCookie('sso_token', result.ssoToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
+            path: '/',
+          });
+        }
+
+        return reply.status(200).send({
+          success: true,
+          message: result.message,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          ssoToken: result.ssoToken,
+          user: result.user,
+          expiresAt: new Date(Date.now() + 90 * 86400 * 1000).toISOString(), // 90 days
+        });
+      }
+
+      return reply.status(401).send({
+        success: false,
+        message: result.message || 'Failed to refresh session',
+      });
+    } catch (error: any) {
+      console.error('Mobile refresh error:', error);
+
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to refresh session',
+      });
+    }
+  }
+
+  /**
+   * Mobile-specific: Get session expiry info (wrapper to auth service)
+   * Returns when session expires and whether it should be refreshed soon
+   */
+  static async mobileSessionExpiry(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const result = await AuthService.mobileSessionExpiry(request);
+
+      if (result.success) {
+        return reply.status(200).send(result);
+      }
+
+      return reply.status(401).send(result);
+    } catch (error: any) {
+      console.error('Mobile session expiry error:', error);
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to check session expiry',
+      });
     }
   }
 }

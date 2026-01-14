@@ -309,4 +309,92 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, AuthController.logout);
+
+  // Mobile-specific: Silent token refresh
+  fastify.post('/mobile/refresh', {
+    schema: {
+      description: 'Silent token refresh for mobile apps (90-day sessions, no OTP required)',
+      tags: ['Mobile Authentication'],
+      body: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: {
+            type: 'string',
+            description: 'Refresh token from login',
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+            ssoToken: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                avatar: { type: 'string' },
+              },
+            },
+            expiresAt: { type: 'string' },
+          },
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+        500: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, AuthController.mobileRefresh);
+
+  // Mobile-specific: Check session expiry
+  fastify.get('/mobile/session-expiry', {
+    schema: {
+      description: 'Check when current session expires (for mobile apps to schedule refresh)',
+      tags: ['Mobile Authentication'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            expiresAt: { type: 'string' },
+            expiresInMs: { type: 'number' },
+            expiresInMinutes: { type: 'number' },
+            shouldRefresh: { type: 'boolean' },
+          },
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+        500: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, AuthController.mobileSessionExpiry);
 }
