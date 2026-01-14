@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { AuthService } from '../services/AuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
+import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 
 interface User {
   id: string;
@@ -30,35 +32,199 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Start with loading false
-  
+  const appState = useRef(AppState.currentState);
+  const lastValidation = useRef<number>(Date.now());
+  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Memoize authService to prevent recreation
   const authService = useMemo(() => new AuthService(), []);
   const isAuthenticated = !!user;
 
-  // Initialize user from storage on app start
+  // Initialize user from storage on app start - STAY LOGGED IN
   useEffect(() => {
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
-        
+
         const authData = await AuthStorage.getAuthData();
-        
+
         if (authData && authData.user && authData.ssoToken) {
+          // Set user immediately from storage - stay logged in!
           setUser(authData.user);
-          // Warm cache after restoring session
-          warmAppCache().catch(() => {});
+
+          // Try to validate session with backend in background (non-blocking)
+          authService.getCurrentUser(authData.ssoToken)
+            .then(async (currentUser) => {
+              if (currentUser) {
+                // Session is still valid - update user data if changed
+                setUser(currentUser);
+                await AuthStorage.saveAuthData(
+                  currentUser,
+                  authData.accessToken,
+                  authData.refreshToken,
+                  authData.ssoToken
+                );
+                // Warm cache after validating session
+                warmAppCache().catch(() => {});
+              } else {
+                // Session invalid on backend - but DON'T log out yet
+                // User might be offline - keep them logged in with local data
+                console.warn('[AuthContext] Session validation returned null - keeping user logged in with local data');
+              }
+            })
+            .catch((error) => {
+              // Network error - DON'T log out! User might be offline
+              console.error('[AuthContext] Failed to validate session (network error) - keeping user logged in:', error);
+              // User stays logged in with local data
+            });
         } else {
           setUser(null);
         }
       } catch (error) {
-        setUser(null);
+        console.error('[AuthContext] Auth initialization error:', error);
+        // Even on error, try to stay logged in if we have stored data
+        const authData = await AuthStorage.getAuthData();
+        if (authData?.user) {
+          setUser(authData.user);
+        } else {
+          setUser(null);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [authService, warmAppCache]);
+
+  // Validate session when app comes to foreground - but NEVER log out automatically
+  const validateSessionOnForeground = useCallback(async () => {
+    // Only validate if user is logged in
+    if (!user) return;
+
+    // Only validate once per 5 minutes to avoid excessive API calls
+    const now = Date.now();
+    const timeSinceLastValidation = now - lastValidation.current;
+    const VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+    if (timeSinceLastValidation < VALIDATION_INTERVAL) {
+      console.log('[AuthContext] Skipping validation - validated recently');
+      return;
+    }
+
+    try {
+      console.log('[AuthContext] Validating session on foreground');
+      const authData = await AuthStorage.getAuthData();
+
+      if (authData && authData.ssoToken) {
+        const currentUser = await authService.getCurrentUser(authData.ssoToken);
+        if (currentUser) {
+          // Session still valid - update user data
+          setUser(currentUser);
+          lastValidation.current = now;
+          await AuthStorage.saveAuthData(
+            currentUser,
+            authData.accessToken,
+            authData.refreshToken,
+            authData.ssoToken
+          );
+          console.log('[AuthContext] Session validated successfully');
+        } else {
+          // Session returned null - but DON'T log out
+          // User might be offline or backend issue - keep them logged in
+          console.warn('[AuthContext] Session validation returned null - keeping user logged in');
+          lastValidation.current = now; // Mark as validated to avoid spamming
+        }
+      }
+    } catch (error) {
+      console.error('[AuthContext] Session validation error - keeping user logged in:', error);
+      // NEVER log out on network errors - user might be offline
+      lastValidation.current = now; // Mark as validated to avoid spamming retries
+    }
+  }, [user, authService]);
+
+  // Listen to app state changes (foreground/background)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      // When app comes to foreground
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('[AuthContext] App has come to foreground - validating session');
+        validateSessionOnForeground();
+      }
+
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [validateSessionOnForeground]);
+
+  // Background token refresh timer - checks every 15 minutes and refreshes if needed
+  useEffect(() => {
+    if (!user) {
+      // Clear timer if user is not logged in
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      return;
+    }
+
+    console.log('[AuthContext] Starting background token refresh timer');
+
+    // Check and refresh immediately on mount
+    SilentTokenRefresh.checkAndRefresh().catch(err => {
+      console.error('[AuthContext] Initial token refresh check failed:', err);
+    });
+
+    // Then check every 15 minutes
+    const interval = setInterval(() => {
+      console.log('[AuthContext] Running scheduled token refresh check...');
+      SilentTokenRefresh.checkAndRefresh().catch(err => {
+        console.error('[AuthContext] Scheduled token refresh check failed:', err);
+      });
+    }, 15 * 60 * 1000); // 15 minutes
+
+    refreshTimerRef.current = interval;
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [user]);
+
+  // Monitor auth storage for silent logouts - check every 5 seconds
+  useEffect(() => {
+    if (!user) return; // Only monitor when user is logged in
+
+    const checkAuthStorage = async () => {
+      try {
+        const authData = await AuthStorage.getAuthData();
+
+        // If auth data was cleared but user is still set, update user state
+        if (!authData && user) {
+          console.log('[AuthContext] Auth data cleared - logging out user');
+          setUser(null);
+          // Router will automatically redirect to login
+        }
+      } catch (error) {
+        console.error('[AuthContext] Error checking auth storage:', error);
+      }
+    };
+
+    // Check immediately
+    checkAuthStorage();
+
+    // Then check every 5 seconds
+    const storageMonitor = setInterval(checkAuthStorage, 5000);
+
+    return () => {
+      clearInterval(storageMonitor);
+    };
+  }, [user]);
 
   const warmAppCache = useCallback(async () => {
     const TTL = 3 * 60 * 1000; // 3 minutes

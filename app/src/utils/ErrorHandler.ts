@@ -7,12 +7,30 @@ export interface UserFriendlyError {
   action?: string;
 }
 
+/**
+ * Error Handler
+ *
+ * Handles API errors gracefully:
+ * - 401 errors are handled silently (automatic logout and redirect to login)
+ * - Network errors show helpful messages
+ * - Other errors show appropriate user-friendly messages
+ *
+ * Users NEVER see auth-related error alerts
+ */
+
 export class ErrorHandler {
-  static handleApiError(error: any): UserFriendlyError {
+  static handleApiError(error: any): UserFriendlyError | null {
+    // Check if this is a silent logout error (should not show to user)
+    if (error._silentLogout) {
+      // Return null to indicate no error should be shown
+      // User will be automatically redirected to login
+      return null;
+    }
+
     // Handle Axios errors
     if (error.isAxiosError) {
       const axiosError = error as AxiosError;
-      
+
       // Network errors (no internet, server down, etc.)
       if (!axiosError.response) {
         return {
@@ -31,11 +49,9 @@ export class ErrorHandler {
             action: 'OK'
           };
         case 401:
-          return {
-            title: 'Authentication Required',
-            message: 'Please log in again to continue.',
-            action: 'Login'
-          };
+          // 401 errors are handled silently by EvenlyApiClient
+          // If we reach here, it means auth is being handled - don't show error
+          return null;
         case 403:
           return {
             title: 'Access Denied',
@@ -115,7 +131,13 @@ export class ErrorHandler {
 
   static showErrorAlert(error: any, onAction?: () => void) {
     const userFriendlyError = this.handleApiError(error);
-    
+
+    // Don't show alert if error should be handled silently (e.g., 401 auth errors)
+    if (!userFriendlyError) {
+      console.log('[ErrorHandler] Skipping error alert - handled silently');
+      return;
+    }
+
     Alert.alert(
       userFriendlyError.title,
       userFriendlyError.message,
@@ -131,7 +153,13 @@ export class ErrorHandler {
 
   static showErrorWithRetry(error: any, onRetry?: () => void) {
     const userFriendlyError = this.handleApiError(error);
-    
+
+    // Don't show alert if error should be handled silently (e.g., 401 auth errors)
+    if (!userFriendlyError) {
+      console.log('[ErrorHandler] Skipping error alert - handled silently');
+      return;
+    }
+
     const buttons = [
       {
         text: 'Cancel',

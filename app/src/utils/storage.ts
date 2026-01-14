@@ -10,7 +10,7 @@ interface StorageData {
 }
 
 const STORAGE_KEY = 'evenly_auth_data';
-const TOKEN_EXPIRY_DAYS = 7; // Token expires after 7 days
+// No local expiry - tokens managed by backend with sliding window (90 days)
 
 class StorageManager {
   private isWeb = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -74,29 +74,22 @@ export const AuthStorage = {
   async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; ssoToken?: string; timestamp?: number } | null> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
-      
+
       if (!dataString) {
         return null;
       }
 
       const data: StorageData = JSON.parse(dataString);
-      
-      // Handle backward compatibility - if no timestamp, assume it's old
-      const timestamp = data.timestamp || 0;
-      
-      // Check if token is expired
-      const now = Date.now();
-      const tokenAge = now - timestamp;
-      const maxAge = TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-      
-      if (tokenAge > maxAge) {
-        await this.clearAuthData();
-        return null;
-      }
+
+      // Handle backward compatibility - if no timestamp, use current time
+      const timestamp = data.timestamp || Date.now();
+
+      // NO LOCAL EXPIRY CHECK - Backend handles session expiry with sliding window
+      // This allows users to stay logged in indefinitely as long as they use the app
 
       // Check if ssoToken is present (required for backend authentication)
       if (!data.ssoToken) {
-        await this.clearAuthData();
+        console.warn('[AuthStorage] No ssoToken found in stored data');
         return null;
       }
 

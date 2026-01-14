@@ -3,6 +3,7 @@ import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
 import { Platform } from 'react-native';
+import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 
 /**
  * Axios instance for Evenly Backend API with automatic authentication
@@ -86,64 +87,72 @@ class EvenlyApiClient {
         // Log the error for debugging
         ErrorHandler.logError(error, 'API Request');
         
-        // Handle 401 Unauthorized - token might be expired
+        // Handle 401 Unauthorized - backend session expired
         if (error.response?.status === 401) {
+          const originalRequest = error.config;
+
+          // Avoid infinite retry loop
+          if (originalRequest._retryCount && originalRequest._retryCount >= 1) {
+            console.error('[EvenlyApiClient] Already retried once - silently logging out');
+
+            // Silently logout user (clears auth data, triggers redirect to login)
+            await SilentTokenRefresh.silentLogout();
+
+            // Return a user-friendly error without showing alert
+            // Calling code should handle this gracefully since user will be redirected
+            return Promise.reject({
+              ...error,
+              _silentLogout: true,
+              message: 'Session expired'
+            });
+          }
+
+          console.log('[EvenlyApiClient] Backend session expired - attempting silent refresh');
+
           try {
-            // Try to refresh the token
-            const authData = await AuthStorage.getAuthData();
-            const refreshToken = authData?.refreshToken;
+            // Silently refresh using refresh token (NO user interaction)
+            const refreshed = await SilentTokenRefresh.refresh();
 
-            if (refreshToken) {
-              const refreshResponse = await axios.post(
-                `${ENV.EVENLY_BACKEND_URL}/auth/refresh-token`,
-                { refreshToken },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'ngrok-skip-browser-warning': 'true',
-                  },
-                }
-              );
+            if (refreshed) {
+              // Get new auth data
+              const authData = await AuthStorage.getAuthData();
+              if (authData?.ssoToken) {
+                // Mark as retried
+                originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
 
-              if (refreshResponse.data.accessToken) {
-                // Update stored tokens
-                await AuthStorage.saveAuthData(
-                  authData.user,
-                  refreshResponse.data.accessToken,
-                  refreshToken,
-                  authData.ssoToken
-                );
+                // Update sso_token in request headers
+                originalRequest.headers['Cookie'] = `sso_token=${authData.ssoToken}`;
 
-                // Retry the original request with new token
-                const originalRequest = error.config;
-                const rawToken = authData.ssoToken || '';
-                
-                // Handle existing cookies properly
-                const existingCookie = originalRequest.headers['Cookie'] || originalRequest.headers['cookie'];
-                if (existingCookie) {
-                  // Split by semicolon (standard cookie separator), filter out sso_token entries, then rejoin
-                  const cookieParts = existingCookie
-                    .split(';')
-                    .map((part: string) => part.trim())
-                    .filter((part: string) => !part.startsWith('sso_token='))
-                    .filter((part: string) => part.length > 0); // Remove empty parts
-                  
-                  // Add the new sso_token (use raw token to match Android)
-                  cookieParts.push(`sso_token=${rawToken}`);
-                  
-                  originalRequest.headers['Cookie'] = cookieParts.join('; ');
-                } else {
-                  originalRequest.headers['Cookie'] = `sso_token=${rawToken}`;
-                }
-                
+                console.log('[EvenlyApiClient] ✅ Silent refresh successful, retrying request');
+                // Retry the original request with new session
                 return this.client(originalRequest);
               }
+            } else {
+              console.warn('[EvenlyApiClient] ❌ Silent refresh failed - silently logging out');
+
+              // Silently logout user (clears auth data, triggers redirect to login)
+              await SilentTokenRefresh.silentLogout();
+
+              // Return error without showing alert
+              return Promise.reject({
+                ...error,
+                _silentLogout: true,
+                message: 'Session expired'
+              });
             }
           } catch (refreshError) {
-            console.error('[EvenlyApiClient] Token refresh failed:', refreshError);
-            ErrorHandler.logError(refreshError, 'Token Refresh');
-            // Clear auth data and redirect to login
-            await AuthStorage.clearAuthData();
+            console.error('[EvenlyApiClient] ❌ Silent refresh error - silently logging out');
+            ErrorHandler.logError(refreshError, 'Silent Token Refresh');
+
+            // Silently logout user
+            await SilentTokenRefresh.silentLogout();
+
+            // Return error without showing alert
+            return Promise.reject({
+              ...error,
+              _silentLogout: true,
+              message: 'Session expired'
+            });
           }
         }
 
