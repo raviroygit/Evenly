@@ -43,7 +43,7 @@ export class SilentTokenRefresh {
 
         // Call mobile-specific refresh endpoint (via evenly-backend wrapper)
         const response = await axios.post(
-          `${ENV.EVENLY_BACKEND_URL}/mobile/refresh`,
+          `${ENV.EVENLY_BACKEND_URL}/auth/mobile/refresh`,
           { refreshToken: authData.refreshToken },
           {
             headers: {
@@ -108,7 +108,7 @@ export class SilentTokenRefresh {
 
       // Check when session expires (via evenly-backend wrapper)
       const response = await axios.get(
-        `${ENV.EVENLY_BACKEND_URL}/mobile/session-expiry`,
+        `${ENV.EVENLY_BACKEND_URL}/auth/mobile/session-expiry`,
         {
           headers: {
             'Cookie': `sso_token=${authData.ssoToken}`,
