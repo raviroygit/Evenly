@@ -16,7 +16,6 @@ export { useScreenDimensions } from './hooks/useScreenDimensions';
 
 // Export all screen components
 export { HomeScreen } from './features/home/HomeScreen';
-export { ExpensesScreen } from './features/expenses/ExpensesScreen';
 export { GroupsScreen } from './features/groups/GroupsScreen';
 export { ProfileScreen } from './features/profile/ProfileScreen';
 

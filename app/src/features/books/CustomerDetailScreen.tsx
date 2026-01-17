@@ -3,11 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Platform,
   Image,
-  RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -15,9 +14,15 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { AddTransactionModal } from '../../components/modals/AddTransactionModal';
+import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { SkeletonTransactionList } from '../../components/ui/SkeletonLoader';
 import { AppCache } from '../../utils/cache';
+import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
+import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
+import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
+import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
+import { useSwipeAction } from '../../contexts/SwipeActionContext';
 
 interface Transaction {
   id: string;
@@ -34,6 +39,7 @@ export const CustomerDetailScreen: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerInitials?: string }>();
   const { colors, theme } = useTheme();
+  const { setActiveSwipeId } = useSwipeAction();
   const [customer, setCustomer] = useState<{
     id: string;
     name: string;
@@ -46,6 +52,9 @@ export const CustomerDetailScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [transactionType, setTransactionType] = useState<'give' | 'get'>('give');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
 
   const getInitials = (name: string): string => {
     return name
@@ -150,16 +159,11 @@ export const CustomerDetailScreen: React.FC = () => {
       try {
         // Show skeleton loader while refreshing
         setLoading(true);
-        
-        // Manually invalidate cache to ensure fresh data
-        await AppCache.invalidateByPrefixes(['/khata']);
-        
-        // Small delay to ensure cache invalidation completes
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+
+        // Force cache bypass to get fresh data
         const [customerData, transactionsData] = await Promise.all([
-          EvenlyBackendService.getKhataCustomerById(params.customerId),
-          EvenlyBackendService.getKhataCustomerTransactions(params.customerId),
+          EvenlyBackendService.getKhataCustomerById(params.customerId, { cacheTTLMs: 0 }),
+          EvenlyBackendService.getKhataCustomerTransactions(params.customerId, { cacheTTLMs: 0 }),
         ]);
 
         setCustomer({
@@ -193,56 +197,152 @@ export const CustomerDetailScreen: React.FC = () => {
     }
   };
 
+  const handleUpdateTransaction = async (transactionId: string, data: FormData) => {
+    try {
+      await EvenlyBackendService.updateKhataTransaction(transactionId, data);
+      setEditingTransaction(null);
+
+      // Refresh data with cache bypass
+      if (params.customerId) {
+        setLoading(true);
+        const [customerData, transactionsData] = await Promise.all([
+          EvenlyBackendService.getKhataCustomerById(params.customerId, { cacheTTLMs: 0 }),
+          EvenlyBackendService.getKhataCustomerTransactions(params.customerId, { cacheTTLMs: 0 }),
+        ]);
+
+        setCustomer({
+          id: customerData.id,
+          name: customerData.name,
+          initials: getInitials(customerData.name),
+          balance: customerData.balance,
+          type: customerData.type,
+        });
+
+        const formattedTransactions: Transaction[] = transactionsData.map((t) => {
+          const { date, time } = formatDate(t.transactionDate);
+          return {
+            id: t.id,
+            date,
+            time,
+            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
+            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
+            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            hasAttachment: !!t.imageUrl,
+            imageUrl: t.imageUrl || undefined,
+          };
+        });
+
+        setTransactions(formattedTransactions);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('[CustomerDetailScreen] Error updating transaction:', error);
+      Alert.alert('Error', 'Failed to update transaction. Please try again.');
+    }
+  };
+
+  const handleDeleteTransaction = (transactionId: string) => {
+    setDeletingTransactionId(transactionId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (!deletingTransactionId) return;
+
+    try {
+      setLoading(true);
+      await EvenlyBackendService.deleteKhataTransaction(deletingTransactionId);
+
+      // Refresh data with cache bypass
+      if (params.customerId) {
+        const [customerData, transactionsData] = await Promise.all([
+          EvenlyBackendService.getKhataCustomerById(params.customerId, { cacheTTLMs: 0 }),
+          EvenlyBackendService.getKhataCustomerTransactions(params.customerId, { cacheTTLMs: 0 }),
+        ]);
+
+        setCustomer({
+          id: customerData.id,
+          name: customerData.name,
+          initials: getInitials(customerData.name),
+          balance: customerData.balance,
+          type: customerData.type,
+        });
+
+        const formattedTransactions: Transaction[] = transactionsData.map((t) => {
+          const { date, time } = formatDate(t.transactionDate);
+          return {
+            id: t.id,
+            date,
+            time,
+            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
+            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
+            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            hasAttachment: !!t.imageUrl,
+            imageUrl: t.imageUrl || undefined,
+          };
+        });
+
+        setTransactions(formattedTransactions);
+      }
+
+      setLoading(false);
+      // Modal will close automatically, show success alert
+      Alert.alert('Success', 'Transaction deleted successfully');
+    } catch (error) {
+      console.error('[CustomerDetailScreen] Error deleting transaction:', error);
+      setLoading(false);
+      Alert.alert('Error', 'Failed to delete transaction. Please try again.');
+      throw error; // Re-throw to prevent modal from closing
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     console.log('CustomerDetailScreen: onRefresh called');
     await loadData(true);
   }, [loadData]);
 
+  // Create pull-to-refresh handlers using utility function
+  const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
+    onRefresh,
+    refreshing,
+  });
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#000000' }]}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {customerInitials}
-            </Text>
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerName}>{customerName}</Text>
-            <Text style={styles.headerSubtitle}>Click here to view settings.</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerActionButton}>
-              <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+    <>
+      <PullToRefreshSpinner refreshing={refreshing} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: '#000000' }]}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
+            <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+              <Text style={[styles.avatarText, { color: colors.primary }]}>
+                {customerInitials}
+              </Text>
+            </View>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerName}>{customerName}</Text>
+              <Text style={styles.headerSubtitle}>Click here to view settings.</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.headerActionButton}>
+                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={Platform.OS === 'ios'}
-        alwaysBounceVertical={Platform.OS === 'ios'}
-        scrollEventThrottle={16}
-        decelerationRate="normal"
-        scrollIndicatorInsets={{ right: 1 }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? colors.primary : undefined}
-            colors={Platform.OS === 'android' ? [colors.primary] : undefined}
-            enabled={true}
-          />
-        }
-      >
+        <PullToRefreshScrollView
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={handleScrollEndDrag}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Summary Card */}
         <View style={styles.summaryContainer}>
           <ResponsiveLiquidGlassCard
@@ -275,10 +375,42 @@ export const CustomerDetailScreen: React.FC = () => {
             </View>
           ) : (
             transactions.map((transaction) => (
-            <ResponsiveLiquidGlassCard
+            <SwipeActionRow
               key={transaction.id}
+              swipeId={`transaction-${transaction.id}`}
+              actions={[
+                {
+                  id: 'edit',
+                  title: 'Edit',
+                  icon: 'pencil-outline',
+                  color: '#FFFFFF',
+                  backgroundColor: '#FF9500',
+                  onPress: () => {
+                    setEditingTransaction(transaction);
+                  },
+                },
+                {
+                  id: 'delete',
+                  title: 'Delete',
+                  icon: 'trash-outline',
+                  color: '#FFFFFF',
+                  backgroundColor: '#FF3B30',
+                  onPress: () => {
+                    handleDeleteTransaction(transaction.id);
+                  },
+                },
+              ]}
+              onActionExecuted={() => {
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    setActiveSwipeId(null);
+                  });
+                });
+              }}
+            >
+            <ResponsiveLiquidGlassCard
               padding={{ small: 10, medium: 12, large: 14 }}
-              marginBottom={8}
+              marginBottom={0}
               borderRadius={{ small: 12, medium: 14, large: 16 }}
             >
               <View style={styles.transactionRow}>
@@ -305,9 +437,9 @@ export const CustomerDetailScreen: React.FC = () => {
                         {transaction.time}
                       </Text>
                     </View>
-                    <View style={[styles.balanceBadge, { 
-                      backgroundColor: theme === 'dark' 
-                        ? 'rgba(255, 59, 48, 0.15)' 
+                    <View style={[styles.balanceBadge, {
+                      backgroundColor: theme === 'dark'
+                        ? 'rgba(255, 59, 48, 0.15)'
                         : 'rgba(255, 59, 48, 0.1)',
                       borderColor: 'rgba(255, 59, 48, 0.4)',
                       borderWidth: 1,
@@ -332,52 +464,71 @@ export const CustomerDetailScreen: React.FC = () => {
                 </View>
               </View>
             </ResponsiveLiquidGlassCard>
+            </SwipeActionRow>
             ))
           )}
         </View>
-      </ScrollView>
+        </PullToRefreshScrollView>
 
-      {/* Floating Action Buttons */}
-      <FloatingActionButton
-        actions={[
-          {
-            id: 'add-customer',
-            title: 'Add Customer',
-            icon: '👤',
-            onPress: () => {
-              // TODO: Implement add customer functionality
-              console.log('Add customer');
+        {/* Floating Action Buttons */}
+        <FloatingActionButton
+          actions={[
+            {
+              id: 'add-customer',
+              title: 'Add Customer',
+              icon: '👤',
+              onPress: () => {
+                // TODO: Implement add customer functionality
+                console.log('Add customer');
+              },
             },
-          },
-          {
-            id: 'you-gave',
-            title: 'You Gave ₹',
-            icon: '💰',
-            onPress: handleYouGave,
-            color: '#D9433D',
-          },
-          {
-            id: 'you-got',
-            title: 'You Got ₹',
-            icon: '💵',
-            onPress: handleYouGot,
-            color: '#519F51',
-          },
-        ]}
-        position="bottom-right"
-      />
-
-      {/* Add Transaction Modal */}
-      {customer?.id && (
-        <AddTransactionModal
-          visible={showTransactionModal}
-          onClose={() => setShowTransactionModal(false)}
-          onSuccess={handleTransactionAdded}
-          customerId={customer.id}
-          transactionType={transactionType}
+            {
+              id: 'you-gave',
+              title: 'You Gave ₹',
+              icon: '💰',
+              onPress: handleYouGave,
+              color: '#D9433D',
+            },
+            {
+              id: 'you-got',
+              title: 'You Got ₹',
+              icon: '💵',
+              onPress: handleYouGot,
+              color: '#519F51',
+            },
+          ]}
+          position="bottom-right"
         />
-      )}
-    </View>
+
+        {/* Add/Edit Transaction Modal */}
+        {customer?.id && (
+          <AddTransactionModal
+            visible={showTransactionModal || !!editingTransaction}
+            onClose={() => {
+              setShowTransactionModal(false);
+              setEditingTransaction(null);
+            }}
+            onSuccess={handleTransactionAdded}
+            customerId={customer.id}
+            transactionType={transactionType}
+            editTransaction={editingTransaction}
+            onUpdateTransaction={handleUpdateTransaction}
+          />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          visible={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setDeletingTransactionId(null);
+          }}
+          onConfirm={confirmDeleteTransaction}
+          title="Delete Transaction"
+          description="Are you sure you want to delete this transaction? This action cannot be undone."
+        />
+      </View>
+    </>
   );
 };
 
@@ -430,9 +581,6 @@ const styles = StyleSheet.create({
   headerActionButton: {
     padding: 4,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
     padding: 20,
     paddingBottom: 100,
@@ -459,6 +607,7 @@ const styles = StyleSheet.create({
   },
   transactionsContainer: {
     marginTop: 8,
+    gap: 8,
   },
   transactionRow: {
     flexDirection: 'row',

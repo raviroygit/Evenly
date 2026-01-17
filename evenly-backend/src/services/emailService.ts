@@ -64,25 +64,34 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
  * @param isExistingUser - Whether the recipient already has an account
  */
 export async function sendGroupInvitationEmail(
-  email: string, 
-  groupName: string, 
-  inviterName: string, 
+  email: string,
+  groupName: string,
+  inviterName: string,
   invitationLink: string,
-  isExistingUser: boolean
+  isExistingUser: boolean,
+  invitationToken?: string
 ): Promise<void> {
   try {
+    // Construct app download link (smart redirect that detects device)
+    // Include invitation token so the app can open directly to the invitation
+    let appDownloadLink = `${config.app.baseUrl}/api/app/download`;
+    if (invitationToken) {
+      appDownloadLink += `?token=${invitationToken}`;
+    }
+
     const htmlBody = await renderTemplate('groupInvitation.ejs', {
       groupName,
       inviterName,
       invitationLink,
       isExistingUser,
+      appDownloadLink,
       year: new Date().getFullYear()
     });
-    
-    const subject = isExistingUser 
+
+    const subject = isExistingUser
       ? `You've been invited to join "${groupName}" on Evenly`
       : `Join "${groupName}" on Evenly - Expense Sharing Made Easy`;
-      
+
     await sendEmail(email, subject, htmlBody);
   } catch (error: any) {
     console.error('Error in sendGroupInvitationEmail:', error);
@@ -131,12 +140,16 @@ export async function sendExpenseNotificationEmail(
   });
 
   try {
+    // Create smart app open link for expense/group
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
+
     const htmlBody = await renderTemplate('expenseNotification.ejs', {
       expense,
       addedBy,
       group,
       userSplit,
       appBaseUrl: config.app.baseUrl,
+      appOpenLink,
       year: new Date().getFullYear()
     });
     
@@ -462,5 +475,390 @@ export async function sendKhataTransactionEmail(
   } catch (error) {
     console.error('Error in sendKhataTransactionEmail:', error);
     throw error;
+  }
+}
+
+/**
+ * Send expense updated notification email to group members.
+ */
+export async function sendExpenseUpdatedEmail(
+  email: string,
+  expense: {
+    id: string;
+    title: string;
+    description?: string;
+    totalAmount: string;
+    category: string;
+    date: string;
+  },
+  updatedBy: {
+    id: string;
+    name: string;
+    email: string;
+  },
+  group: {
+    id: string;
+    name: string;
+  },
+  userSplit: {
+    amount: string;
+  }
+): Promise<void> {
+  console.log('sendExpenseUpdatedEmail called with:', {
+    to: email,
+    expenseTitle: expense.title,
+    updatedByName: updatedBy.name,
+    groupName: group.name,
+    userSplitAmount: userSplit.amount
+  });
+
+  try {
+    // Create smart app open link for expense/group
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
+
+    const htmlBody = await renderTemplate('expenseUpdated.ejs', {
+      expense,
+      updatedBy,
+      group,
+      userSplit,
+      appBaseUrl: config.app.baseUrl,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Expense "${expense.title}" updated in ${group.name}`;
+
+    await sendEmail(email, subject, htmlBody);
+    console.log('Expense updated email sent successfully to:', email);
+  } catch (error) {
+    console.error('Error in sendExpenseUpdatedEmail:', error);
+    // Don't throw - email failure shouldn't break the update operation
+  }
+}
+
+/**
+ * Send expense deleted notification email to group members.
+ */
+export async function sendExpenseDeletedEmail(
+  email: string,
+  expense: {
+    id: string;
+    title: string;
+    description?: string;
+    totalAmount: string;
+    category: string;
+    date: string;
+  },
+  deletedBy: {
+    id: string;
+    name: string;
+    email: string;
+  },
+  group: {
+    id: string;
+    name: string;
+  }
+): Promise<void> {
+  console.log('sendExpenseDeletedEmail called with:', {
+    to: email,
+    expenseTitle: expense.title,
+    deletedByName: deletedBy.name,
+    groupName: group.name
+  });
+
+  try {
+    // Create smart app open link for group
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+
+    const htmlBody = await renderTemplate('expenseDeleted.ejs', {
+      expense,
+      deletedBy,
+      group,
+      appBaseUrl: config.app.baseUrl,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Expense "${expense.title}" deleted from ${group.name}`;
+
+    await sendEmail(email, subject, htmlBody);
+    console.log('Expense deleted email sent successfully to:', email);
+  } catch (error) {
+    console.error('Error in sendExpenseDeletedEmail:', error);
+    // Don't throw - email failure shouldn't break the delete operation
+  }
+}
+
+/**
+ * Send customer added notification email.
+ */
+export async function sendCustomerAddedEmail(
+  customerEmail: string,
+  customerName: string,
+  userName: string
+): Promise<void> {
+  console.log('sendCustomerAddedEmail called with:', {
+    to: customerEmail,
+    customerName,
+    userName
+  });
+
+  try {
+    // Create smart app open link for Khata
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+
+    const htmlBody = await renderTemplate('customerAdded.ejs', {
+      customerName,
+      userName,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `You've been added to ${userName}'s Khata on Evenly`;
+
+    await sendEmail(customerEmail, subject, htmlBody);
+    console.log('Customer added email sent successfully to:', customerEmail);
+  } catch (error) {
+    console.error('Error in sendCustomerAddedEmail:', error);
+    // Don't throw - email failure shouldn't break customer creation
+  }
+}
+
+/**
+ * Send customer deleted notification email.
+ */
+export async function sendCustomerDeletedEmail(
+  customerEmail: string,
+  customerName: string,
+  userName: string,
+  finalBalance?: string
+): Promise<void> {
+  console.log('sendCustomerDeletedEmail called with:', {
+    to: customerEmail,
+    customerName,
+    userName,
+    finalBalance
+  });
+
+  try {
+    // Create smart app open link for Khata
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+
+    const htmlBody = await renderTemplate('customerDeleted.ejs', {
+      customerName,
+      userName,
+      finalBalance,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Khata account closed with ${userName}`;
+
+    await sendEmail(customerEmail, subject, htmlBody);
+    console.log('Customer deleted email sent successfully to:', customerEmail);
+  } catch (error) {
+    console.error('Error in sendCustomerDeletedEmail:', error);
+    // Don't throw - email failure shouldn't break customer deletion
+  }
+}
+
+/**
+ * Send transaction updated notification email to customer.
+ */
+export async function sendTransactionUpdatedEmail(
+  customerEmail: string,
+  customerName: string,
+  userName: string,
+  transaction: {
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    balance: string;
+    date: string;
+  }
+): Promise<void> {
+  console.log('sendTransactionUpdatedEmail called with:', {
+    to: customerEmail,
+    customerName,
+    userName,
+    transactionType: transaction.type,
+    amount: transaction.amount,
+  });
+
+  try {
+    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
+    const balanceNum = parseFloat(transaction.balance);
+    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+
+    // Create smart app open link for Khata
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+
+    const htmlBody = await renderTemplate('transactionUpdated.ejs', {
+      customerName,
+      userName,
+      transaction,
+      transactionType,
+      transactionColor,
+      balanceNum,
+      balanceType,
+      balanceColor,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Transaction Updated: ${transactionType} ₹${transaction.amount}`;
+
+    await sendEmail(customerEmail, subject, htmlBody);
+    console.log('Transaction updated email sent successfully to:', customerEmail);
+  } catch (error) {
+    console.error('Error in sendTransactionUpdatedEmail:', error);
+    // Don't throw - email failure shouldn't break the update
+  }
+}
+
+/**
+ * Send transaction deleted notification email to customer.
+ */
+export async function sendTransactionDeletedEmail(
+  customerEmail: string,
+  customerName: string,
+  userName: string,
+  transaction: {
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    balance: string;
+    date: string;
+  }
+): Promise<void> {
+  console.log('sendTransactionDeletedEmail called with:', {
+    to: customerEmail,
+    customerName,
+    userName,
+    transactionType: transaction.type,
+    amount: transaction.amount,
+  });
+
+  try {
+    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    const balanceNum = parseFloat(transaction.balance);
+    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+
+    // Create smart app open link for Khata
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+
+    const htmlBody = await renderTemplate('transactionDeleted.ejs', {
+      customerName,
+      userName,
+      transaction,
+      transactionType,
+      balanceNum,
+      balanceType,
+      balanceColor,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Transaction Deleted: ${transactionType} ₹${transaction.amount}`;
+
+    await sendEmail(customerEmail, subject, htmlBody);
+    console.log('Transaction deleted email sent successfully to:', customerEmail);
+  } catch (error) {
+    console.error('Error in sendTransactionDeletedEmail:', error);
+    // Don't throw - email failure shouldn't break the deletion
+  }
+}
+
+/**
+ * Send group join success email to the user who joined.
+ */
+export async function sendGroupJoinedEmail(
+  userEmail: string,
+  userName: string,
+  group: {
+    id: string;
+    name: string;
+    description?: string;
+  },
+  memberCount: number
+): Promise<void> {
+  console.log('sendGroupJoinedEmail called with:', {
+    to: userEmail,
+    userName,
+    groupName: group.name,
+    memberCount
+  });
+
+  try {
+    // Create smart app open link for group
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+
+    const htmlBody = await renderTemplate('groupJoined.ejs', {
+      groupName: group.name,
+      groupDescription: group.description,
+      memberCount,
+      appBaseUrl: config.app.baseUrl,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `Welcome to ${group.name}!`;
+
+    await sendEmail(userEmail, subject, htmlBody);
+    console.log('Group joined email sent successfully to:', userEmail);
+  } catch (error) {
+    console.error('Error in sendGroupJoinedEmail:', error);
+    // Don't throw - email failure shouldn't break the join operation
+  }
+}
+
+/**
+ * Send new member notification email to existing group members.
+ */
+export async function sendNewMemberJoinedEmail(
+  existingMemberEmail: string,
+  newMember: {
+    name: string;
+    email: string;
+  },
+  group: {
+    id: string;
+    name: string;
+  },
+  memberCount: number
+): Promise<void> {
+  console.log('sendNewMemberJoinedEmail called with:', {
+    to: existingMemberEmail,
+    newMemberName: newMember.name,
+    groupName: group.name,
+    memberCount
+  });
+
+  try {
+    // Create smart app open link for group
+    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+
+    const htmlBody = await renderTemplate('newMemberJoined.ejs', {
+      newMemberName: newMember.name,
+      newMemberEmail: newMember.email,
+      groupName: group.name,
+      memberCount,
+      appBaseUrl: config.app.baseUrl,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    const subject = `${newMember.name} joined ${group.name}`;
+
+    await sendEmail(existingMemberEmail, subject, htmlBody);
+    console.log('New member notification sent successfully to:', existingMemberEmail);
+  } catch (error) {
+    console.error('Error in sendNewMemberJoinedEmail:', error);
+    // Don't throw - email failure shouldn't break the join operation
   }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
-    <title>New Expense Added - Evenly</title>
+    <title>Expense Updated - Evenly</title>
     <style>
         /* Force light mode rendering */
         :root {
@@ -33,8 +33,15 @@
                     <tr>
                         <td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
                             <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #6366f1;">Evenly</h1>
-                            <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #1f2937;">New Expense Added</h2>
-                            <p style="margin: 0; font-size: 16px; color: #6b7280;">Someone in your group has added a new expense</p>
+                            <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Expense Updated</h2>
+                            <p style="margin: 0; font-size: 16px; color: #6b7280;"><%= updatedBy.name %> has updated an expense</p>
+                        </td>
+                    </tr>
+
+                    <!-- Badge -->
+                    <tr>
+                        <td align="center" style="padding: 0 30px 20px 30px; background-color: #ffffff;">
+                            <span style="display: inline-block; background-color: #fbbf24; color: #78350f; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 600;">📝 UPDATED</span>
                         </td>
                     </tr>
 
@@ -50,8 +57,8 @@
                                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Added by:</span>
-                                                    <span style="color: #6b7280;"><%= addedBy.name %></span>
+                                                    <span style="font-weight: 600; color: #374151;">Updated by:</span>
+                                                    <span style="color: #6b7280;"><%= updatedBy.name %></span>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -82,21 +89,18 @@
                                             </tr>
                                         </table>
 
-                                        <div style="margin: 20px 0; font-size: 28px; font-weight: 700; color: #059669;">
+                                        <div style="margin: 20px 0; font-size: 28px; font-weight: 700; color: #f59e0b;">
                                             $<%= parseFloat(expense.totalAmount).toFixed(2) %>
                                         </div>
 
                                         <!-- Split Info -->
-                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #dbeafe; border: 2px solid #93c5fd; border-radius: 6px; margin-top: 16px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border: 2px solid #fcd34d; border-radius: 6px; margin-top: 16px;">
                                             <tr>
                                                 <td style="padding: 16px;">
-                                                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Your share:</div>
-                                                    <div style="font-size: 20px; font-weight: 600; color: #1e40af; margin-bottom: 8px;">
+                                                    <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">Your updated share:</div>
+                                                    <div style="font-size: 20px; font-weight: 600; color: #92400e;">
                                                         $<%= parseFloat(userSplit.amount).toFixed(2) %>
                                                     </div>
-                                                    <p style="margin: 0; color: #1e3a8a; font-size: 14px;">
-                                                        You need to pay this amount to <%= addedBy.name %>
-                                                    </p>
                                                 </td>
                                             </tr>
                                         </table>

@@ -17,12 +17,25 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
+interface Transaction {
+  id: string;
+  date: string;
+  time: string;
+  balance: string;
+  amountGiven: string;
+  amountGot: string;
+  hasAttachment: boolean;
+  imageUrl?: string;
+}
+
 interface AddTransactionModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
   customerId: string;
   transactionType: 'give' | 'get';
+  editTransaction?: Transaction | null;
+  onUpdateTransaction?: (transactionId: string, data: FormData) => Promise<void>;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -31,6 +44,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onSuccess,
   customerId,
   transactionType,
+  editTransaction = null,
+  onUpdateTransaction,
 }) => {
   const { colors, theme } = useTheme();
   const [amount, setAmount] = useState('');
@@ -39,6 +54,32 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [errors, setErrors] = useState<{ amount?: string }>({});
+  const [selectedType, setSelectedType] = useState<'give' | 'get'>(transactionType);
+
+  // Pre-fill form when editing
+  React.useEffect(() => {
+    if (editTransaction) {
+      // Extract amount from amountGiven or amountGot (remove commas and ₹)
+      const transactionAmount = editTransaction.amountGiven || editTransaction.amountGot;
+      const cleanAmount = transactionAmount.replace(/,/g, '');
+      setAmount(cleanAmount);
+      setDescription(''); // We don't have description in the transaction object
+      setImageUri(editTransaction.imageUrl || null);
+
+      // Determine the type from which field has value
+      if (editTransaction.amountGiven) {
+        setSelectedType('give');
+      } else if (editTransaction.amountGot) {
+        setSelectedType('get');
+      }
+    } else {
+      setAmount('');
+      setDescription('');
+      setImageUri(null);
+      setSelectedType(transactionType);
+    }
+    setErrors({});
+  }, [editTransaction, visible, transactionType]);
 
   const validateForm = (): boolean => {
     const newErrors: { amount?: string } = {};
@@ -160,55 +201,96 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       // Create FormData for transaction (with optional image)
       const formData = new FormData();
-      formData.append('customerId', customerId);
-      formData.append('type', transactionType);
-      formData.append('amount', parseFloat(amount).toFixed(2));
-      formData.append('currency', 'INR');
-      
-      if (description.trim()) {
-        formData.append('description', description.trim());
-      }
-      
-      console.log('Creating transaction with FormData:', {
-        customerId,
-        type: transactionType,
-        amount: parseFloat(amount).toFixed(2),
-        currency: 'INR',
-        description: description.trim() || undefined,
-        hasImage: !!imageUri,
-      });
-      
-      // Add image if selected
-      if (imageUri) {
-        setUploadingImage(true);
-        const filename = imageUri.split('/').pop() || 'image.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image/jpeg`;
-        
-        formData.append('image', {
-          uri: imageUri,
-          name: filename,
-          type,
-        } as any);
-      }
 
-      // Create transaction (with image if provided)
-      await EvenlyBackendService.createKhataTransaction(formData);
+      if (editTransaction && onUpdateTransaction) {
+        // Update existing transaction
+        formData.append('type', selectedType);
+        formData.append('amount', parseFloat(amount).toFixed(2));
+        formData.append('currency', 'INR');
+
+        if (description.trim()) {
+          formData.append('description', description.trim());
+        }
+
+        console.log('Updating transaction with FormData:', {
+          transactionId: editTransaction.id,
+          type: selectedType,
+          amount: parseFloat(amount).toFixed(2),
+          currency: 'INR',
+          description: description.trim() || undefined,
+          hasImage: !!imageUri,
+        });
+
+        // Add image if selected
+        if (imageUri && !editTransaction.imageUrl) {
+          // New image selected
+          setUploadingImage(true);
+          const filename = imageUri.split('/').pop() || 'image.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          formData.append('image', {
+            uri: imageUri,
+            name: filename,
+            type,
+          } as any);
+        }
+
+        // Update transaction
+        await onUpdateTransaction(editTransaction.id, formData);
+      } else {
+        // Create new transaction
+        formData.append('customerId', customerId);
+        formData.append('type', transactionType);
+        formData.append('amount', parseFloat(amount).toFixed(2));
+        formData.append('currency', 'INR');
+
+        if (description.trim()) {
+          formData.append('description', description.trim());
+        }
+
+        console.log('Creating transaction with FormData:', {
+          customerId,
+          type: transactionType,
+          amount: parseFloat(amount).toFixed(2),
+          currency: 'INR',
+          description: description.trim() || undefined,
+          hasImage: !!imageUri,
+        });
+
+        // Add image if selected
+        if (imageUri) {
+          setUploadingImage(true);
+          const filename = imageUri.split('/').pop() || 'image.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          formData.append('image', {
+            uri: imageUri,
+            name: filename,
+            type,
+          } as any);
+        }
+
+        // Create transaction (with image if provided)
+        await EvenlyBackendService.createKhataTransaction(formData);
+      }
 
       // Reset form
       setAmount('');
       setDescription('');
       setImageUri(null);
+      setSelectedType(transactionType);
       setErrors({});
 
-      // Close modal and refresh
+      // Refresh data first, then close modal
+      await onSuccess();
       onClose();
-      onSuccess();
     } catch (error: any) {
-      console.error('Error creating transaction:', error);
+      console.error(editTransaction ? 'Error updating transaction:' : 'Error creating transaction:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.message || 'Failed to create transaction. Please try again.',
+        error.response?.data?.message || `Failed to ${editTransaction ? 'update' : 'create'} transaction. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -222,6 +304,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setAmount('');
       setDescription('');
       setImageUri(null);
+      setSelectedType(transactionType);
       setErrors({});
       onClose();
     }
@@ -261,7 +344,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                  {transactionType === 'give' ? 'You Gave' : 'You Got'}
+                  {editTransaction
+                    ? 'Edit Transaction'
+                    : (transactionType === 'give' ? 'You Gave' : 'You Got')}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -281,6 +366,67 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 keyboardShouldPersistTaps="handled"
                 bounces={true}
               >
+                {/* Transaction Type Selector - Only show when editing */}
+                {editTransaction && (
+                  <View style={styles.inputContainer}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>
+                      Transaction Type <Text style={styles.required}>*</Text>
+                    </Text>
+                    <View style={styles.typeSelector}>
+                      <TouchableOpacity
+                        style={[
+                          styles.typeButton,
+                          {
+                            backgroundColor: selectedType === 'give'
+                              ? colors.primary
+                              : (theme === 'dark' ? '#1A1A1A' : '#F8F8F8'),
+                          },
+                        ]}
+                        onPress={() => setSelectedType('give')}
+                        disabled={loading || uploadingImage}
+                      >
+                        <Text
+                          style={[
+                            styles.typeButtonText,
+                            {
+                              color: selectedType === 'give'
+                                ? '#FFFFFF'
+                                : colors.foreground,
+                            },
+                          ]}
+                        >
+                          You Gave
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.typeButton,
+                          {
+                            backgroundColor: selectedType === 'get'
+                              ? colors.primary
+                              : (theme === 'dark' ? '#1A1A1A' : '#F8F8F8'),
+                          },
+                        ]}
+                        onPress={() => setSelectedType('get')}
+                        disabled={loading || uploadingImage}
+                      >
+                        <Text
+                          style={[
+                            styles.typeButtonText,
+                            {
+                              color: selectedType === 'get'
+                                ? '#FFFFFF'
+                                : colors.foreground,
+                            },
+                          ]}
+                        >
+                          You Got
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
                 {/* Amount Field */}
                 <View style={styles.inputContainer}>
                   <Text style={[styles.label, { color: colors.foreground }]}>
@@ -401,7 +547,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text style={styles.submitButtonText}>
-                      Add Transaction
+                      {editTransaction ? 'Update Transaction' : 'Add Transaction'}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -439,7 +585,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: Platform.OS === 'ios' ? 20 : 10,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    height: '66%',
+    height: '70%',
     width: '100%',
     flexDirection: 'column',
   },
@@ -491,6 +637,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     fontSize: 16,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  typeButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   textArea: {
     minHeight: 80,

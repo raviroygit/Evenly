@@ -5,6 +5,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { PlatformActionButton } from '../ui/PlatformActionButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
+import { ENV } from '../../config/env';
+import { AuthStorage } from '../../utils/storage';
 
 interface PersonalInfoModalProps {
   visible: boolean;
@@ -26,17 +28,64 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
   }, [visible, user?.name, user?.email]);
 
   const handleSave = async () => {
+    // Define payload outside try-catch so it's accessible in both blocks
+    let payload: { name?: string; email?: string } = {};
+
     try {
       setSaving(true);
-      const payload: { name?: string; email?: string } = {};
+
+      // Build payload
       if (name && name !== user?.name) payload.name = name.trim();
       if (email && email !== user?.email) payload.email = email.trim();
+
+      console.log('[PersonalInfoModal] Preparing update:', {
+        originalName: user?.name,
+        newName: name,
+        originalEmail: user?.email,
+        newEmail: email,
+        payload: payload
+      });
+
       if (Object.keys(payload).length === 0) {
+        console.log('[PersonalInfoModal] No changes detected, closing modal');
         onClose();
         return;
       }
+
+      // Test: First verify the session is valid by calling GET /auth/me
+      console.log('[PersonalInfoModal] Testing session before update...');
+      try {
+        const testResponse = await fetch(`${ENV.EVENLY_BACKEND_URL}/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Cookie': `sso_token=${(await AuthStorage.getAuthData())?.ssoToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const testData = await testResponse.json();
+        console.log('[PersonalInfoModal] Session test result:', testData);
+
+        if (!testData.success) {
+          console.error('[PersonalInfoModal] ❌ Session is invalid BEFORE update attempt');
+          Alert.alert('Session Expired', 'Please log out and log back in.');
+          return;
+        } else {
+          console.log('[PersonalInfoModal] ✅ Session is valid, proceeding with update');
+        }
+      } catch (testError) {
+        console.error('[PersonalInfoModal] Session test failed:', testError);
+      }
+
+      console.log('[PersonalInfoModal] Calling updateCurrentUser with payload:', JSON.stringify(payload));
       const result = await EvenlyBackendService.updateCurrentUser(payload);
-      
+
+      console.log('[PersonalInfoModal] Update result:', {
+        success: result.success,
+        message: result.message,
+        hasUser: !!result.data?.user,
+        fullResult: result
+      });
+
       if (result.success) {
         // Update local state with the response data
         const updated = result.data?.user;
@@ -46,14 +95,35 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
           // Fallback: update with the payload if no user data in response
           setUser({ ...user, ...payload });
         }
-        Alert.alert('Success', result.message || 'Profile updated successfully');
-        onClose();
+
+        // Show success alert with callback to close modal
+        Alert.alert(
+          'Success',
+          result.message || 'Profile updated successfully',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                onClose();
+              },
+            },
+          ]
+        );
       } else {
         Alert.alert('Error', result.message || 'Failed to update profile');
       }
     } catch (error: any) {
-      console.error('Profile update failed:', error);
-      Alert.alert('Error', error?.response?.data?.message || error.message || 'Failed to update profile');
+      console.error('[PersonalInfoModal] ❌ Profile update failed:', {
+        message: error.message,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        responseData: error?.response?.data,
+        requestData: payload,
+        fullError: error
+      });
+
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile';
+      Alert.alert('Error', `${errorMessage}\n\nStatus: ${error?.response?.status || 'Network Error'}`);
     } finally {
       setSaving(false);
     }

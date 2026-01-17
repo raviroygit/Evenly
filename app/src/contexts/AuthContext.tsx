@@ -243,27 +243,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (email: string, otp: string) => {
     try {
       const result = await authService.verifyOTP(email, otp);
-      
+
       // If login was successful and we have user data, use it directly
       if (result.success && result.user) {
         setUser(result.user);
         await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken, result.ssoToken);
+
+        // IMPORTANT: Immediately upgrade to 90-day session after OTP login
+        // OTP login gives 24-hour session, but mobile needs 90-day for "stay logged in forever"
+        console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
+        const upgraded = await SilentTokenRefresh.refresh();
+        if (upgraded) {
+          console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
+        } else {
+          console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
+        }
+
         warmAppCache().catch(() => {});
-        
+
         return { success: true, message: 'Login successful!' };
       }
       
       // If we have an ssoToken but no user data, try to get current user
       if (result.ssoToken) {
-        
         // Try to get current user with the ssoToken
         try {
           const currentUser = await authService.getCurrentUser(result.ssoToken);
           if (currentUser) {
             setUser(currentUser);
             await AuthStorage.saveAuthData(currentUser, result.accessToken, result.refreshToken, result.ssoToken);
+
+            // Upgrade to 90-day session
+            console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
+            const upgraded = await SilentTokenRefresh.refresh();
+            if (upgraded) {
+              console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
+            } else {
+              console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
+            }
+
             warmAppCache().catch(() => {});
-            
+
             return { success: true, message: 'Login successful!' };
           } else {
             return { success: false, message: 'Login failed - could not get user data' };
@@ -275,6 +295,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Fallback to original logic if no ssoToken but response is successful
         setUser(result.user);
         await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken, result.ssoToken);
+
+        // Upgrade to 90-day session
+        console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
+        const upgraded = await SilentTokenRefresh.refresh();
+        if (upgraded) {
+          console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
+        } else {
+          console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
+        }
+
         return { success: true, message: 'Login successful!' };
       } else {
         return { success: false, message: result.message || 'Login failed - no ssoToken received' };
@@ -321,10 +351,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
         await AuthStorage.saveAuthData(currentUser);
       } else {
-        setUser(null);
-        await AuthStorage.clearAuthData();
+        // NEVER auto-logout - keep user logged in with local data
+        console.warn('[AuthContext] refreshUser returned null - keeping user logged in with cached data');
+        // Do NOT clear auth data or set user to null
       }
     } catch (error) {
+      // NEVER auto-logout on network errors - keep user logged in
+      console.warn('[AuthContext] refreshUser failed - keeping user logged in with cached data');
     }
   }, [authService]);
 

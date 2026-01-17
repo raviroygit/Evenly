@@ -39,9 +39,23 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     try {
       setIsLoading(true);
       await onSendInvitation(email.trim());
-      Alert.alert('Success', 'Invitation sent successfully!');
+
+      // Reset form first
       setEmail('');
-      onClose();
+
+      // Show success alert with callback to close modal
+      Alert.alert(
+        'Success',
+        'Invitation sent successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              onClose();
+            },
+          },
+        ]
+      );
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send invitation');
     } finally {

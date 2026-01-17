@@ -245,6 +245,105 @@ export class KhataController {
   });
 
   /**
+   * Update a transaction (with optional image upload)
+   */
+  static updateTransaction = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const { user } = request as AuthenticatedRequest;
+    const { transactionId } = request.params as { transactionId: string };
+
+    // Handle multipart form data (for image upload)
+    let imageUrl: string | undefined;
+    const data: any = {};
+
+    // Check if request has multipart data
+    const isMultipart = request.isMultipart();
+
+    if (isMultipart) {
+      // Parse multipart form data
+      try {
+        const parts = request.parts();
+
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            // Handle image upload
+            try {
+              const buffer = await part.toBuffer();
+              const result = await uploadSingleImage(buffer, 'khata');
+              imageUrl = result.url;
+            } catch (uploadError) {
+              console.error('Error uploading image:', uploadError);
+              return reply.status(500).send({
+                success: false,
+                message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
+              });
+            }
+          } else {
+            // Handle form fields
+            try {
+              const fieldname = part.fieldname;
+              const value = typeof part.value === 'string'
+                ? part.value
+                : await part.value;
+
+              if (fieldname === 'type') data.type = value as 'give' | 'get';
+              else if (fieldname === 'amount') data.amount = value;
+              else if (fieldname === 'currency') data.currency = value;
+              else if (fieldname === 'description') data.description = value;
+              else if (fieldname === 'transactionDate') data.transactionDate = value;
+            } catch (fieldError) {
+              console.error('Error reading form field:', fieldError);
+            }
+          }
+        }
+
+        if (imageUrl) {
+          data.imageUrl = imageUrl;
+        }
+      } catch (multipartError) {
+        console.error('Error parsing multipart data:', multipartError);
+        return reply.status(400).send({
+          success: false,
+          message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
+        });
+      }
+    } else {
+      // Handle regular JSON body
+      const body = request.body as {
+        type?: 'give' | 'get';
+        amount?: string;
+        currency?: string;
+        description?: string;
+        imageUrl?: string;
+        transactionDate?: string;
+      };
+      Object.assign(data, body);
+    }
+
+    const transaction = await KhataService.updateTransaction(transactionId, data, user.id);
+
+    reply.send({
+      success: true,
+      data: transaction,
+      message: 'Transaction updated successfully',
+    });
+  });
+
+  /**
+   * Delete a transaction
+   */
+  static deleteTransaction = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const { user } = request as AuthenticatedRequest;
+    const { transactionId } = request.params as { transactionId: string };
+
+    await KhataService.deleteTransaction(transactionId, user.id);
+
+    reply.send({
+      success: true,
+      message: 'Transaction deleted successfully',
+    });
+  });
+
+  /**
    * Get financial summary
    */
   static getFinancialSummary = asyncHandler(

@@ -55,6 +55,8 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   }, [activeSwipeId, swipeId, isOpen, translateX]);
 
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10]) // Only activate on horizontal movement (10px threshold)
+    .failOffsetY([-10, 10]) // Fail gesture if vertical movement exceeds 10px, allowing scroll
     .onStart(() => {
       // Close any other open swipe actions
       if (activeSwipeId && activeSwipeId !== swipeId) {

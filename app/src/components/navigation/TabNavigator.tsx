@@ -4,13 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HomeScreen } from '../../features/home/HomeScreen';
-import { ExpensesScreen } from '../../features/expenses/ExpensesScreen';
 import { GroupsScreen } from '../../features/groups/GroupsScreen';
 import { ProfileScreen } from '../../features/profile/ProfileScreen';
 
 export type TabParamList = {
   Home: undefined;
-  Expenses: undefined;
   Groups: undefined;
   Profile: undefined;
 };
@@ -28,8 +26,6 @@ export const TabNavigator: React.FC = () => {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Expenses') {
-            iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'Groups') {
             iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Profile') {
@@ -65,29 +61,22 @@ export const TabNavigator: React.FC = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
         }}
       />
-      <Tab.Screen 
-        name="Expenses" 
-        component={ExpensesScreen}
-        options={{
-          tabBarLabel: 'Expenses',
-        }}
-      />
-      <Tab.Screen 
-        name="Groups" 
+      <Tab.Screen
+        name="Groups"
         component={GroupsScreen}
         options={{
           tabBarLabel: 'Groups',
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',

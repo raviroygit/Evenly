@@ -3,25 +3,32 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   TextInput,
-  RefreshControl,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
+import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
 import { CustomerFilterModal, FilterType, SortType } from '../../components/modals/CustomerFilterModal';
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
+import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { useRouter } from 'expo-router';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { SkeletonCustomerList } from '../../components/ui/SkeletonLoader';
+import { useSwipeAction } from '../../contexts/SwipeActionContext';
+import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
+import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
+import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 
 interface Customer {
   id: string;
   name: string;
+  email?: string;
+  phone?: string;
   initials: string;
   amount: string;
   timestamp: string;
@@ -32,9 +39,13 @@ interface Customer {
 export const BooksScreen: React.FC = () => {
   const router = useRouter();
   const { colors, theme } = useTheme();
+  const { setActiveSwipeId } = useSwipeAction();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState<{ id: string; name: string } | null>(null);
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortType, setSortType] = useState<SortType>('most-recent');
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -89,6 +100,8 @@ export const BooksScreen: React.FC = () => {
       const formattedCustomers: Customer[] = customersData.map((c) => ({
         id: c.id,
         name: c.name,
+        email: c.email,
+        phone: c.phone,
         initials: getInitials(c.name),
         amount: parseFloat(c.balance).toFixed(2),
         timestamp: formatTimeAgo(c.updatedAt),
@@ -119,9 +132,40 @@ export const BooksScreen: React.FC = () => {
     setShowAddCustomerModal(true);
   };
 
-  const handleCustomerAdded = () => {
+  const handleCustomerAdded = async () => {
     // Refresh the customer list after adding a new customer
-    loadCustomers();
+    // Force fresh data by bypassing cache
+    setLoading(true);
+    try {
+      const [customersData, summaryData] = await Promise.all([
+        EvenlyBackendService.getKhataCustomers({
+          search: searchQuery || undefined,
+          filterType,
+          sortType,
+          cacheTTLMs: 0, // Bypass cache to get fresh data
+        }),
+        EvenlyBackendService.getKhataFinancialSummary(),
+      ]);
+
+      const formattedCustomers: Customer[] = customersData.map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        initials: getInitials(c.name),
+        amount: parseFloat(c.balance).toFixed(2),
+        timestamp: formatTimeAgo(c.updatedAt),
+        type: c.type,
+        balance: c.balance,
+      }));
+
+      setCustomers(formattedCustomers);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onRefresh = useCallback(async () => {
@@ -129,34 +173,116 @@ export const BooksScreen: React.FC = () => {
     await loadCustomers(true);
   }, [loadCustomers]);
 
+  // Create pull-to-refresh handlers using utility function
+  const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
+    onRefresh,
+    refreshing,
+  });
+
+  const handleUpdateCustomer = async (customerId: string, data: { name: string; email?: string; phone?: string }) => {
+    try {
+      await EvenlyBackendService.updateKhataCustomer(customerId, data);
+      setEditingCustomer(null);
+
+      // Reload customers with fresh data (bypass cache)
+      const [customersData, summaryData] = await Promise.all([
+        EvenlyBackendService.getKhataCustomers({
+          search: searchQuery || undefined,
+          filterType,
+          sortType,
+          cacheTTLMs: 0, // Bypass cache to get fresh data
+        }),
+        EvenlyBackendService.getKhataFinancialSummary(),
+      ]);
+
+      const formattedCustomers: Customer[] = customersData.map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        initials: getInitials(c.name),
+        amount: parseFloat(c.balance).toFixed(2),
+        timestamp: formatTimeAgo(c.updatedAt),
+        type: c.type,
+        balance: c.balance,
+      }));
+
+      setCustomers(formattedCustomers);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error('[BooksScreen] Error updating customer:', error);
+      Alert.alert('Error', 'Failed to update customer. Please try again.');
+    }
+  };
+
+  const handleDeleteCustomer = (customerId: string, customerName: string) => {
+    setDeletingCustomer({ id: customerId, name: customerName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCustomer = async () => {
+    if (!deletingCustomer) return;
+
+    try {
+      setLoading(true);
+      await EvenlyBackendService.deleteKhataCustomer(deletingCustomer.id);
+
+      // Reload customers with fresh data (bypass cache)
+      const [customersData, summaryData] = await Promise.all([
+        EvenlyBackendService.getKhataCustomers({
+          search: searchQuery || undefined,
+          filterType,
+          sortType,
+          cacheTTLMs: 0, // Bypass cache to get fresh data
+        }),
+        EvenlyBackendService.getKhataFinancialSummary(),
+      ]);
+
+      const formattedCustomers: Customer[] = customersData.map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        initials: getInitials(c.name),
+        amount: parseFloat(c.balance).toFixed(2),
+        timestamp: formatTimeAgo(c.updatedAt),
+        type: c.type,
+        balance: c.balance,
+      }));
+
+      setCustomers(formattedCustomers);
+      setSummary(summaryData);
+      setLoading(false);
+
+      // Modal will close automatically, show success alert
+      Alert.alert('Success', `"${deletingCustomer.name}" and all their transactions have been deleted successfully`);
+    } catch (error) {
+      console.error('[BooksScreen] Error deleting customer:', error);
+      setLoading(false);
+      Alert.alert('Error', 'Failed to delete customer. Please try again.');
+      throw error; // Re-throw to prevent modal from closing
+    }
+  };
+
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={Platform.OS === 'ios'}
-        alwaysBounceVertical={Platform.OS === 'ios'}
-        scrollEventThrottle={16}
-        decelerationRate="normal"
-        scrollIndicatorInsets={{ right: 1 }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Platform.OS === 'ios' ? colors.primary : undefined}
-            colors={Platform.OS === 'android' ? [colors.primary] : undefined}
-            enabled={true}
-          />
-        }
-      >
+    <>
+      <PullToRefreshSpinner refreshing={refreshing} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <PullToRefreshScrollView
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={handleScrollEndDrag}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Financial Summary Cards */}
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCardWrapper}>
             <ResponsiveLiquidGlassCard
-              padding={{ small: 16, medium: 20, large: 24 }}
+              padding={{ small: 12, medium: 14, large: 16 }}
               marginBottom={0}
               marginHorizontal={0}
               borderRadius={{ small: 16, medium: 18, large: 20 }}
@@ -168,13 +294,13 @@ export const BooksScreen: React.FC = () => {
               <Text style={[styles.summaryAmount, { color: colors.foreground }]}>
                 ₹{formatAmount(summary.totalGive)}
               </Text>
-            
+
             </ResponsiveLiquidGlassCard>
           </View>
 
           <View style={styles.summaryCardWrapper}>
             <ResponsiveLiquidGlassCard
-              padding={{ small: 16, medium: 20, large: 24 }}
+              padding={{ small: 12, medium: 14, large: 16 }}
               marginBottom={0}
               marginHorizontal={0}
               borderRadius={{ small: 16, medium: 18, large: 20 }}
@@ -186,7 +312,7 @@ export const BooksScreen: React.FC = () => {
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
                 ₹{formatAmount(summary.totalGet)}
               </Text>
-            
+
             </ResponsiveLiquidGlassCard>
           </View>
         </View>
@@ -228,8 +354,31 @@ export const BooksScreen: React.FC = () => {
             </View>
           ) : (
             customers.map((customer) => (
-              <TouchableOpacity
+              <SwipeActionRow
                 key={customer.id}
+                swipeId={`customer-${customer.id}`}
+                actions={[
+                  {
+                    id: 'edit',
+                    title: 'Edit',
+                    icon: 'pencil-outline',
+                    color: '#FFFFFF',
+                    backgroundColor: '#FF9500',
+                    onPress: () => {
+                      setEditingCustomer(customer);
+                    },
+                  },
+                  {
+                    id: 'delete',
+                    title: 'Delete',
+                    icon: 'trash-outline',
+                    color: '#FFFFFF',
+                    backgroundColor: '#FF3B30',
+                    onPress: () => {
+                      handleDeleteCustomer(customer.id, customer.name);
+                    },
+                  },
+                ]}
                 onPress={() => {
                   router.push({
                     pathname: '/tabs/books/[customerId]',
@@ -240,11 +389,17 @@ export const BooksScreen: React.FC = () => {
                     },
                   } as any);
                 }}
-                activeOpacity={0.7}
+                onActionExecuted={() => {
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                      setActiveSwipeId(null);
+                    });
+                  });
+                }}
               >
                 <ResponsiveLiquidGlassCard
                   padding={{ small: 12, medium: 16, large: 20 }}
-                  marginBottom={8}
+                  marginBottom={0}
                   borderRadius={{ small: 12, medium: 14, large: 16 }}
                 >
                   <View style={styles.customerRow}>
@@ -271,45 +426,63 @@ export const BooksScreen: React.FC = () => {
                     </View>
                   </View>
                 </ResponsiveLiquidGlassCard>
-              </TouchableOpacity>
+              </SwipeActionRow>
             ))
           )}
         </View>
-      </ScrollView>
+        </PullToRefreshScrollView>
 
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        actions={[
-          {
-            id: 'add-customer',
-            title: 'Add Customer',
-            icon: '👤',
-            onPress: handleAddCustomer,
-          },
-        ]}
-        position="bottom-right"
-      />
+        {/* Floating Action Button */}
+        <FloatingActionButton
+          actions={[
+            {
+              id: 'add-customer',
+              title: 'Add Customer',
+              icon: '👤',
+              onPress: handleAddCustomer,
+            },
+          ]}
+          position="bottom-right"
+        />
 
-      {/* Filter Modal */}
-      <CustomerFilterModal
-        visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onApply={(filter, sort) => {
-          setFilterType(filter);
-          setSortType(sort);
-          setShowFilterModal(false);
-        }}
-        currentFilter={filterType}
-        currentSort={sortType}
-      />
+        {/* Filter Modal */}
+        <CustomerFilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApply={(filter, sort) => {
+            setFilterType(filter);
+            setSortType(sort);
+            setShowFilterModal(false);
+          }}
+          currentFilter={filterType}
+          currentSort={sortType}
+        />
 
-      {/* Add Customer Modal */}
-      <AddCustomerModal
-        visible={showAddCustomerModal}
-        onClose={() => setShowAddCustomerModal(false)}
-        onSuccess={handleCustomerAdded}
-      />
-    </View>
+        {/* Add/Edit Customer Modal */}
+        <AddCustomerModal
+          visible={showAddCustomerModal || !!editingCustomer}
+          onClose={() => {
+            setShowAddCustomerModal(false);
+            setEditingCustomer(null);
+          }}
+          onSuccess={handleCustomerAdded}
+          editCustomer={editingCustomer}
+          onUpdateCustomer={handleUpdateCustomer}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          visible={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setDeletingCustomer(null);
+          }}
+          onConfirm={confirmDeleteCustomer}
+          title="Delete Customer"
+          description={`Are you sure you want to delete "${deletingCustomer?.name}"? This will also delete all transactions with this customer. This action cannot be undone.`}
+        />
+      </View>
+    </>
   );
 };
 
@@ -317,35 +490,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
+    paddingTop: Platform.OS === 'ios' ? 10 : 12,
     paddingBottom: 100,
     flexGrow: 1,
   },
   summaryContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 12,
     paddingHorizontal: 20,
-    gap: 16,
+    gap: 12,
   },
   summaryCardWrapper: {
     flex: 1,
   },
   summaryCard: {
-    minHeight: 120,
+    minHeight: 80,
     width: '100%',
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   summaryAmount: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 12,
   },
   summaryButton: {
     alignItems: 'center',
@@ -355,7 +525,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 12,
     paddingHorizontal: 20,
     gap: 12,
   },
@@ -380,7 +550,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContainer: {
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 20,
   },
   customerRow: {

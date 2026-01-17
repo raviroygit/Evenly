@@ -11,19 +11,25 @@ export interface UserFriendlyError {
  * Error Handler
  *
  * Handles API errors gracefully:
- * - 401 errors are handled silently (automatic logout and redirect to login)
+ * - 401 errors (session expired) keep user logged in with cached data (offline mode)
  * - Network errors show helpful messages
  * - Other errors show appropriate user-friendly messages
  *
- * Users NEVER see auth-related error alerts
+ * Users NEVER see auth-related error alerts and NEVER get auto-logged out
  */
 
 export class ErrorHandler {
   static handleApiError(error: any): UserFriendlyError | null {
-    // Check if this is a silent logout error (should not show to user)
+    // Check if this is an offline mode error (session expired but user kept logged in)
+    if (error._offlineMode) {
+      // Return null to indicate no error should be shown
+      // User stays logged in with cached data (offline mode)
+      return null;
+    }
+
+    // Legacy flag support (if any old code still uses this)
     if (error._silentLogout) {
       // Return null to indicate no error should be shown
-      // User will be automatically redirected to login
       return null;
     }
 

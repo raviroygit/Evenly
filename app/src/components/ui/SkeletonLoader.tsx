@@ -453,14 +453,7 @@ export const SkeletonRecentActivity: React.FC = () => {
 // Skeleton for expense summary using EXACT same ResponsiveLiquidGlassCard structure
 export const SkeletonExpenseSummary: React.FC = () => {
   const { theme } = useTheme();
-  
-  // Calculate EXACT same card width as actual ExpenseSummary
-  const screenWidth = Dimensions.get('window').width;
-  const horizontalPadding = 40; // 20px on each side (total screen padding)
-  const cardGaps = 24; // 12px gap between each card (2 gaps for 3 cards)
-  const availableWidth = screenWidth - horizontalPadding - cardGaps;
-  const cardWidth = Math.floor(availableWidth / 3); // Divide by 3 for 3 cards
-  
+
   const SkeletonExpenseCard: React.FC = () => (
     <ResponsiveLiquidGlassCard
       padding={{
@@ -475,13 +468,9 @@ export const SkeletonExpenseSummary: React.FC = () => {
         large: 16,
         tablet: 18,
       }}
-      glassEffectStyle="thick"
-      isInteractive={false}
-      style={{ 
-        ...styles.expenseSummaryCard, 
-        alignItems: 'center', 
-        width: cardWidth, 
-        minHeight: 100,
+      style={{
+        ...styles.expenseSummaryCard,
+        alignItems: 'center',
         justifyContent: 'center'
       }}
     >
@@ -489,7 +478,7 @@ export const SkeletonExpenseSummary: React.FC = () => {
         height={12}
         width="80%"
         borderRadius={6}
-        style={{ marginBottom: 6, opacity: 0.8 }}
+        style={{ marginBottom: 4, opacity: 0.8 }}
       />
       <SkeletonLoader
         height={18}
@@ -1165,11 +1154,13 @@ const styles = StyleSheet.create({
   // Expense summary skeleton styles - EXACT match to ExpenseSummary
   expenseSummaryContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   expenseSummaryCard: {
     padding: 16,
     justifyContent: 'center',
+    flex: 1,
+    minHeight: 80,
   },
   // Glass card skeleton styles
   glassStatHeader: {

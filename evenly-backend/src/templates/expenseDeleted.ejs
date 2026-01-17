@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
     <meta name="supported-color-schemes" content="light">
-    <title>New Expense Added - Evenly</title>
+    <title>Expense Deleted - Evenly</title>
     <style>
         /* Force light mode rendering */
         :root {
@@ -33,8 +33,15 @@
                     <tr>
                         <td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
                             <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #6366f1;">Evenly</h1>
-                            <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #1f2937;">New Expense Added</h2>
-                            <p style="margin: 0; font-size: 16px; color: #6b7280;">Someone in your group has added a new expense</p>
+                            <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Expense Deleted</h2>
+                            <p style="margin: 0; font-size: 16px; color: #6b7280;"><%= deletedBy.name %> has deleted an expense</p>
+                        </td>
+                    </tr>
+
+                    <!-- Badge -->
+                    <tr>
+                        <td align="center" style="padding: 0 30px 20px 30px; background-color: #ffffff;">
+                            <span style="display: inline-block; background-color: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 600;">🗑️ DELETED</span>
                         </td>
                     </tr>
 
@@ -42,64 +49,53 @@
                     <tr>
                         <td style="padding: 0 30px 40px 30px; background-color: #ffffff;">
                             <!-- Expense Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; margin-bottom: 24px;">
                                 <tr>
                                     <td style="padding: 24px;">
-                                        <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1f2937;"><%= expense.title %></h3>
+                                        <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #7f1d1d;"><%= expense.title %></h3>
 
                                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Added by:</span>
-                                                    <span style="color: #6b7280;"><%= addedBy.name %></span>
+                                                    <span style="font-weight: 600; color: #991b1b;">Deleted by:</span>
+                                                    <span style="color: #991b1b;"><%= deletedBy.name %></span>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Group:</span>
-                                                    <span style="color: #6b7280;"><%= group.name %></span>
+                                                    <span style="font-weight: 600; color: #991b1b;">Group:</span>
+                                                    <span style="color: #991b1b;"><%= group.name %></span>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Date:</span>
-                                                    <span style="color: #6b7280;"><%= new Date(expense.date).toLocaleDateString() %></span>
+                                                    <span style="font-weight: 600; color: #991b1b;">Original Date:</span>
+                                                    <span style="color: #991b1b;"><%= new Date(expense.date).toLocaleDateString() %></span>
                                                 </td>
                                             </tr>
                                             <% if (expense.description) { %>
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Description:</span>
-                                                    <span style="color: #6b7280;"><%= expense.description %></span>
+                                                    <span style="font-weight: 600; color: #991b1b;">Description:</span>
+                                                    <span style="color: #991b1b;"><%= expense.description %></span>
                                                 </td>
                                             </tr>
                                             <% } %>
                                             <tr>
                                                 <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Category:</span>
-                                                    <span style="color: #6b7280;"><%= expense.category %></span>
+                                                    <span style="font-weight: 600; color: #991b1b;">Category:</span>
+                                                    <span style="color: #991b1b;"><%= expense.category %></span>
                                                 </td>
                                             </tr>
                                         </table>
 
-                                        <div style="margin: 20px 0; font-size: 28px; font-weight: 700; color: #059669;">
+                                        <div style="margin: 20px 0; font-size: 28px; font-weight: 700; color: #dc2626; text-decoration: line-through;">
                                             $<%= parseFloat(expense.totalAmount).toFixed(2) %>
                                         </div>
 
-                                        <!-- Split Info -->
-                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #dbeafe; border: 2px solid #93c5fd; border-radius: 6px; margin-top: 16px;">
-                                            <tr>
-                                                <td style="padding: 16px;">
-                                                    <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Your share:</div>
-                                                    <div style="font-size: 20px; font-weight: 600; color: #1e40af; margin-bottom: 8px;">
-                                                        $<%= parseFloat(userSplit.amount).toFixed(2) %>
-                                                    </div>
-                                                    <p style="margin: 0; color: #1e3a8a; font-size: 14px;">
-                                                        You need to pay this amount to <%= addedBy.name %>
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </table>
+                                        <p style="margin: 16px 0 0 0; color: #991b1b; font-size: 14px;">
+                                            This expense has been removed from the group and all balances have been updated accordingly.
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
@@ -109,7 +105,7 @@
                                 <tr>
                                     <td align="center" style="padding: 20px 0;">
                                         <a href="<%= appOpenLink %>" style="display: inline-block; padding: 16px 40px; background-color: #6366f1; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            📱 Open in App
+                                            📱 Open Group in App
                                         </a>
                                     </td>
                                 </tr>

@@ -86,24 +86,22 @@ class EvenlyApiClient {
       async (error) => {
         // Log the error for debugging
         ErrorHandler.logError(error, 'API Request');
-        
+
         // Handle 401 Unauthorized - backend session expired
         if (error.response?.status === 401) {
           const originalRequest = error.config;
 
           // Avoid infinite retry loop
           if (originalRequest._retryCount && originalRequest._retryCount >= 1) {
-            console.error('[EvenlyApiClient] Already retried once - silently logging out');
+            console.warn('[EvenlyApiClient] ⚠️ Already retried once - keeping user logged in with cached data');
+            console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
 
-            // Silently logout user (clears auth data, triggers redirect to login)
-            await SilentTokenRefresh.silentLogout();
-
-            // Return a user-friendly error without showing alert
-            // Calling code should handle this gracefully since user will be redirected
+            // NEVER logout user - keep them logged in with cached data
+            // User stays logged in, can view cached data
             return Promise.reject({
               ...error,
-              _silentLogout: true,
-              message: 'Session expired'
+              _offlineMode: true,
+              message: 'Session expired - using cached data'
             });
           }
 
@@ -128,30 +126,28 @@ class EvenlyApiClient {
                 return this.client(originalRequest);
               }
             } else {
-              console.warn('[EvenlyApiClient] ❌ Silent refresh failed - silently logging out');
+              console.warn('[EvenlyApiClient] ⚠️ Silent refresh failed - keeping user logged in with cached data');
+              console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
 
-              // Silently logout user (clears auth data, triggers redirect to login)
-              await SilentTokenRefresh.silentLogout();
-
-              // Return error without showing alert
+              // NEVER logout user - keep them logged in with cached data
+              // User stays logged in, can view cached data
               return Promise.reject({
                 ...error,
-                _silentLogout: true,
-                message: 'Session expired'
+                _offlineMode: true,
+                message: 'Session expired - using cached data'
               });
             }
           } catch (refreshError) {
-            console.error('[EvenlyApiClient] ❌ Silent refresh error - silently logging out');
+            console.warn('[EvenlyApiClient] ⚠️ Silent refresh error - keeping user logged in with cached data');
+            console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
             ErrorHandler.logError(refreshError, 'Silent Token Refresh');
 
-            // Silently logout user
-            await SilentTokenRefresh.silentLogout();
-
-            // Return error without showing alert
+            // NEVER logout user - keep them logged in with cached data
+            // User stays logged in, can view cached data
             return Promise.reject({
               ...error,
-              _silentLogout: true,
-              message: 'Session expired'
+              _offlineMode: true,
+              message: 'Session expired - using cached data'
             });
           }
         }

@@ -402,6 +402,140 @@ export class KhataService {
   }
 
   /**
+   * Update a transaction
+   */
+  static async updateTransaction(
+    transactionId: string,
+    transactionData: {
+      type?: 'give' | 'get';
+      amount?: string;
+      currency?: string;
+      description?: string;
+      imageUrl?: string;
+      transactionDate?: string;
+    },
+    userId: string
+  ): Promise<KhataTransaction> {
+    try {
+      // Get the transaction and verify ownership
+      const [existingTransaction] = await db
+        .select()
+        .from(khataTransactions)
+        .where(eq(khataTransactions.id, transactionId))
+        .limit(1);
+
+      if (!existingTransaction) {
+        throw new NotFoundError('Transaction not found');
+      }
+
+      // Verify customer ownership
+      await this.getCustomerById(existingTransaction.customerId, userId);
+
+      // Update the transaction
+      const updateData: any = {};
+      if (transactionData.type) updateData.type = transactionData.type;
+      if (transactionData.amount) updateData.amount = transactionData.amount;
+      if (transactionData.currency) updateData.currency = transactionData.currency;
+      if (transactionData.description !== undefined) updateData.description = transactionData.description || null;
+      if (transactionData.imageUrl !== undefined) updateData.imageUrl = transactionData.imageUrl || null;
+      if (transactionData.transactionDate) updateData.transactionDate = new Date(transactionData.transactionDate);
+
+      const [updatedTransaction] = await db
+        .update(khataTransactions)
+        .set(updateData)
+        .where(eq(khataTransactions.id, transactionId))
+        .returning();
+
+      // Recalculate balances for all transactions of this customer
+      await this.recalculateCustomerBalances(existingTransaction.customerId);
+
+      // Fetch the updated transaction with recalculated balance
+      const [finalTransaction] = await db
+        .select()
+        .from(khataTransactions)
+        .where(eq(khataTransactions.id, transactionId))
+        .limit(1);
+
+      return finalTransaction;
+    } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      console.error('Error updating transaction:', error);
+      throw new DatabaseError('Failed to update transaction');
+    }
+  }
+
+  /**
+   * Delete a transaction
+   */
+  static async deleteTransaction(transactionId: string, userId: string): Promise<void> {
+    try {
+      // Get the transaction and verify ownership
+      const [transaction] = await db
+        .select()
+        .from(khataTransactions)
+        .where(eq(khataTransactions.id, transactionId))
+        .limit(1);
+
+      if (!transaction) {
+        throw new NotFoundError('Transaction not found');
+      }
+
+      // Verify customer ownership
+      await this.getCustomerById(transaction.customerId, userId);
+
+      // Delete the transaction
+      await db.delete(khataTransactions).where(eq(khataTransactions.id, transactionId));
+
+      // Recalculate balances for all transactions of this customer
+      await this.recalculateCustomerBalances(transaction.customerId);
+    } catch (error: any) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      console.error('Error deleting transaction:', error);
+      throw new DatabaseError('Failed to delete transaction');
+    }
+  }
+
+  /**
+   * Recalculate balances for all transactions of a customer
+   */
+  private static async recalculateCustomerBalances(customerId: string): Promise<void> {
+    try {
+      // Get all transactions for the customer ordered by date
+      const transactions = await db
+        .select()
+        .from(khataTransactions)
+        .where(eq(khataTransactions.customerId, customerId))
+        .orderBy(khataTransactions.transactionDate);
+
+      let currentBalance = 0;
+
+      // Recalculate balance for each transaction
+      for (const transaction of transactions) {
+        const amount = parseFloat(transaction.amount);
+
+        if (transaction.type === 'give') {
+          currentBalance -= amount;
+        } else {
+          currentBalance += amount;
+        }
+
+        // Update the transaction with new balance
+        await db
+          .update(khataTransactions)
+          .set({ balance: currentBalance.toFixed(2) })
+          .where(eq(khataTransactions.id, transaction.id));
+      }
+    } catch (error: any) {
+      console.error('Error recalculating balances:', error);
+      throw new DatabaseError('Failed to recalculate balances');
+    }
+  }
+
+  /**
    * Get financial summary (total give and total get)
    */
   static async getFinancialSummary(userId: string): Promise<{

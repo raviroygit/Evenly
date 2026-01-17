@@ -2,14 +2,14 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly-split",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "experiments": {
       "tsconfigPaths": true
     },
-    "scheme": "evenly-split",
+    "scheme": "evenly",
     "plugins": [
       "expo-asset",
       "expo-router"
@@ -27,7 +27,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nxtgenaidev.evenly"
+      "bundleIdentifier": "com.nxtgenaidev.evenly",
+      "associatedDomains": [
+        "applinks:evenly.app",
+        "applinks:www.evenly.app",
+        "applinks:evenlysplit.nxtgenaidev.com"
+      ]
     },
     "android": {
       "versionCode": 3,
@@ -41,8 +46,30 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "evenly" },
-            { "scheme": "com.nxtgenaidev.evenly" }
+            {
+              "scheme": "evenly",
+              "host": "invitation"
+            },
+            {
+              "scheme": "evenly"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "evenly.app",
+              "pathPrefix": "/invitation"
+            },
+            {
+              "scheme": "https",
+              "host": "www.evenly.app",
+              "pathPrefix": "/invitation"
+            }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }

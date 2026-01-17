@@ -17,6 +17,7 @@ import { groupInvitationRoutes } from './routes/groupInvitationRoutes';
 import { authRoutes } from './routes/authRoutes';
 import supportRoutes from './routes/supportRoutes';
 import { khataRoutes } from './routes/khataRoutes';
+import appRedirectRoutes from './routes/appRedirectRoutes';
 // Health check routes removed - using simple background service instead
 import { handleError } from './utils/errors';
 // Simple health check service that runs in the main process
@@ -79,16 +80,32 @@ const fastify = Fastify({
 // Register plugins
 async function registerPlugins() {
   // Cookie parser
-  await fastify.register(cookie);
+  try {
+    await fastify.register(cookie);
+    console.log('✅ Cookie plugin registered');
+  } catch (error) {
+    console.warn('⚠️  Failed to register cookie plugin:', error);
+  }
 
-  // CORS
-  await fastify.register(cors, {
-    origin: [config.cors.origin, config.cors.CORS_ORIGIN1],
-    credentials: true,
-  });
+  // CORS - filter out empty origins
+  try {
+    const corsOrigins = [config.cors.origin, config.cors.CORS_ORIGIN1].filter(origin => origin && origin.trim());
+    await fastify.register(cors, {
+      origin: corsOrigins.length > 0 ? corsOrigins : true, // Allow all if no origins configured
+      credentials: true,
+    });
+    console.log('✅ CORS plugin registered');
+  } catch (error) {
+    console.warn('⚠️  Failed to register CORS plugin:', error);
+  }
 
   // Helmet for security headers
-  await fastify.register(helmet);
+  try {
+    await fastify.register(helmet);
+    console.log('✅ Helmet plugin registered');
+  } catch (error) {
+    console.warn('⚠️  Failed to register helmet plugin:', error);
+  }
 
   // Rate limiting - DISABLED for development
   // await fastify.register(rateLimit, {
@@ -97,7 +114,8 @@ async function registerPlugins() {
   // });
 
   // Swagger documentation
-  await fastify.register(swagger, {
+  try {
+    await fastify.register(swagger, {
     openapi: {
       openapi: '3.0.0',
       info: {
@@ -135,68 +153,45 @@ async function registerPlugins() {
       ],
     },
   });
+    console.log('✅ Swagger plugin registered');
+  } catch (error) {
+    console.warn('⚠️  Failed to register swagger plugin:', error);
+  }
 
   // Swagger UI
-  await fastify.register(swaggerUi, {
-    routePrefix: '/docs',
-    uiConfig: {
-      docExpansion: 'list',
-      deepLinking: false,
-    },
-    uiHooks: {
-      onRequest: function (request, reply, next) {
-        next();
+  try {
+    await fastify.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        deepLinking: false,
       },
-      preHandler: function (request, reply, next) {
-        next();
+      uiHooks: {
+        onRequest: function (request, reply, next) {
+          next();
+        },
+        preHandler: function (request, reply, next) {
+          next();
+        },
       },
-    },
-    staticCSP: true,
-    transformStaticCSP: (header) => header,
-    transformSpecification: (swaggerObject, _request, _reply) => {
-      return swaggerObject;
-    },
-    transformSpecificationClone: true,
-  });
+      staticCSP: true,
+      transformStaticCSP: (header) => header,
+      transformSpecification: (swaggerObject, _request, _reply) => {
+        return swaggerObject;
+      },
+      transformSpecificationClone: true,
+    });
+    console.log('✅ Swagger UI plugin registered');
+  } catch (error) {
+    console.warn('⚠️  Failed to register swagger UI plugin:', error);
+  }
 }
 
 // Register routes
 async function registerRoutes() {
-  // Health check
-  fastify.get('/health', async (_request, _reply) => {
-    try {
-      const dbConnected = await testConnection();
-      return {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        database: dbConnected ? 'connected' : 'disconnected',
-        version: '1.0.0',
-        environment: config.server.env,
-        message: dbConnected ? 'All systems operational' : 'Database connection pending'
-      };
-    } catch (error) {
-      return {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        database: 'disconnected',
-        version: '1.0.0',
-        environment: config.server.env,
-        message: 'Service running - database connection pending',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  });
-
-  // Simple test endpoint
-  fastify.get('/', async (_request, _reply) => {
-    return {
-      message: 'Evenly Backend API is running',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      environment: config.server.env
-    };
-  });
-
+  // Note: /health and / routes are registered earlier in start() for faster Cloud Run startup
+  // Only register API routes here
+  
   // API routes
   try {
     await fastify.register(authRoutes, { prefix: '/api/auth' });
@@ -207,6 +202,7 @@ async function registerRoutes() {
     await fastify.register(groupInvitationRoutes, { prefix: '/api/invitations' });
     await fastify.register(supportRoutes, { prefix: '/api/support' });
     await fastify.register(khataRoutes, { prefix: '/api/khata' });
+    await fastify.register(appRedirectRoutes, { prefix: '/api' }); // No prefix needed, routes are /app/download
     console.log('✅ All API routes registered successfully');
   } catch (error) {
     console.warn('⚠️  Some API routes failed to register:', error);
@@ -240,41 +236,118 @@ const gracefulShutdown = async (signal: string) => {
 // Start server
 const start = async () => {
   try {
-    // Test database connection
-    const dbConnected = await testConnection();
-    if (!dbConnected) {
-      if (config.server.env === 'production') {
-        console.warn('⚠️  Database connection failed, but continuing in production mode');
-        console.warn('⚠️  Some features may not work until database is properly configured');
-      } else {
-        throw new Error('Database connection failed');
-      }
-    }
-
-    // Register plugins and routes
-    await registerPlugins();
-    await registerRoutes();
-
-    // Start server
-    await fastify.listen({
-      port: config.server.port,
-      host: config.server.host,
+    console.log('📦 Starting server initialization...');
+    console.log(`🔧 Server configuration: PORT=${config.server.port}, HOST=${config.server.host}, NODE_ENV=${config.server.env}`);
+    console.log(`🔧 Environment PORT: ${process.env.PORT || 'not set'}`);
+    console.log(`🔧 Process PID: ${process.pid}`);
+    
+    // Register basic health check route FIRST (before plugins)
+    // This ensures Cloud Run can detect the server is listening
+    // Keep it simple - no database calls, just return OK immediately
+    fastify.get('/health', async (_request, _reply) => {
+      return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        environment: config.server.env || 'production',
+        message: 'Server is running'
+      };
     });
 
-    console.log(`🚀 Server running on http://${config.server.host}:${config.server.port}`);
-    console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
+    // Register root route
+    fastify.get('/', async (_request, _reply) => {
+      return {
+        message: 'Evenly Backend API is running',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        environment: config.server.env
+      };
+    });
+
+    // CRITICAL: Start server IMMEDIATELY before anything else
+    // Cloud Run requires the server to listen on PORT within the timeout
+    // All other initialization happens AFTER the server is listening
+    const port = config.server.port || parseInt(process.env.PORT || '8080', 10);
+    const host = config.server.host || '0.0.0.0';
+    
+    console.log(`🔧 Starting server on ${host}:${port}...`);
+    
+    await fastify.listen({
+      port: port,
+      host: host,
+    });
+
+    console.log(`🚀 Server running on http://${host}:${port}`);
+    
+    // Now register plugins and routes asynchronously (non-blocking)
+    // This happens after the server is already listening
+    setImmediate(async () => {
+      try {
+        await registerPlugins();
+        console.log('✅ Plugins registered');
+      } catch (error) {
+        console.error('⚠️  Error registering plugins:', error);
+        console.error('⚠️  Continuing startup - some features may not be available');
+      }
+
+      try {
+        await registerRoutes();
+        console.log('✅ Routes registered');
+        console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
+      } catch (error) {
+        console.error('⚠️  Error registering routes:', error);
+        console.error('⚠️  Continuing startup - basic routes are available');
+      }
+    });
+    
+    // Test database connection asynchronously after server starts
+    // This prevents blocking Cloud Run startup timeout
+    testConnection().then((dbConnected) => {
+      if (!dbConnected) {
+        if (config.server.env === 'production') {
+          console.warn('⚠️  Database connection failed, but continuing in production mode');
+          console.warn('⚠️  Some features may not work until database is properly configured');
+        } else {
+          console.error('❌ Database connection failed');
+        }
+      }
+    }).catch((error) => {
+      console.error('❌ Database connection error:', error);
+      if (config.server.env !== 'production') {
+        console.error('⚠️  Continuing in development mode despite database error');
+      }
+    });
     
     // Auto-start health check service in background
     startHealthCheckService();
   } catch (error) {
-    console.error('Error starting server:', error);
+    console.error('❌ Fatal error starting server:', error);
+    if (error instanceof Error) {
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
+    }
     process.exit(1);
   }
 };
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
 // Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the server
-start();
+console.log('🚀 Starting Evenly Backend server...');
+start().catch((error) => {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+});

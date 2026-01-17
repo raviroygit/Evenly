@@ -89,7 +89,8 @@ export class GroupInvitationService {
             group[0].name,
             inviterName,
             invitationLink,
-            existingUser.length > 0
+            existingUser.length > 0,
+            invitation.token // Pass the invitation token
           );
           console.log(`Invitation email resent successfully to ${invitedEmail}`);
         } catch (emailError) {
@@ -133,7 +134,8 @@ export class GroupInvitationService {
           group[0].name,
           inviterName,
           invitationLink,
-          existingUser.length > 0
+          existingUser.length > 0,
+          token // Pass the invitation token
         );
         console.log(`Invitation email sent successfully to ${invitedEmail}`);
       } catch (emailError) {

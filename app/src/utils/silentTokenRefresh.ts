@@ -77,11 +77,12 @@ export class SilentTokenRefresh {
       } catch (error: any) {
         console.error('[SilentRefresh] ❌ Refresh failed:', error.message);
 
-        // If refresh token is invalid/expired (401), silently logout
+        // NEVER clear auth data - keep user logged in with cached data
+        // Even if refresh token is invalid/expired, user should stay logged in
         if (error.response?.status === 401) {
-          console.log('[SilentRefresh] Refresh token invalid - silently logging out');
-          await AuthStorage.clearAuthData();
-          // AuthContext will detect this and redirect to login automatically
+          console.warn('[SilentRefresh] ⚠️ Refresh token invalid - keeping user logged in with cached data');
+          console.warn('[SilentRefresh] ⚠️ User can continue using app in offline mode');
+          // Do NOT clear auth data - user stays logged in
         }
 
         isRefreshing = false;

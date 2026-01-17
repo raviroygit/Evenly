@@ -7,10 +7,20 @@ import * as schema from '../db/schema';
 const sql = neon(config.database.url);
 export const db = drizzle(sql, { schema });
 
-// Test database connection
-export const testConnection = async (): Promise<boolean> => {
+// Test database connection with timeout
+export const testConnection = async (timeoutMs: number = 5000): Promise<boolean> => {
   try {
-    await sql`SELECT NOW()`;
+    // Create a promise that rejects after timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Database connection timeout')), timeoutMs);
+    });
+
+    // Race between the query and the timeout
+    await Promise.race([
+      sql`SELECT NOW()`,
+      timeoutPromise
+    ]);
+    
     console.log('✅ Database connected successfully');
     return true;
   } catch (error) {

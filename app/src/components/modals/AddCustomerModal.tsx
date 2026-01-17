@@ -14,16 +14,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
+interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 interface AddCustomerModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editCustomer?: Customer | null;
+  onUpdateCustomer?: (customerId: string, data: { name: string; email?: string; phone?: string }) => Promise<void>;
 }
 
 export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   visible,
   onClose,
   onSuccess,
+  editCustomer = null,
+  onUpdateCustomer,
 }) => {
   const { colors, theme } = useTheme();
   const [name, setName] = useState('');
@@ -31,6 +42,20 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+
+  // Pre-fill form when editing
+  React.useEffect(() => {
+    if (editCustomer) {
+      setName(editCustomer.name || '');
+      setEmail(editCustomer.email || '');
+      setPhone(editCustomer.phone || '');
+    } else {
+      setName('');
+      setEmail('');
+      setPhone('');
+    }
+    setErrors({});
+  }, [editCustomer, visible]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,11 +86,22 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
     try {
       setLoading(true);
-      await EvenlyBackendService.createKhataCustomer({
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-      });
+
+      if (editCustomer && onUpdateCustomer) {
+        // Update existing customer
+        await onUpdateCustomer(editCustomer.id, {
+          name: name.trim(),
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+        });
+      } else {
+        // Create new customer
+        await EvenlyBackendService.createKhataCustomer({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+        });
+      }
 
       // Reset form
       setName('');
@@ -73,14 +109,14 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setPhone('');
       setErrors({});
 
-      // Close modal and refresh list
+      // Refresh list first, then close modal
+      await onSuccess();
       onClose();
-      onSuccess();
     } catch (error: any) {
-      console.error('Error creating customer:', error);
+      console.error(editCustomer ? 'Error updating customer:' : 'Error creating customer:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.message || 'Failed to create customer. Please try again.',
+        error.response?.data?.message || `Failed to ${editCustomer ? 'update' : 'create'} customer. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -132,7 +168,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                  Add Customer
+                  {editCustomer ? 'Edit Customer' : 'Add Customer'}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -247,7 +283,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Add Customer</Text>
+                  <Text style={styles.submitButtonText}>
+                    {editCustomer ? 'Update Customer' : 'Add Customer'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

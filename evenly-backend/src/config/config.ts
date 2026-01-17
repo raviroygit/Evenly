@@ -4,6 +4,7 @@ dotenv.config();
 
 export const config = {
   server: {
+    // Cloud Run sets PORT=8080 automatically, fallback to 3001 for local dev
     port: parseInt(process.env.PORT || '3001', 10),
     host: process.env.HOST || '0.0.0.0',
     env: process.env.NODE_ENV || 'development',

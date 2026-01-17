@@ -153,11 +153,20 @@ export class EvenlyBackendService {
 
   // User API
   static async updateCurrentUser(update: { name?: string; email?: string }): Promise<ApiResponse<any>> {
+    console.log('[EvenlyBackendService] ========== UPDATE USER REQUEST ==========');
+    console.log('[EvenlyBackendService] updateCurrentUser called with:', JSON.stringify(update, null, 2));
+    console.log('[EvenlyBackendService] Update object type:', typeof update);
+    console.log('[EvenlyBackendService] Update keys:', Object.keys(update));
+    console.log('[EvenlyBackendService] Update values:', Object.values(update));
+
     const response = await this.makeRequest<any>('/auth/me', {
       method: 'PUT',
       body: JSON.stringify(update),
       invalidatePrefixes: ['/auth/me', '/balances', '/groups', '/expenses']
     });
+
+    console.log('[EvenlyBackendService] ========== UPDATE USER RESPONSE ==========');
+    console.log('[EvenlyBackendService] Response:', JSON.stringify(response, null, 2));
     return response;
   }
 
@@ -170,7 +179,7 @@ export class EvenlyBackendService {
 
   private static async makeRequest<T>(
     endpoint: string,
-    options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[] } = {},
+    options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[]; transformRequest?: any } = {},
     retryCount: number = 0
   ): Promise<ApiResponse<T>> {
     try {
@@ -185,8 +194,13 @@ export class EvenlyBackendService {
         // If it's FormData, pass it directly to axios
         if (options.body instanceof FormData) {
           axiosConfig.data = options.body;
+          console.log('[makeRequest] Detected FormData body');
         } else {
-          axiosConfig.data = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+          const parsedData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+          axiosConfig.data = parsedData;
+          console.log('[makeRequest] Parsed body data:', JSON.stringify(parsedData, null, 2));
+          console.log('[makeRequest] Data keys:', Object.keys(parsedData));
+          console.log('[makeRequest] Data values:', Object.values(parsedData));
         }
       }
 
@@ -617,7 +631,10 @@ export class EvenlyBackendService {
     return response.data;
   }
 
-  static async getKhataCustomerById(customerId: string): Promise<{
+  static async getKhataCustomerById(
+    customerId: string,
+    options?: { cacheTTLMs?: number }
+  ): Promise<{
     id: string;
     userId: string;
     name: string;
@@ -646,7 +663,7 @@ export class EvenlyBackendService {
       type: 'give' | 'get' | 'settled';
     }>(`/khata/customers/${customerId}`, {
       method: 'GET',
-      cacheTTLMs: 30000,
+      cacheTTLMs: options?.cacheTTLMs ?? 30000,
     });
 
     return response.data;
@@ -694,7 +711,62 @@ export class EvenlyBackendService {
     return response.data;
   }
 
-  static async getKhataCustomerTransactions(customerId: string): Promise<Array<{
+  static async updateKhataCustomer(customerId: string, data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+  }): Promise<{
+    id: string;
+    userId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    avatar?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const response = await this.makeRequest<{
+      id: string;
+      userId: string;
+      name: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      avatar?: string;
+      notes?: string;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      `/khata/customers/${customerId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        invalidatePrefixes: ['/khata'],
+      }
+    );
+
+    return response.data;
+  }
+
+  static async deleteKhataCustomer(customerId: string): Promise<void> {
+    await this.makeRequest<void>(
+      `/khata/customers/${customerId}`,
+      {
+        method: 'DELETE',
+        invalidatePrefixes: ['/khata'],
+      }
+    );
+  }
+
+  static async getKhataCustomerTransactions(
+    customerId: string,
+    options?: { cacheTTLMs?: number }
+  ): Promise<Array<{
     id: string;
     customerId: string;
     userId: string;
@@ -723,7 +795,7 @@ export class EvenlyBackendService {
       updatedAt: string;
     }>>(`/khata/customers/${customerId}/transactions`, {
       method: 'GET',
-      cacheTTLMs: 30000,
+      cacheTTLMs: options?.cacheTTLMs ?? 30000,
     });
 
     return response.data;
@@ -754,16 +826,23 @@ export class EvenlyBackendService {
     updatedAt: string;
   }> {
     const isFormData = data instanceof FormData;
-    
+
+    console.log('[EvenlyBackendService] createKhataTransaction - isFormData:', isFormData);
+
     // If FormData, send as multipart/form-data, otherwise send as JSON
-    const requestConfig = isFormData
-      ? {
-          headers: {
-            'Accept': 'application/json',
-            // Don't set Content-Type - axios will set it automatically with boundary for FormData
-          },
-        }
-      : {};
+    const requestConfig: any = {};
+
+    if (isFormData) {
+      // For FormData, we need special handling for React Native
+      requestConfig.headers = {
+        'Accept': 'application/json',
+        // Don't set Content-Type - axios will set it automatically with boundary for FormData
+      };
+      // Ensure axios treats this as multipart
+      requestConfig.transformRequest = [(data: any) => data];
+
+      console.log('[EvenlyBackendService] Sending FormData to /khata/transactions');
+    }
 
     const response = await this.makeRequest<{
       id: string;
@@ -797,6 +876,85 @@ export class EvenlyBackendService {
     );
 
     return response.data;
+  }
+
+  static async updateKhataTransaction(
+    transactionId: string,
+    data: FormData | {
+      type?: 'give' | 'get';
+      amount?: string;
+      currency?: string;
+      description?: string;
+      imageUrl?: string;
+      transactionDate?: string;
+    }
+  ): Promise<{
+    id: string;
+    customerId: string;
+    userId: string;
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    imageUrl?: string;
+    balance: string;
+    transactionDate: string;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const isFormData = data instanceof FormData;
+
+    console.log('[EvenlyBackendService] updateKhataTransaction - isFormData:', isFormData);
+
+    // If FormData, send as multipart/form-data, otherwise send as JSON
+    const requestConfig: any = {};
+
+    if (isFormData) {
+      // For FormData, we need special handling for React Native
+      requestConfig.headers = {
+        'Accept': 'application/json',
+        // Don't set Content-Type - axios will set it automatically with boundary for FormData
+      };
+      // Ensure axios treats this as multipart
+      requestConfig.transformRequest = [(data: any) => data];
+
+      console.log('[EvenlyBackendService] Sending FormData to /khata/transactions/:id');
+    }
+
+    const response = await this.makeRequest<{
+      id: string;
+      customerId: string;
+      userId: string;
+      type: 'give' | 'get';
+      amount: string;
+      currency: string;
+      description?: string;
+      imageUrl?: string;
+      balance: string;
+      transactionDate: string;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      `/khata/transactions/${transactionId}`,
+      {
+        method: 'PUT',
+        body: isFormData ? data : JSON.stringify(data),
+        ...requestConfig,
+        invalidatePrefixes: ['/khata'],
+      }
+    );
+
+    return response.data;
+  }
+
+  static async deleteKhataTransaction(transactionId: string): Promise<void> {
+    await this.makeRequest(
+      `/khata/transactions/${transactionId}`,
+      {
+        method: 'DELETE',
+        invalidatePrefixes: ['/khata'],
+      }
+    );
   }
 
   static async getKhataFinancialSummary(): Promise<{

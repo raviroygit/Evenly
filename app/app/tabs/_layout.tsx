@@ -28,12 +28,6 @@ function TabLayoutContent() {
               }}
             />
             <Tabs.Screen
-              name="expenses"
-              options={{
-                title: "Expenses"
-              }}
-            />
-            <Tabs.Screen
               name="groups"
               options={{
                 title: "Groups"
@@ -58,22 +52,17 @@ function TabLayoutContent() {
               <Label>Home</Label>
               <Icon sf="house.fill" />
             </NativeTabs.Trigger>
-            
-            <NativeTabs.Trigger name="expenses">
-              <Label>Expenses</Label>
-              <Icon sf="doc.text.fill" />
-            </NativeTabs.Trigger>
-            
+
             <NativeTabs.Trigger name="groups">
               <Label>Groups</Label>
               <Icon sf="person.3.fill" />
             </NativeTabs.Trigger>
-            
+
             <NativeTabs.Trigger name="books">
               <Label>Khata</Label>
               <Icon sf="book.fill" />
             </NativeTabs.Trigger>
-            
+
             <NativeTabs.Trigger name="profile">
               <Label>Profile</Label>
               <Icon sf="person.fill" />

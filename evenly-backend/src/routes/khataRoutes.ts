@@ -136,6 +136,36 @@ export async function khataRoutes(fastify: FastifyInstance) {
     },
   }, KhataController.createTransaction);
 
+  fastify.put('/transactions/:transactionId', {
+    schema: {
+      description: 'Update a transaction (supports JSON or multipart/form-data for image upload)',
+      tags: ['Khata'],
+      params: {
+        type: 'object',
+        required: ['transactionId'],
+        properties: {
+          transactionId: { type: 'string', format: 'uuid' },
+        },
+      },
+      // Note: Schema validation is disabled for body to support both JSON and multipart/form-data
+      // The controller handles validation manually
+    },
+  }, KhataController.updateTransaction);
+
+  fastify.delete('/transactions/:transactionId', {
+    schema: {
+      description: 'Delete a transaction',
+      tags: ['Khata'],
+      params: {
+        type: 'object',
+        required: ['transactionId'],
+        properties: {
+          transactionId: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, KhataController.deleteTransaction);
+
   // Image Upload
   fastify.post('/upload', {
     schema: {
