@@ -264,9 +264,27 @@ const start = async () => {
       };
     });
 
-    // CRITICAL: Start server IMMEDIATELY before anything else
-    // Cloud Run requires the server to listen on PORT within the timeout
-    // All other initialization happens AFTER the server is listening
+    // CRITICAL: Register plugins and routes BEFORE starting the server
+    // Fastify doesn't allow plugin/route registration after listen() is called
+    // We register them synchronously to ensure they're ready before the server starts
+    try {
+      await registerPlugins();
+      console.log('✅ Plugins registered');
+    } catch (error) {
+      console.error('⚠️  Error registering plugins:', error);
+      console.error('⚠️  Continuing startup - some features may not be available');
+    }
+
+    try {
+      await registerRoutes();
+      console.log('✅ Routes registered');
+      console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
+    } catch (error) {
+      console.error('⚠️  Error registering routes:', error);
+      console.error('⚠️  Continuing startup - basic routes are available');
+    }
+
+    // Now start the server after plugins and routes are registered
     const port = config.server.port || parseInt(process.env.PORT || '8080', 10);
     const host = config.server.host || '0.0.0.0';
     
@@ -278,27 +296,6 @@ const start = async () => {
     });
 
     console.log(`🚀 Server running on http://${host}:${port}`);
-    
-    // Now register plugins and routes asynchronously (non-blocking)
-    // This happens after the server is already listening
-    setImmediate(async () => {
-      try {
-        await registerPlugins();
-        console.log('✅ Plugins registered');
-      } catch (error) {
-        console.error('⚠️  Error registering plugins:', error);
-        console.error('⚠️  Continuing startup - some features may not be available');
-      }
-
-      try {
-        await registerRoutes();
-        console.log('✅ Routes registered');
-        console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
-      } catch (error) {
-        console.error('⚠️  Error registering routes:', error);
-        console.error('⚠️  Continuing startup - basic routes are available');
-      }
-    });
     
     // Test database connection asynchronously after server starts
     // This prevents blocking Cloud Run startup timeout
