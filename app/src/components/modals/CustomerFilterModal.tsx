@@ -39,8 +39,8 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
 
   const filterOptions: { label: string; value: FilterType }[] = [
     { label: 'All', value: 'all' },
-    { label: 'You will get', value: 'get' },
-    { label: 'You will give', value: 'give' },
+    { label: 'You will get', value: 'give' },
+    { label: 'You will give', value: 'get' },
     { label: 'Settled', value: 'settled' },
   ];
 

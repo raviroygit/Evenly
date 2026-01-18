@@ -131,9 +131,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+        allowsEditing: false, // Keep original image without cropping
+        quality: 1, // Best quality
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -151,9 +150,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+        allowsEditing: false, // Keep original image without cropping
+        quality: 1, // Best quality
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -221,9 +219,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           hasImage: !!imageUri,
         });
 
-        // Add image if selected
-        if (imageUri && !editTransaction.imageUrl) {
-          // New image selected
+        // Add image if selected or changed
+        if (imageUri && imageUri !== editTransaction.imageUrl) {
+          // New image selected or existing image changed
           setUploadingImage(true);
           const filename = imageUri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);

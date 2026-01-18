@@ -971,4 +971,81 @@ export class EvenlyBackendService {
 
     return response.data;
   }
+
+  static async getKhataRecentTransactions(options?: {
+    limit?: number;
+    cacheTTLMs?: number;
+  }): Promise<Array<{
+    id: string;
+    customerId: string;
+    customerName: string;
+    userId: string;
+    type: 'give' | 'get';
+    amount: string;
+    currency: string;
+    description?: string;
+    imageUrl?: string;
+    balance: string;
+    transactionDate: string;
+    createdAt: string;
+    updatedAt: string;
+  }>> {
+    // Fetch all customers
+    const customers = await this.getKhataCustomers({
+      cacheTTLMs: options?.cacheTTLMs ?? 30000,
+    });
+
+    // Fetch transactions for each customer and combine them
+    const allTransactions: Array<{
+      id: string;
+      customerId: string;
+      customerName: string;
+      userId: string;
+      type: 'give' | 'get';
+      amount: string;
+      currency: string;
+      description?: string;
+      imageUrl?: string;
+      balance: string;
+      transactionDate: string;
+      createdAt: string;
+      updatedAt: string;
+    }> = [];
+
+    // Fetch transactions for each customer (limited to prevent too many requests)
+    const customerIds = customers.slice(0, 20); // Limit to first 20 customers to avoid too many requests
+
+    await Promise.all(
+      customerIds.map(async (customer) => {
+        try {
+          const transactions = await this.getKhataCustomerTransactions(
+            customer.id,
+            { cacheTTLMs: options?.cacheTTLMs ?? 30000 }
+          );
+
+          // Add customer name to each transaction
+          transactions.forEach((transaction) => {
+            allTransactions.push({
+              ...transaction,
+              customerName: customer.name,
+            });
+          });
+        } catch (error) {
+          console.error(`Failed to fetch transactions for customer ${customer.id}:`, error);
+          // Continue even if one customer's transactions fail
+        }
+      })
+    );
+
+    // Sort by createdAt or transactionDate (most recent first)
+    allTransactions.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.transactionDate).getTime();
+      const dateB = new Date(b.createdAt || b.transactionDate).getTime();
+      return dateB - dateA;
+    });
+
+    // Return limited results
+    const limit = options?.limit ?? 10;
+    return allTransactions.slice(0, limit);
+  }
 }

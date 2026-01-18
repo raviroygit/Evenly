@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 24,
+    marginBottom: 8,
     paddingHorizontal: 6,
   },
   statCard: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     // elevation: 4,
     marginHorizontal: '1.5%',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   statContent: {
     flex: 1,

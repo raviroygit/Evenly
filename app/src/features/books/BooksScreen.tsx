@@ -335,11 +335,7 @@ export const BooksScreen: React.FC = () => {
           >
             <Ionicons name="options-outline" size={20} color={colors.foreground} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}
-          >
-            <Ionicons name="document-text-outline" size={20} color={colors.foreground} />
-          </TouchableOpacity>
+        
         </View>
 
         {/* Customer List */}

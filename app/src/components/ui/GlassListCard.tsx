@@ -21,12 +21,12 @@ export const GlassListCard: React.FC<GlassListCardProps> = ({
   children,
   style,
   padding = {
-    small: 12,
-    medium: 16,
-    large: 20,
-    tablet: 24,
+    small: 8,
+    medium: 10,
+    large: 12,
+    tablet: 14,
   },
-  marginBottom = 24,
+  marginBottom = 8,
   borderRadius = {
     small: 14,
     medium: 16,
@@ -74,14 +74,14 @@ export const GlassListCard: React.FC<GlassListCardProps> = ({
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: 16,
+    marginBottom: 8,
     alignItems: 'center',
   },
   titleContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
     paddingRight: 20, // Add padding to ensure text doesn't overlap with badge
   },
   title: {

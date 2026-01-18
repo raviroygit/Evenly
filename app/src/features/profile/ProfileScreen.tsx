@@ -16,6 +16,8 @@ import { AboutModal } from '../../components/modals/AboutModal';
 import { SupportModal } from '../../components/modals/SupportModal';
 import { PrivacySecurityModal } from '../../components/modals/PrivacySecurityModal';
 import { PersonalInfoModal } from '../../components/modals/PersonalInfoModal';
+import { GroupsListModal } from '../../components/modals/GroupsListModal';
+import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout } = useAuth();
@@ -28,6 +30,9 @@ export const ProfileScreen: React.FC = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showPrivacySecurityModal, setShowPrivacySecurityModal] = useState(false);
   const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
+  const [showGroupsListModal, setShowGroupsListModal] = useState(false);
+  const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -112,6 +117,21 @@ export const ProfileScreen: React.FC = () => {
     );
   };
 
+  const handleGroupPress = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    setShowGroupsListModal(false);
+    setTimeout(() => {
+      setShowGroupInfoModal(true);
+    }, 300);
+  };
+
+  const handleGroupInfoClose = () => {
+    setShowGroupInfoModal(false);
+    setTimeout(() => {
+      setShowGroupsListModal(true);
+    }, 300);
+  };
+
   // Show loading state if user data is not available
   if (!user) {
     return (
@@ -170,29 +190,56 @@ export const ProfileScreen: React.FC = () => {
         items={[
           {
             title: "Net Balance",
-            subtitle: balancesLoading ? "Loading..." : `₹${netBalance?.netBalance.toFixed(2) || '0.00'}`,
-            rightElement: (
-              <Text style={[
-                styles.balanceText,
-                { 
-                  color: netBalance && netBalance.netBalance >= 0 ? '#4CAF50' : '#F44336' 
-                }
-              ]}>
-                {netBalance && netBalance.netBalance >= 0 ? 'Owed' : 'Owing'}
-              </Text>
+            subtitle: balancesLoading ? "Loading..." : undefined,
+            rightElement: balancesLoading ? undefined : (
+              <View style={styles.balanceRow}>
+                <Text style={[
+                  styles.balanceAmount,
+                  {
+                    color: netBalance && netBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
+                  }
+                ]}>
+                  ₹{netBalance?.netBalance.toFixed(2) || '0.00'}
+                </Text>
+                <Text style={[
+                  styles.balanceLabel,
+                  {
+                    color: netBalance && netBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
+                  }
+                ]}>
+                  {netBalance && netBalance.netBalance >= 0 ? 'Owed' : 'Owing'}
+                </Text>
+              </View>
             ),
           },
           {
             title: "Total Owed",
-            subtitle: balancesLoading ? "Loading..." : `₹${netBalance?.totalOwed.toFixed(2) || '0.00'}`,
+            subtitle: balancesLoading ? "Loading..." : undefined,
+            rightElement: balancesLoading ? undefined : (
+              <Text style={[
+                styles.balanceAmount,
+                { color: '#10B981' }
+              ]}>
+                ₹{netBalance?.totalOwed.toFixed(2) || '0.00'}
+              </Text>
+            ),
           },
           {
             title: "Total Owing",
-            subtitle: balancesLoading ? "Loading..." : `₹${netBalance?.totalOwing.toFixed(2) || '0.00'}`,
+            subtitle: balancesLoading ? "Loading..." : undefined,
+            rightElement: balancesLoading ? undefined : (
+              <Text style={[
+                styles.balanceAmount,
+                { color: '#EF4444' }
+              ]}>
+                ₹{netBalance?.totalOwing.toFixed(2) || '0.00'}
+              </Text>
+            ),
           },
           {
             title: "Active Groups",
             subtitle: groupsLoading ? "Loading..." : `${groups.length} group${groups.length !== 1 ? 's' : ''}`,
+            onPress: () => setShowGroupsListModal(true),
           },
         ]}
       />
@@ -290,6 +337,25 @@ export const ProfileScreen: React.FC = () => {
         visible={showPersonalInfoModal}
         onClose={() => setShowPersonalInfoModal(false)}
       />
+
+      {/* Groups List Modal */}
+      <GroupsListModal
+        visible={showGroupsListModal}
+        onClose={() => {
+          setShowGroupsListModal(false);
+          setSelectedGroupId(null);
+        }}
+        groups={groups}
+        onGroupPress={handleGroupPress}
+        loading={groupsLoading}
+      />
+
+      {/* Group Info Modal */}
+      <GroupInfoModal
+        visible={showGroupInfoModal}
+        onClose={handleGroupInfoClose}
+        groupId={selectedGroupId}
+      />
     </>
   );
 };
@@ -309,7 +375,16 @@ const styles = StyleSheet.create({
     marginBottom: 120, // Increased bottom margin to ensure button is fully visible above tab bar
     alignItems: 'center',
   },
-  balanceText: {
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  balanceAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  balanceLabel: {
     fontSize: 12,
     fontWeight: '600',
   },
