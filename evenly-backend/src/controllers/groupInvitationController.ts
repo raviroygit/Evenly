@@ -25,10 +25,17 @@ export class GroupInvitationController {
       invitedEmail
     );
 
+    // Check if email was sent successfully
+    const emailSent = (invitation as any).emailSent !== false;
+    const message = emailSent
+      ? 'Invitation sent successfully'
+      : 'Invitation created but email failed to send. Please check email configuration or share the invitation link manually.';
+
     reply.status(201).send({
       success: true,
       data: invitation,
-      message: 'Invitation sent successfully',
+      message,
+      warning: emailSent ? undefined : 'Email delivery failed - invitation link may need to be shared manually',
     });
   });
 

@@ -82,7 +82,8 @@ export class GroupInvitationService {
         // Create invitation link
         const invitationLink = `${config.app.baseUrl}/invite/${invitation.token}`;
         
-        // Resend email (optional - don't fail if email fails)
+        // Resend email (don't fail if email fails, but log prominently)
+        let emailSent = false;
         try {
           await sendGroupInvitationEmail(
             invitedEmail,
@@ -92,12 +93,21 @@ export class GroupInvitationService {
             existingUser.length > 0,
             invitation.token // Pass the invitation token
           );
-          console.log(`Invitation email resent successfully to ${invitedEmail}`);
-        } catch (emailError) {
-          console.error(`Failed to resend invitation email to ${invitedEmail}:`, emailError);
-          // Don't throw error - invitation exists, just email failed
+          console.log(`✅ Invitation email resent successfully to ${invitedEmail}`);
+          emailSent = true;
+        } catch (emailError: any) {
+          console.error(`💥 FAILED to resend invitation email to ${invitedEmail}:`, emailError);
+          console.error(`⚠️  IMPORTANT: Invitation exists but email NOT sent!`);
+          console.error(`⚠️  User will NOT receive email. Please check email configuration.`);
+          console.error(`⚠️  Or manually share this link: ${invitationLink}`);
+
+          // Add email failure info to invitation object for API response
+          (invitation as any).emailSent = false;
+          (invitation as any).emailError = emailError.message;
         }
-        
+
+        // Add email status to return object
+        (invitation as any).emailSent = emailSent;
         return invitation;
       }
 
@@ -127,7 +137,8 @@ export class GroupInvitationService {
       // Create invitation link
       const invitationLink = `${config.app.baseUrl}/invite/${token}`;
 
-      // Send email (optional - don't fail invitation creation if email fails)
+      // Send email (don't fail invitation creation if email fails, but log prominently)
+      let emailSent = false;
       try {
         await sendGroupInvitationEmail(
           invitedEmail,
@@ -137,12 +148,21 @@ export class GroupInvitationService {
           existingUser.length > 0,
           token // Pass the invitation token
         );
-        console.log(`Invitation email sent successfully to ${invitedEmail}`);
-      } catch (emailError) {
-        console.error(`Failed to send invitation email to ${invitedEmail}:`, emailError);
-        // Don't throw error - invitation was created successfully, just email failed
+        console.log(`✅ Invitation email sent successfully to ${invitedEmail}`);
+        emailSent = true;
+      } catch (emailError: any) {
+        console.error(`💥 FAILED to send invitation email to ${invitedEmail}:`, emailError);
+        console.error(`⚠️  IMPORTANT: Invitation created but email NOT sent!`);
+        console.error(`⚠️  User will NOT receive email. Please check email configuration.`);
+        console.error(`⚠️  Or manually share this link: ${invitationLink}`);
+
+        // Add email failure info to invitation object for API response
+        (createdInvitation as any).emailSent = false;
+        (createdInvitation as any).emailError = emailError.message;
       }
 
+      // Add email status to return object
+      (createdInvitation as any).emailSent = emailSent;
       return createdInvitation;
     } catch (error) {
       console.error('Error sending group invitation:', error);

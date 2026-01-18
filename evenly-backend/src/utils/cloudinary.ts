@@ -10,14 +10,79 @@ cloudinary.config({
 });
 
 /**
+ * Validate image file type and size
+ * @param fileBuffer - Buffer of the image
+ * @param mimetype - MIME type of the file
+ * @returns {boolean} - True if valid, throws error otherwise
+ */
+const validateImageFile = (fileBuffer: Buffer, mimetype?: string): void => {
+  // Validate buffer
+  if (!fileBuffer || fileBuffer.length === 0) {
+    throw new Error('Invalid file: buffer is empty or null');
+  }
+
+  // Check file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+  if (fileBuffer.length > maxSize) {
+    throw new Error(`File too large: maximum size is 10MB, got ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+  }
+
+  // Supported image formats
+  const supportedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/bmp',
+    'image/svg+xml',
+  ];
+
+  // Check mimetype if provided
+  if (mimetype) {
+    const isSupported = supportedMimeTypes.includes(mimetype.toLowerCase());
+    if (!isSupported) {
+      throw new Error(
+        `Unsupported image format: ${mimetype}. Supported formats: JPEG, PNG, GIF, WebP, BMP, SVG. ` +
+        `Note: HEIC/HEIF images (iPhone photos) need to be converted to JPEG first.`
+      );
+    }
+  }
+
+  // Validate file signature (magic numbers) for common formats
+  const fileSignature = fileBuffer.slice(0, 12).toString('hex');
+
+  const validSignatures = [
+    'ffd8ff',      // JPEG
+    '89504e47',    // PNG
+    '47494638',    // GIF
+    '52494646',    // WebP (RIFF)
+    '424d',        // BMP
+    '3c3f786d6c',  // SVG (<?xml)
+    '3c737667',    // SVG (<svg)
+  ];
+
+  const isValidSignature = validSignatures.some(sig => fileSignature.startsWith(sig));
+
+  if (!isValidSignature) {
+    throw new Error(
+      'Invalid image file: file signature not recognized. ' +
+      'Please ensure you are uploading a valid image file (JPEG, PNG, GIF, WebP, BMP, or SVG).'
+    );
+  }
+};
+
+/**
  * Upload a single image to Cloudinary
  * @param fileBuffer - Buffer of the image
  * @param folder - Cloudinary folder name
+ * @param mimetype - Optional MIME type for validation
  * @returns {Promise<{ url: string, publicId: string }>} - Image URL & Public ID
  */
 export const uploadSingleImage = async (
   fileBuffer: Buffer,
-  folder: string = 'khata'
+  folder: string = 'khata',
+  mimetype?: string
 ): Promise<{ url: string; publicId: string }> => {
   // Validate Cloudinary configuration
   if (!config.cloudinary.cloudName || !config.cloudinary.apiKey || !config.cloudinary.apiSecret) {
@@ -28,20 +93,28 @@ export const uploadSingleImage = async (
     throw new Error(`Cloudinary configuration missing: ${missing.join(', ')}. Please check your .env file.`);
   }
 
-  // Validate buffer
-  if (!fileBuffer || fileBuffer.length === 0) {
-    throw new Error('Invalid file buffer: buffer is empty or null');
+  // Validate image file
+  try {
+    validateImageFile(fileBuffer, mimetype);
+  } catch (validationError: any) {
+    console.error('Image validation failed:', validationError.message);
+    throw validationError;
   }
 
   console.log('Uploading to Cloudinary:', {
     cloudName: config.cloudinary.cloudName,
     folder: `evenly/${folder}`,
     bufferSize: fileBuffer.length,
+    mimetype: mimetype || 'unknown',
   });
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder: `evenly/${folder}` },
+      {
+        folder: `evenly/${folder}`,
+        resource_type: 'image',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'],
+      },
       (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', {
@@ -51,7 +124,7 @@ export const uploadSingleImage = async (
           });
           return reject(new Error(`Cloudinary upload failed: ${error.message} (HTTP ${error.http_code || 'N/A'})`));
         }
-        
+
         if (!result || !result.secure_url) {
           console.error('Cloudinary upload returned invalid result:', result);
           return reject(new Error('Cloudinary upload failed: Invalid response from Cloudinary'));
@@ -60,6 +133,8 @@ export const uploadSingleImage = async (
         console.log('Cloudinary upload successful:', {
           url: result.secure_url,
           publicId: result.public_id,
+          format: result.format,
+          size: result.bytes,
         });
 
         resolve({
@@ -68,7 +143,7 @@ export const uploadSingleImage = async (
         });
       }
     );
-    
+
     // Handle stream errors
     stream.on('error', (streamError) => {
       console.error('Cloudinary stream error:', streamError);

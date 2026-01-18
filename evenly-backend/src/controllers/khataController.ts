@@ -159,13 +159,19 @@ export class KhataController {
             // Handle image upload
             try {
               const buffer = await part.toBuffer();
-              console.log('Image buffer size:', buffer.length);
-              const result = await uploadSingleImage(buffer, 'khata');
+              const mimetype = part.mimetype;
+              console.log('Processing image:', {
+                fieldname: part.fieldname,
+                filename: part.filename,
+                mimetype: mimetype,
+                bufferSize: buffer.length,
+              });
+              const result = await uploadSingleImage(buffer, 'khata', mimetype);
               imageUrl = result.url;
               console.log('Image uploaded successfully:', imageUrl);
             } catch (uploadError) {
               console.error('Error uploading image:', uploadError);
-              return reply.status(500).send({
+              return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
               });
@@ -268,11 +274,18 @@ export class KhataController {
             // Handle image upload
             try {
               const buffer = await part.toBuffer();
-              const result = await uploadSingleImage(buffer, 'khata');
+              const mimetype = part.mimetype;
+              console.log('Processing image for update:', {
+                fieldname: part.fieldname,
+                filename: part.filename,
+                mimetype: mimetype,
+                bufferSize: buffer.length,
+              });
+              const result = await uploadSingleImage(buffer, 'khata', mimetype);
               imageUrl = result.url;
             } catch (uploadError) {
               console.error('Error uploading image:', uploadError);
-              return reply.status(500).send({
+              return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
               });
@@ -373,17 +386,31 @@ export class KhataController {
       });
     }
 
-    const buffer = await data.toBuffer();
-    const result = await uploadSingleImage(buffer, 'khata');
+    try {
+      const buffer = await data.toBuffer();
+      const mimetype = data.mimetype;
+      console.log('Direct image upload:', {
+        filename: data.filename,
+        mimetype: mimetype,
+        bufferSize: buffer.length,
+      });
+      const result = await uploadSingleImage(buffer, 'khata', mimetype);
 
-    reply.send({
-      success: true,
-      data: {
-        url: result.url,
-        publicId: result.publicId,
-      },
-      message: 'Image uploaded successfully',
-    });
+      reply.send({
+        success: true,
+        data: {
+          url: result.url,
+          publicId: result.publicId,
+        },
+        message: 'Image uploaded successfully',
+      });
+    } catch (uploadError) {
+      console.error('Error in direct upload:', uploadError);
+      return reply.status(400).send({
+        success: false,
+        message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
+      });
+    }
   });
 }
 

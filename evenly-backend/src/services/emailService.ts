@@ -38,20 +38,27 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${to}: ${info.messageId}`);
+    console.log(`✅ Email sent successfully to ${to}: ${info.messageId}`);
   } catch (error: any) {
-    console.error('Error sending email:', error);
-    
-    // Log the error but don't throw to prevent invitation creation from failing
+    console.error('💥 Error sending email:', error);
+
+    // Log detailed error information
     if (error.code === 'EAUTH' || error.responseCode === 535) {
-      console.warn(`SMTP authentication failed for ${to}. Please check your email credentials in .env file.`);
-      console.warn('Email not sent, but invitation was created successfully.');
-      console.warn('To fix: Set up EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in your .env file');
-      return; // Don't throw error, just log it
+      console.error(`🚨 SMTP authentication failed for ${to}. Email credentials are incorrect!`);
+      console.error('Current email config:', {
+        host: config.email.host,
+        port: config.email.port,
+        user: config.email.auth.user,
+        secure: config.email.secure
+      });
+      console.error('To fix: Check EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in your .env file');
+      // THROW error so invitation service knows email failed
+      throw new Error(`SMTP_AUTH_FAILED: Cannot send email to ${to}. Please configure email credentials.`);
     }
-    
-    console.warn(`Email sending failed for ${to}, but invitation was created successfully.`);
-    return; // Don't throw error to prevent invitation creation from failing
+
+    // For other errors, also throw so system knows email failed
+    console.error(`🚨 Email sending failed for ${to}:`, error.message);
+    throw new Error(`EMAIL_SEND_FAILED: ${error.message}`);
   }
 }
 
