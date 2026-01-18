@@ -288,10 +288,10 @@ export const BooksScreen: React.FC = () => {
               borderRadius={{ small: 16, medium: 18, large: 20 }}
               style={styles.summaryCard}
             >
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+              <Text style={[styles.summaryLabel, { color: '#10B981' }]}>
                 You will get
               </Text>
-              <Text style={[styles.summaryAmount, { color: colors.foreground }]}>
+              <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
                 ₹{formatAmount(summary.totalGive)}
               </Text>
 
@@ -306,7 +306,7 @@ export const BooksScreen: React.FC = () => {
               borderRadius={{ small: 16, medium: 18, large: 20 }}
               style={styles.summaryCard}
             >
-              <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
+              <Text style={[styles.summaryLabel, { color: '#FF3B30' }]}>
                 You will give
               </Text>
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
@@ -417,10 +417,14 @@ export const BooksScreen: React.FC = () => {
                       </Text>
                     </View>
                     <View style={styles.customerAmount}>
-                      <Text style={[styles.amountText, { color: '#FF3B30' }]}>
+                      <Text style={[styles.amountText, {
+                        color: customer.type === 'give' ? '#10B981' : customer.type === 'get' ? '#FF3B30' : colors.mutedForeground
+                      }]}>
                         ₹{formatAmount(Math.abs(parseFloat(customer.balance)))}
                       </Text>
-                      <Text style={[styles.amountLabel, { color: colors.mutedForeground }]}>
+                      <Text style={[styles.amountLabel, {
+                        color: customer.type === 'give' ? '#10B981' : customer.type === 'get' ? '#FF3B30' : colors.mutedForeground
+                      }]}>
                         You&apos;ll {customer.type === 'get' ? 'Give' : customer.type === 'give' ? 'Get' : 'Settled'}
                       </Text>
                     </View>

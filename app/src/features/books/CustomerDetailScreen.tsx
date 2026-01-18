@@ -312,10 +312,14 @@ export const CustomerDetailScreen: React.FC = () => {
       <PullToRefreshSpinner refreshing={refreshing} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: '#000000' }]}>
+        <View style={[styles.header, {
+          backgroundColor: theme === 'dark' ? '#1A1A1A' : '#FFFFFF',
+          borderBottomWidth: 1,
+          borderBottomColor: theme === 'dark' ? '#2A2A2A' : '#E5E5E5',
+        }]}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              <Ionicons name="arrow-back" size={24} color={colors.foreground} />
             </TouchableOpacity>
             <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
               <Text style={[styles.avatarText, { color: colors.primary }]}>
@@ -323,12 +327,12 @@ export const CustomerDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.headerInfo}>
-              <Text style={styles.headerName}>{customerName}</Text>
-              <Text style={styles.headerSubtitle}>Click here to view settings.</Text>
+              <Text style={[styles.headerName, { color: colors.foreground }]}>{customerName}</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>Click here to view settings.</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.headerActionButton}>
-                <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+                <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
           </View>
@@ -353,10 +357,14 @@ export const CustomerDetailScreen: React.FC = () => {
             style={styles.summaryCard}
           >
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.foreground }]}>
+              <Text style={[styles.summaryLabel, {
+                color: customer?.type === 'give' ? '#10B981' : customer?.type === 'get' ? '#FF3B30' : colors.foreground
+              }]}>
                 {customer?.type === 'get' ? 'You will give' : customer?.type === 'give' ? 'You will get' : 'Settled'}
               </Text>
-              <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
+              <Text style={[styles.summaryAmount, {
+                color: customer?.type === 'give' ? '#10B981' : customer?.type === 'get' ? '#FF3B30' : colors.foreground
+              }]}>
                 ₹{totalAmount}
               </Text>
             </View>
@@ -539,7 +547,8 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'ios' ? 7 : 20,
     paddingBottom: 8,
-    paddingHorizontal: 12,
+    paddingLeft: 20,
+    paddingRight: 20,
   },
   headerTop: {
     flexDirection: 'row',
@@ -567,12 +576,10 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#CCCCCC',
   },
   headerActions: {
     flexDirection: 'row',

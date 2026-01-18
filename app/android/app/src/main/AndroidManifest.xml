@@ -30,8 +30,15 @@
       </intent-filter>
       <intent-filter android:autoVerify="true" data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="evenly" android:host="invitation"/>
         <data android:scheme="evenly"/>
-        <data android:scheme="com.nxtgenaidev.evenly"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
+      <intent-filter android:autoVerify="true" data-generated="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="https" android:host="evenly.app" android:pathPrefix="/invitation"/>
+        <data android:scheme="https" android:host="www.evenly.app" android:pathPrefix="/invitation"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
