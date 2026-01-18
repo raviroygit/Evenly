@@ -165,6 +165,7 @@ export class AuthService {
           id: response.user.id,
           email: response.user.email,
           name: response.user.name,
+          phoneNumber: response.user.phoneNumber,
           stats: { groups: 0, totalSpent: 0, owed: 0 }, // Will be updated from evenly-backend
         };
       }

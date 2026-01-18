@@ -20,26 +20,70 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
   const [email, setEmail] = useState(user?.email || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phoneNumber?: string }>({});
 
   useEffect(() => {
     if (visible) {
       setName(user?.name || '');
       setEmail(user?.email || '');
       setPhoneNumber(user?.phoneNumber || '');
+      setErrors({});
     }
   }, [visible, user?.name, user?.email, user?.phoneNumber]);
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Allow various phone formats: +1234567890, 123-456-7890, (123) 456-7890, etc.
+    const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+    return phoneRegex.test(phone);
+  };
 
   const handleSave = async () => {
     // Define payload outside try-catch so it's accessible in both blocks
     let payload: { name?: string; email?: string; phoneNumber?: string } = {};
+    const newErrors: { name?: string; email?: string; phoneNumber?: string } = {};
 
     try {
       setSaving(true);
+      setErrors({});
+
+      // Validate name
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        newErrors.name = 'Name is required';
+      } else if (trimmedName.length < 2) {
+        newErrors.name = 'Name must be at least 2 characters';
+      }
+
+      // Validate email
+      const trimmedEmail = email.trim();
+      if (!trimmedEmail) {
+        newErrors.email = 'Email is required';
+      } else if (!validateEmail(trimmedEmail)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+
+      // Validate phone number (optional, but if provided must be valid)
+      const trimmedPhone = phoneNumber.trim();
+      if (trimmedPhone && !validatePhoneNumber(trimmedPhone)) {
+        newErrors.phoneNumber = 'Please enter a valid phone number';
+      }
+
+      // If there are validation errors, show them and stop
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        setSaving(false);
+        return;
+      }
 
       // Build payload
-      if (name && name !== user?.name) payload.name = name.trim();
-      if (email && email !== user?.email) payload.email = email.trim();
-      if (phoneNumber && phoneNumber !== user?.phoneNumber) payload.phoneNumber = phoneNumber.trim();
+      if (trimmedName && trimmedName !== user?.name) payload.name = trimmedName;
+      if (trimmedEmail && trimmedEmail !== user?.email) payload.email = trimmedEmail;
+      if (trimmedPhone && trimmedPhone !== user?.phoneNumber) payload.phoneNumber = trimmedPhone;
 
       console.log('[PersonalInfoModal] Preparing update:', {
         originalName: user?.name,
@@ -120,46 +164,73 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       <View style={styles.content}>
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.foreground }]}>Full Name</Text>
-          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.inputContainer, {
+            backgroundColor: colors.background,
+            borderColor: errors.name ? '#FF3B30' : colors.border
+          }]}>
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                if (errors.name) setErrors({ ...errors, name: undefined });
+              }}
               placeholder="Enter your name"
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="words"
             />
           </View>
+          {errors.name && (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
-          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.inputContainer, {
+            backgroundColor: colors.background,
+            borderColor: errors.email ? '#FF3B30' : colors.border
+          }]}>
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errors.email) setErrors({ ...errors, email: undefined });
+              }}
               placeholder="Enter your email"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.foreground }]}>Phone Number</Text>
-          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <Text style={[styles.label, { color: colors.foreground }]}>Phone Number (Optional)</Text>
+          <View style={[styles.inputContainer, {
+            backgroundColor: colors.background,
+            borderColor: errors.phoneNumber ? '#FF3B30' : colors.border
+          }]}>
             <TextInput
               style={[styles.input, { color: colors.foreground }]}
               value={phoneNumber}
-              onChangeText={setPhoneNumber}
+              onChangeText={(text) => {
+                setPhoneNumber(text);
+                if (errors.phoneNumber) setErrors({ ...errors, phoneNumber: undefined });
+              }}
               placeholder="Enter your phone number"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="phone-pad"
               autoCapitalize="none"
             />
           </View>
+          {errors.phoneNumber && (
+            <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+          )}
         </View>
 
         <View style={styles.actions}>
@@ -192,6 +263,11 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 4,
   },
   actions: {
     flexDirection: 'row',
