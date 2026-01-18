@@ -40,32 +40,16 @@ class EvenlyApiClient {
 
           // Get auth data from storage
           const authData = await AuthStorage.getAuthData();
-          let ssoToken = authData?.ssoToken;
+          const accessToken = authData?.accessToken;
 
-          if (ssoToken) {
-            // Normalize accidental double-encoding (e.g., %253A -> %3A)
-            try {
-              if (typeof ssoToken === 'string' && ssoToken.includes('%253A')) {
-                ssoToken = decodeURIComponent(ssoToken);
-              }
-            } catch {}
-            // Add sso_token to cookies
+          if (accessToken) {
+            // Use Bearer token authentication for mobile apps
             config.headers = config.headers || {};
-            // Remove any pre-existing cookie headers to avoid duplication
-            if (config.headers['Cookie']) delete (config.headers as any)['Cookie'];
-            if (config.headers['cookie']) delete (config.headers as any)['cookie'];
-            
-            // Set the cookie
-            const cookieVal = `sso_token=${ssoToken}`;
-            config.headers['Cookie'] = cookieVal;
-            
-            // Single log for sso token (full value)
-            console.log(`[${Platform.OS}] SSO Token: ${ssoToken}`);
-            
-            if (Platform.OS === 'ios') {
-              (config as any).withCredentials = true;
-            }
+            config.headers['Authorization'] = `Bearer ${accessToken}`;
+
+            console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }
+
           return config;
         } catch (error) {
           console.error('Request interceptor error:', error);
@@ -105,7 +89,33 @@ class EvenlyApiClient {
             });
           }
 
-          console.log('[EvenlyApiClient] Backend session expired - attempting silent refresh');
+          // Check if access token is actually expired before attempting refresh
+          try {
+            const authData = await AuthStorage.getAuthData();
+
+            if (authData?.accessToken) {
+              // Check if token is expired or about to expire (< 5 minutes)
+              const needsRefresh = SilentTokenRefresh.isTokenExpiredOrExpiring(authData.accessToken, 5);
+
+              if (!needsRefresh) {
+                // Token is still valid (> 5 minutes remaining)
+                // This 401 is a legitimate auth error (wrong token, revoked, permission denied)
+                console.warn('[EvenlyApiClient] ⚠️ Token still valid but got 401 - legitimate auth error');
+                console.warn('[EvenlyApiClient] ⚠️ Keeping user logged in with cached data');
+
+                return Promise.reject({
+                  ...error,
+                  _offlineMode: true,
+                  message: 'Authentication error - using cached data'
+                });
+              }
+            }
+          } catch (checkError) {
+            console.warn('[EvenlyApiClient] Error checking token expiry:', checkError);
+            // If we can't check, proceed with refresh attempt
+          }
+
+          console.log('[EvenlyApiClient] Token expired - attempting silent refresh');
 
           try {
             // Silently refresh using refresh token (NO user interaction)
@@ -114,12 +124,12 @@ class EvenlyApiClient {
             if (refreshed) {
               // Get new auth data
               const authData = await AuthStorage.getAuthData();
-              if (authData?.ssoToken) {
+              if (authData?.accessToken) {
                 // Mark as retried
                 originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
 
-                // Update sso_token in request headers
-                originalRequest.headers['Cookie'] = `sso_token=${authData.ssoToken}`;
+                // Update Bearer token in request headers
+                originalRequest.headers['Authorization'] = `Bearer ${authData.accessToken}`;
 
                 console.log('[EvenlyApiClient] ✅ Silent refresh successful, retrying request');
                 // Retry the original request with new session

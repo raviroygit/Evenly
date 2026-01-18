@@ -17,6 +17,28 @@ let refreshPromise: Promise<boolean> | null = null;
 
 export class SilentTokenRefresh {
   /**
+   * Check if access token is expired or about to expire (< 5 minutes)
+   * Returns true if token needs refresh, false otherwise
+   */
+  static isTokenExpiredOrExpiring(accessToken: string, thresholdMinutes: number = 5): boolean {
+    try {
+      // Decode JWT to check expiry (JWT format: header.payload.signature)
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      const timeUntilExpiry = expiryTime - currentTime;
+      const minutesUntilExpiry = Math.floor(timeUntilExpiry / 60000);
+
+      // Return true if token expires in less than threshold minutes
+      return minutesUntilExpiry < thresholdMinutes;
+    } catch (error) {
+      console.warn('[SilentRefresh] Failed to decode token, assuming expired:', error);
+      // If we can't decode, assume token needs refresh
+      return true;
+    }
+  }
+
+  /**
    * Silently refresh session using refresh token
    * No user interaction required
    */
@@ -41,9 +63,9 @@ export class SilentTokenRefresh {
           return;
         }
 
-        // Call mobile-specific refresh endpoint (via evenly-backend wrapper)
+        // Call nxgenaidev_auth refresh token endpoint directly
         const response = await axios.post(
-          `${ENV.EVENLY_BACKEND_URL}/auth/mobile/refresh`,
+          `${ENV.EVENLY_BACKEND_URL}/auth/refresh-token`,
           { refreshToken: authData.refreshToken },
           {
             headers: {
@@ -54,15 +76,14 @@ export class SilentTokenRefresh {
           }
         );
 
-        if (response.data.success && response.data.ssoToken) {
+        if (response.data.accessToken && response.data.refreshToken) {
           console.log('[SilentRefresh] ✅ Session refreshed successfully');
 
-          // Save new tokens
+          // Save new tokens (keep existing user data)
           await AuthStorage.saveAuthData(
-            response.data.user,
+            authData.user,
             response.data.accessToken,
-            response.data.refreshToken,
-            response.data.ssoToken
+            response.data.refreshToken
           );
 
           isRefreshing = false;
@@ -102,41 +123,46 @@ export class SilentTokenRefresh {
     try {
       const authData = await AuthStorage.getAuthData();
 
-      if (!authData?.ssoToken || !authData?.refreshToken) {
+      if (!authData?.accessToken || !authData?.refreshToken) {
         console.log('[SilentRefresh] No auth data, skipping refresh check');
         return;
       }
 
-      // Check when session expires (via evenly-backend wrapper)
-      const response = await axios.get(
-        `${ENV.EVENLY_BACKEND_URL}/auth/mobile/session-expiry`,
-        {
-          headers: {
-            'Cookie': `sso_token=${authData.ssoToken}`,
-            'ngrok-skip-browser-warning': 'true',
-          },
-          timeout: 10000,
-        }
-      );
+      // Check if token is expired or about to expire
+      if (this.isTokenExpiredOrExpiring(authData.accessToken, 5)) {
+        // Calculate exact minutes for logging
+        try {
+          const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));
+          const expiryTime = payload.exp * 1000;
+          const currentTime = Date.now();
+          const minutesUntilExpiry = Math.floor((expiryTime - currentTime) / 60000);
 
-      if (response.data.success && response.data.shouldRefresh) {
-        console.log(
-          `[SilentRefresh] Session expires in ${response.data.expiresInMinutes} minutes - refreshing now`
-        );
+          console.log(
+            `[SilentRefresh] Token expires in ${minutesUntilExpiry} minutes - refreshing now`
+          );
+        } catch {
+          console.log('[SilentRefresh] Token expired or invalid - refreshing now');
+        }
+
         await this.refresh();
       } else {
-        console.log(
-          `[SilentRefresh] Session OK - expires in ${response.data.expiresInMinutes} minutes`
-        );
+        // Calculate exact minutes for logging
+        try {
+          const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));
+          const expiryTime = payload.exp * 1000;
+          const currentTime = Date.now();
+          const minutesUntilExpiry = Math.floor((expiryTime - currentTime) / 60000);
+
+          console.log(
+            `[SilentRefresh] Token OK - expires in ${minutesUntilExpiry} minutes`
+          );
+        } catch {
+          console.log('[SilentRefresh] Token status unknown');
+        }
       }
     } catch (error: any) {
-      // If check fails, try refreshing anyway (session might be expired)
-      if (error.response?.status === 401) {
-        console.log('[SilentRefresh] Session expired, refreshing...');
-        await this.refresh();
-      } else {
-        console.log('[SilentRefresh] Check failed:', error.message);
-      }
+      console.log('[SilentRefresh] Check failed:', error.message);
+      // Don't throw - just log the error
     }
   }
 

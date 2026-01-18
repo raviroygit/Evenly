@@ -12,14 +12,10 @@ export class AuthService {
   /**
    * Sync user with evenly-backend after successful authentication
    */
-  private async syncUserWithEvenlyBackend(user: any, ssoToken?: string): Promise<void> {
+  private async syncUserWithEvenlyBackend(user: any): Promise<void> {
     try {
-      if (!ssoToken) {
-        console.warn('No sso_token provided for syncing with evenly-backend');
-        return;
-      }
-
       // Use the Axios client to make a test API call to evenly-backend to trigger user sync
+      // The interceptor will automatically add the Bearer token
       await evenlyApiClient.get('/groups');
     } catch (error) {
       console.warn('Failed to sync user with evenly-backend:', error);
@@ -30,9 +26,8 @@ export class AuthService {
 
   private async makeRequest(
     endpoint: string,
-    options: RequestInit = {},
-    ssoToken?: string
-  ): Promise<{ data: any; ssoToken?: string; accessToken?: string; refreshToken?: string }> {
+    options: RequestInit = {}
+  ): Promise<{ data: any; accessToken?: string; refreshToken?: string }> {
     try {
       // Convert RequestInit to Axios config
       const axiosConfig: any = {
@@ -47,33 +42,16 @@ export class AuthService {
       }
 
       // NO MANUAL HEADER SETTING - Let the interceptor handle authentication
-      // The interceptor will automatically add sso_token from storage
+      // The interceptor will automatically add Bearer token from storage
 
       // Use the Axios client
       const response = await evenlyApiClient.getInstance().request(axiosConfig);
-      
-      // Extract sso_token from Set-Cookie header
-      let extractedSsoToken: string | undefined;
-      const setCookieHeader = response.headers['set-cookie'];
-      
-      if (setCookieHeader) {
-        // Handle both string and array cases
-        const cookieString = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
-        
-        const ssoTokenMatch = cookieString.match(/sso_token=([^;]+)/);
-        if (ssoTokenMatch) {
-          const rawToken = ssoTokenMatch[1];
-          
-          // Store the raw token (URL-encoded) to match Android behavior
-          extractedSsoToken = rawToken;
-        }
-      }
 
       // Extract JWT tokens from response body if available
       const accessToken = response.data.accessToken || response.data.data?.accessToken;
       const refreshToken = response.data.refreshToken || response.data.data?.refreshToken;
-      
-      return { data: response.data, ssoToken: extractedSsoToken, accessToken, refreshToken };
+
+      return { data: response.data, accessToken, refreshToken };
     } catch (error: any) {
       console.error('API Request failed:', error);
       console.error('Error details:', {
@@ -132,18 +110,18 @@ export class AuthService {
     }
   }
 
-  async verifyOTP(email: string, otp: string): Promise<AuthResponse & { ssoToken?: string; accessToken?: string; refreshToken?: string }> {
+  async verifyOTP(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
     try {
-      const { data: response, ssoToken, accessToken, refreshToken } = await this.makeRequest('/auth/login/verify-otp', {
+      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/login/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, otp }),
       });
 
       if (response.success && (response.user || response.data?.user)) {
         const user = response.user || response.data?.user;
-        
+
         // Sync user with evenly-backend
-        await this.syncUserWithEvenlyBackend(user, ssoToken);
+        await this.syncUserWithEvenlyBackend(user);
 
         return {
           success: true,
@@ -158,7 +136,6 @@ export class AuthService {
               owed: 0,
             },
           },
-          ssoToken,
           accessToken,
           refreshToken,
         };
@@ -167,7 +144,6 @@ export class AuthService {
       return {
         success: false,
         message: response.message || 'Invalid OTP',
-        ssoToken, // Still return the ssoToken even if login failed
       };
     } catch (error: any) {
       const serverMsg = error?.response?.data?.message;
@@ -178,12 +154,12 @@ export class AuthService {
     }
   }
 
-  async getCurrentUser(ssoToken?: string): Promise<User | null> {
+  async getCurrentUser(): Promise<User | null> {
     try {
-      const { data: response } = await this.makeRequest('/auth/me', {}, ssoToken);
+      const { data: response } = await this.makeRequest('/auth/me', {});
       if (response.success && response.user) {
         // Sync user with evenly-backend
-        await this.syncUserWithEvenlyBackend(response.user, ssoToken);
+        await this.syncUserWithEvenlyBackend(response.user);
 
         return {
           id: response.user.id,

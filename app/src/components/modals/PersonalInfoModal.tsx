@@ -18,18 +18,20 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
   const { user, setUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(user?.name || '');
       setEmail(user?.email || '');
+      setPhoneNumber(user?.phoneNumber || '');
     }
-  }, [visible, user?.name, user?.email]);
+  }, [visible, user?.name, user?.email, user?.phoneNumber]);
 
   const handleSave = async () => {
     // Define payload outside try-catch so it's accessible in both blocks
-    let payload: { name?: string; email?: string } = {};
+    let payload: { name?: string; email?: string; phoneNumber?: string } = {};
 
     try {
       setSaving(true);
@@ -37,12 +39,15 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       // Build payload
       if (name && name !== user?.name) payload.name = name.trim();
       if (email && email !== user?.email) payload.email = email.trim();
+      if (phoneNumber && phoneNumber !== user?.phoneNumber) payload.phoneNumber = phoneNumber.trim();
 
       console.log('[PersonalInfoModal] Preparing update:', {
         originalName: user?.name,
         newName: name,
         originalEmail: user?.email,
         newEmail: email,
+        originalPhone: user?.phoneNumber,
+        newPhone: phoneNumber,
         payload: payload
       });
 
@@ -50,30 +55,6 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         console.log('[PersonalInfoModal] No changes detected, closing modal');
         onClose();
         return;
-      }
-
-      // Test: First verify the session is valid by calling GET /auth/me
-      console.log('[PersonalInfoModal] Testing session before update...');
-      try {
-        const testResponse = await fetch(`${ENV.EVENLY_BACKEND_URL}/auth/me`, {
-          method: 'GET',
-          headers: {
-            'Cookie': `sso_token=${(await AuthStorage.getAuthData())?.ssoToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        const testData = await testResponse.json();
-        console.log('[PersonalInfoModal] Session test result:', testData);
-
-        if (!testData.success) {
-          console.error('[PersonalInfoModal] ❌ Session is invalid BEFORE update attempt');
-          Alert.alert('Session Expired', 'Please log out and log back in.');
-          return;
-        } else {
-          console.log('[PersonalInfoModal] ✅ Session is valid, proceeding with update');
-        }
-      } catch (testError) {
-        console.error('[PersonalInfoModal] Session test failed:', testError);
       }
 
       console.log('[PersonalInfoModal] Calling updateCurrentUser with payload:', JSON.stringify(payload));
@@ -90,7 +71,12 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         // Update local state with the response data
         const updated = result.data?.user;
         if (updated) {
-          setUser({ id: updated.id, email: updated.email, name: updated.name });
+          setUser({
+            id: updated.id,
+            email: updated.email,
+            name: updated.name,
+            phoneNumber: updated.phoneNumber
+          });
         } else if (user) {
           // Fallback: update with the payload if no user data in response
           setUser({ ...user, ...payload });
@@ -156,6 +142,21 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
               placeholder="Enter your email"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: colors.foreground }]}>Phone Number</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.input, { color: colors.foreground }]}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              placeholder="Enter your phone number"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="phone-pad"
               autoCapitalize="none"
             />
           </View>

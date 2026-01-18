@@ -9,6 +9,7 @@ interface User {
   id: string;
   email: string;
   name?: string;
+  phoneNumber?: string;
 }
 
 interface AuthContextType {
@@ -48,12 +49,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const authData = await AuthStorage.getAuthData();
 
-        if (authData && authData.user && authData.ssoToken) {
+        if (authData && authData.user && authData.accessToken) {
           // Set user immediately from storage - stay logged in!
           setUser(authData.user);
 
           // Try to validate session with backend in background (non-blocking)
-          authService.getCurrentUser(authData.ssoToken)
+          authService.getCurrentUser()
             .then(async (currentUser) => {
               if (currentUser) {
                 // Session is still valid - update user data if changed
@@ -61,8 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 await AuthStorage.saveAuthData(
                   currentUser,
                   authData.accessToken,
-                  authData.refreshToken,
-                  authData.ssoToken
+                  authData.refreshToken
                 );
                 // Warm cache after validating session
                 warmAppCache().catch(() => {});
@@ -116,8 +116,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Validating session on foreground');
       const authData = await AuthStorage.getAuthData();
 
-      if (authData && authData.ssoToken) {
-        const currentUser = await authService.getCurrentUser(authData.ssoToken);
+      if (authData && authData.accessToken) {
+        const currentUser = await authService.getCurrentUser();
         if (currentUser) {
           // Session still valid - update user data
           setUser(currentUser);
@@ -125,8 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           await AuthStorage.saveAuthData(
             currentUser,
             authData.accessToken,
-            authData.refreshToken,
-            authData.ssoToken
+            authData.refreshToken
           );
           console.log('[AuthContext] Session validated successfully');
         } else {
@@ -247,10 +246,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If login was successful and we have user data, use it directly
       if (result.success && result.user) {
         setUser(result.user);
-        await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken, result.ssoToken);
+        await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken);
 
-        // IMPORTANT: Immediately upgrade to 90-day session after OTP login
-        // OTP login gives 24-hour session, but mobile needs 90-day for "stay logged in forever"
+        // Upgrade to 90-day session
         console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
         const upgraded = await SilentTokenRefresh.refresh();
         if (upgraded) {
@@ -262,57 +260,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         warmAppCache().catch(() => {});
 
         return { success: true, message: 'Login successful!' };
-      }
-      
-      // If we have an ssoToken but no user data, try to get current user
-      if (result.ssoToken) {
-        // Try to get current user with the ssoToken
-        try {
-          const currentUser = await authService.getCurrentUser(result.ssoToken);
-          if (currentUser) {
-            setUser(currentUser);
-            await AuthStorage.saveAuthData(currentUser, result.accessToken, result.refreshToken, result.ssoToken);
-
-            // Upgrade to 90-day session
-            console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
-            const upgraded = await SilentTokenRefresh.refresh();
-            if (upgraded) {
-              console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
-            } else {
-              console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
-            }
-
-            warmAppCache().catch(() => {});
-
-            return { success: true, message: 'Login successful!' };
-          } else {
-            return { success: false, message: 'Login failed - could not get user data' };
-          }
-        } catch (error) {
-          return { success: false, message: 'Login failed - could not get user data' };
-        }
-      } else if (result.success && result.user) {
-        // Fallback to original logic if no ssoToken but response is successful
-        setUser(result.user);
-        await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken, result.ssoToken);
-
-        // Upgrade to 90-day session
-        console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
-        const upgraded = await SilentTokenRefresh.refresh();
-        if (upgraded) {
-          console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
-        } else {
-          console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
-        }
-
-        return { success: true, message: 'Login successful!' };
       } else {
-        return { success: false, message: result.message || 'Login failed - no ssoToken received' };
+        return { success: false, message: result.message || 'Login failed' };
       }
     } catch (error: any) {
       return { success: false, message: error.message || 'Login failed' };
     }
-  }, [authService]);
+  }, [authService, warmAppCache]);
 
   const signup = useCallback(async (email: string) => {
     try {
@@ -346,10 +300,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = useCallback(async () => {
     try {
+      // Get current tokens from storage
+      const authData = await AuthStorage.getAuthData();
+
       const currentUser = await authService.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
-        await AuthStorage.saveAuthData(currentUser);
+        // Re-save with existing tokens
+        await AuthStorage.saveAuthData(
+          currentUser,
+          authData?.accessToken,
+          authData?.refreshToken
+        );
       } else {
         // NEVER auto-logout - keep user logged in with local data
         console.warn('[AuthContext] refreshUser returned null - keeping user logged in with cached data');

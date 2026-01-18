@@ -21,6 +21,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, initials, realSt
     <GlassProfileCard
       name={user.name}
       email={user.email}
+      phoneNumber={user.phoneNumber}
       initials={initials}
       stats={stats}
       onThemeToggle={onThemeToggle}

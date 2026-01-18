@@ -13,6 +13,7 @@ interface ProfileStats {
 interface GlassProfileCardProps {
   name: string;
   email: string;
+  phoneNumber?: string;
   initials: string;
   stats: ProfileStats;
   avatarColor?: string;
@@ -26,6 +27,7 @@ interface GlassProfileCardProps {
 export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
   name,
   email,
+  phoneNumber,
   initials,
   stats,
   avatarColor,
@@ -88,7 +90,12 @@ export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
       <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>
         {email}
       </Text>
-      
+      {phoneNumber && (
+        <Text style={[styles.userPhone, { color: colors.mutedForeground }]}>
+          {phoneNumber}
+        </Text>
+      )}
+
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: colors.foreground }]}>
@@ -165,6 +172,12 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 16,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  userPhone: {
+    fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
     marginBottom: 20,

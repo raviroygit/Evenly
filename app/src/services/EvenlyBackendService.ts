@@ -152,7 +152,7 @@ export class EvenlyBackendService {
   }
 
   // User API
-  static async updateCurrentUser(update: { name?: string; email?: string }): Promise<ApiResponse<any>> {
+  static async updateCurrentUser(update: { name?: string; email?: string; phoneNumber?: string }): Promise<ApiResponse<any>> {
     console.log('[EvenlyBackendService] ========== UPDATE USER REQUEST ==========');
     console.log('[EvenlyBackendService] updateCurrentUser called with:', JSON.stringify(update, null, 2));
     console.log('[EvenlyBackendService] Update object type:', typeof update);
