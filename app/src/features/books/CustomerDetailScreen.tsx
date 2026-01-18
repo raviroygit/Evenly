@@ -15,6 +15,9 @@ import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidG
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { AddTransactionModal } from '../../components/modals/AddTransactionModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
+import { TransactionDetailModal } from '../../components/modals/TransactionDetailModal';
+import { ImageViewer } from '../../components/ui/ImageViewer';
+import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { SkeletonTransactionList } from '../../components/ui/SkeletonLoader';
 import { AppCache } from '../../utils/cache';
@@ -46,6 +49,12 @@ export const CustomerDetailScreen: React.FC = () => {
     initials: string;
     balance: string;
     type: 'give' | 'get' | 'settled';
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+    createdAt?: string;
+    updatedAt?: string;
   } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +64,10 @@ export const CustomerDetailScreen: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
 
   const getInitials = (name: string): string => {
     return name
@@ -95,6 +108,12 @@ export const CustomerDetailScreen: React.FC = () => {
           initials: getInitials(customerData.name),
           balance: customerData.balance,
           type: customerData.type,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address,
+          notes: customerData.notes,
+          createdAt: customerData.createdAt,
+          updatedAt: customerData.updatedAt,
         });
 
         const formattedTransactions: Transaction[] = transactionsData.map((t) => {
@@ -296,6 +315,28 @@ export const CustomerDetailScreen: React.FC = () => {
     }
   };
 
+  const handleTransactionPress = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setShowDetailModal(true);
+  };
+
+  const handleImagePress = () => {
+    // Close detail modal first
+    setShowDetailModal(false);
+    // Then open image viewer with a small delay
+    setTimeout(() => {
+      setShowImageViewer(true);
+    }, 300);
+  };
+
+  const handleImageViewerClose = () => {
+    setShowImageViewer(false);
+    // Reopen detail modal after image viewer closes
+    setTimeout(() => {
+      setShowDetailModal(true);
+    }, 300);
+  };
+
   const onRefresh = useCallback(async () => {
     console.log('CustomerDetailScreen: onRefresh called');
     await loadData(true);
@@ -321,14 +362,19 @@ export const CustomerDetailScreen: React.FC = () => {
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color={colors.foreground} />
             </TouchableOpacity>
-            <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-              <Text style={[styles.avatarText, { color: colors.primary }]}>
-                {customerInitials}
-              </Text>
-            </View>
+            <TouchableOpacity
+              onPress={() => setShowCustomerInfoModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
+                <Text style={[styles.avatarText, { color: colors.primary }]}>
+                  {customerInitials}
+                </Text>
+              </View>
+            </TouchableOpacity>
             <View style={styles.headerInfo}>
               <Text style={[styles.headerName, { color: colors.foreground }]}>{customerName}</Text>
-              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>Click here to view settings.</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>View details</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.headerActionButton}>
@@ -350,7 +396,7 @@ export const CustomerDetailScreen: React.FC = () => {
         {/* Summary Card */}
         <View style={styles.summaryContainer}>
           <ResponsiveLiquidGlassCard
-            padding={{ small: 12, medium: 16, large: 20 }}
+            padding={{ small: 8, medium: 10, large: 12 }}
             marginBottom={0}
             marginHorizontal={0}
             borderRadius={{ small: 16, medium: 18, large: 20 }}
@@ -416,12 +462,16 @@ export const CustomerDetailScreen: React.FC = () => {
                 });
               }}
             >
-            <ResponsiveLiquidGlassCard
-              padding={{ small: 10, medium: 12, large: 14 }}
-              marginBottom={0}
-              borderRadius={{ small: 12, medium: 14, large: 16 }}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleTransactionPress(transaction)}
             >
-              <View style={styles.transactionRow}>
+              <ResponsiveLiquidGlassCard
+                padding={{ small: 6, medium: 8, large: 10 }}
+                marginBottom={0}
+                borderRadius={{ small: 12, medium: 14, large: 16 }}
+              >
+                <View style={styles.transactionRow}>
                 <View style={styles.imageContainer}>
                   <View style={styles.attachmentThumbnail}>
                     {transaction.imageUrl ? (
@@ -472,6 +522,7 @@ export const CustomerDetailScreen: React.FC = () => {
                 </View>
               </View>
             </ResponsiveLiquidGlassCard>
+            </TouchableOpacity>
             </SwipeActionRow>
             ))
           )}
@@ -481,15 +532,6 @@ export const CustomerDetailScreen: React.FC = () => {
         {/* Floating Action Buttons */}
         <FloatingActionButton
           actions={[
-            {
-              id: 'add-customer',
-              title: 'Add Customer',
-              icon: '👤',
-              onPress: () => {
-                // TODO: Implement add customer functionality
-                console.log('Add customer');
-              },
-            },
             {
               id: 'you-gave',
               title: 'You Gave ₹',
@@ -534,6 +576,33 @@ export const CustomerDetailScreen: React.FC = () => {
           onConfirm={confirmDeleteTransaction}
           title="Delete Transaction"
           description="Are you sure you want to delete this transaction? This action cannot be undone."
+        />
+
+        {/* Transaction Detail Modal */}
+        <TransactionDetailModal
+          visible={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedTransaction(null);
+          }}
+          transaction={selectedTransaction}
+          onImagePress={handleImagePress}
+        />
+
+        {/* Image Viewer */}
+        {selectedTransaction?.imageUrl && (
+          <ImageViewer
+            visible={showImageViewer}
+            imageUrl={selectedTransaction.imageUrl}
+            onClose={handleImageViewerClose}
+          />
+        )}
+
+        {/* Customer Info Modal */}
+        <CustomerInfoModal
+          visible={showCustomerInfoModal}
+          onClose={() => setShowCustomerInfoModal(false)}
+          customer={customer}
         />
       </View>
     </>
@@ -589,15 +658,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    padding: 20,
+    paddingTop: 6,
+    paddingHorizontal: 20,
     paddingBottom: 100,
     flexGrow: 1,
   },
   summaryContainer: {
-    marginBottom: 20,
+    marginBottom: 6,
   },
   summaryCard: {
-    minHeight: 70,
+    minHeight: 45,
   },
   summaryRow: {
     flexDirection: 'row',

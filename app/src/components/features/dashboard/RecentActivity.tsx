@@ -9,11 +9,14 @@ import { useActivitiesInfinite } from '../../../hooks/useActivitiesInfinite';
 
 interface ActivityItem {
   id: string;
-  type: 'expense' | 'payment' | 'group' | 'invitation';
+  type: 'expense' | 'payment' | 'group' | 'invitation' | 'khata';
   title: string;
   description: string;
   amount?: string;
   memberCount?: number;
+  groupName?: string; // Group name for expense activities
+  customerName?: string; // Customer name for khata activities
+  khataType?: 'give' | 'get'; // Transaction type for khata activities
   date: string;
   status?: 'pending' | 'completed' | 'cancelled';
 }
@@ -33,6 +36,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
 }) => {
   const {
     activities,
+    totalCount,
     loading,
     loadingMore,
     hasMore,
@@ -55,10 +59,11 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   // Log when activities change to debug
   useEffect(() => {
     console.log('[RecentActivity] Activities changed:', {
-      count: activities.length,
+      loaded: activities.length,
+      total: totalCount,
       activities: activities.map(a => ({ id: a.id, title: a.title }))
     });
-  }, [activities]);
+  }, [activities, totalCount]);
   
   const { colors, theme } = useTheme();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -86,6 +91,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         return '👥';
       case 'invitation':
         return '📧';
+      case 'khata':
+        return '📒';
       default:
         return '📝';
     }
@@ -101,23 +108,13 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         return '#2196F3';
       case 'invitation':
         return '#9C27B0';
+      case 'khata':
+        return '#E91E63';
       default:
         return colors.mutedForeground;
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'completed':
-        return '#4CAF50';
-      case 'pending':
-        return '#FF9800';
-      case 'cancelled':
-        return '#F44336';
-      default:
-        return colors.mutedForeground;
-    }
-  };
 
   const handleActivityPress = (activity: ActivityItem) => {
     if (activity.type === 'group') {
@@ -161,15 +158,26 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
           {activity.amount && (
             <Text style={[
               styles.activityAmount,
-              { color: getActivityColor(activity.type) }
+              {
+                color: activity.type === 'khata'
+                  ? (activity.khataType === 'give' ? '#10B981' : '#EF4444')
+                  : getActivityColor(activity.type)
+              }
             ]}>
-              ₹{activity.amount}
+              {activity.amount}
             </Text>
           )}
         </View>
         
         {activity.description && (
-          <Text style={[styles.activityDescription, { color: colors.mutedForeground }]}>
+          <Text style={[
+            styles.activityDescription,
+            {
+              color: activity.type === 'khata'
+                ? (activity.khataType === 'give' ? '#10B981' : '#EF4444')
+                : colors.mutedForeground
+            }
+          ]}>
             {activity.description}
           </Text>
         )}
@@ -179,6 +187,51 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             {activity.date}
           </Text>
           <View style={styles.badgesContainer}>
+            {activity.groupName && activity.type === 'expense' && (
+              <View style={[
+                styles.groupBadge,
+                { backgroundColor: '#2196F3' + '20' }
+              ]}>
+                <Text style={[
+                  styles.groupText,
+                  { color: '#2196F3' }
+                ]}>
+                  {activity.groupName}
+                </Text>
+              </View>
+            )}
+            {activity.customerName && activity.type === 'khata' && (
+              <View style={[
+                styles.customerBadge,
+                { backgroundColor: '#E91E63' + '20' }
+              ]}>
+                <Text style={[
+                  styles.customerText,
+                  { color: '#E91E63' }
+                ]}>
+                  {activity.customerName}
+                </Text>
+              </View>
+            )}
+            {activity.khataType && activity.type === 'khata' && (
+              <View style={[
+                styles.khataTypeBadge,
+                {
+                  backgroundColor: activity.khataType === 'give'
+                    ? '#10B981' + '20'
+                    : '#EF4444' + '20'
+                }
+              ]}>
+                <Text style={[
+                  styles.khataTypeText,
+                  {
+                    color: activity.khataType === 'give' ? '#10B981' : '#EF4444'
+                  }
+                ]}>
+                  {activity.khataType === 'get' ? 'You will give' : 'You will get'}
+                </Text>
+              </View>
+            )}
             {activity.memberCount && (
               <View style={[
                 styles.memberBadge,
@@ -189,19 +242,6 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                   { color: getActivityColor(activity.type) }
                 ]}>
                   {activity.memberCount} members
-                </Text>
-              </View>
-            )}
-            {activity.status && (
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(activity.status) + '20' }
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  { color: getStatusColor(activity.status) }
-                ]}>
-                  {activity.status}
                 </Text>
               </View>
             )}
@@ -242,7 +282,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         title="Recent Activity"
         subtitle={loading ? "Loading..." : "View your recent activities"}
         contentGap={6}
-        badge={loading ? undefined : (activities.length > 0 ? activities.length : undefined)}
+        badge={loading ? undefined : (totalCount > 0 ? totalCount : undefined)}
         style={styles.glassCard}
       >
         {loading ? (
@@ -377,6 +417,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4, // Reduced from 6
   },
+  groupBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  groupText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  customerBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  customerText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  khataTypeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  khataTypeText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
   memberBadge: {
     paddingHorizontal: 6, // Reduced from 8
     paddingVertical: 2, // Reduced from 4
@@ -385,16 +452,6 @@ const styles = StyleSheet.create({
   memberText: {
     fontSize: 9, // Reduced from 10
     fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: 6, // Reduced from 8
-    paddingVertical: 2, // Reduced from 4
-    borderRadius: 8, // Reduced from 12
-  },
-  statusText: {
-    fontSize: 9, // Reduced from 10
-    fontWeight: '600',
-    textTransform: 'uppercase',
   },
   emptyState: {
     padding: 20,

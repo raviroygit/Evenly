@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from './ResponsiveLiquidGlassCard';
 import { GlassListCard } from './GlassListCard';
@@ -279,8 +279,10 @@ export const SkeletonCustomerList: React.FC<{ count?: number }> = ({ count = 5 }
   );
 };
 
-// Skeleton for group items - EXACT match to GroupItem structure
+// Skeleton for group items - EXACTLY matching GroupItem structure
 export const SkeletonGroupItem: React.FC = () => {
+  const { colors, theme } = useTheme();
+
   return (
     <ResponsiveLiquidGlassCard
       padding={{
@@ -296,32 +298,34 @@ export const SkeletonGroupItem: React.FC = () => {
         large: 16,
         tablet: 18,
       }}
-      glassEffectStyle="thick"
-      isInteractive={true}
       style={styles.groupCardOverrides}
     >
-      <View style={styles.groupHeader}>
-        <View style={styles.groupIcon}>
-          <SkeletonLoader width={20} height={20} borderRadius={10} />
+      <View style={styles.header}>
+        {/* Icon - Blue circle with white letter G */}
+        <View style={[styles.icon, { backgroundColor: '#007AFF' }]}>
+          <Text style={styles.iconText}>G</Text>
         </View>
-        <View style={styles.groupInfo}>
-          <SkeletonLoader width={140} height={16} borderRadius={8} style={styles.groupName} />
-          <SkeletonLoader width={120} height={14} borderRadius={6} style={styles.groupMembers} />
-          <SkeletonLoader width={100} height={12} borderRadius={6} style={styles.groupDescription} />
+
+        {/* Info section - Name, members, description */}
+        <View style={styles.info}>
+          <SkeletonLoader width="70%" height={16} borderRadius={8} style={{ marginBottom: 4 }} />
+          <SkeletonLoader width="60%" height={14} borderRadius={6} style={{ marginBottom: 2 }} />
+          <SkeletonLoader width="50%" height={12} borderRadius={6} style={{ opacity: 0.8 }} />
         </View>
-        <View style={styles.groupAmount}>
+
+        {/* Right section - Split type and time badge */}
+        <View style={styles.amount}>
           <SkeletonLoader width={50} height={16} borderRadius={8} />
+          <View style={[styles.metaBadge, { backgroundColor: colors.border + '20' }]}>
+            <SkeletonLoader width={50} height={9} borderRadius={4} />
+          </View>
         </View>
-      </View>
-      
-      <View style={styles.groupActions}>
-        <SkeletonLoader width={70} height={32} borderRadius={8} />
       </View>
     </ResponsiveLiquidGlassCard>
   );
 };
 
-// Skeleton for group list - Just the group items, no header (header is handled by parent GlassListCard)
+// Skeleton for group list
 export const SkeletonGroupList: React.FC<{ count?: number }> = ({ count = 3 }) => (
   <View style={styles.groupList}>
     {Array.from({ length: count }).map((_, index) => (
@@ -329,6 +333,49 @@ export const SkeletonGroupList: React.FC<{ count?: number }> = ({ count = 3 }) =
     ))}
   </View>
 );
+
+// Skeleton for Khata Summary card - EXACT match to HomeScreen Khata Summary
+export const SkeletonKhataSummary: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <View style={styles.khataSummaryContainer}>
+      <View
+        style={[
+          styles.khataSummaryCard,
+          {
+            backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
+            borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+          },
+        ]}
+      >
+        {/* Header with title and customer count */}
+        <View style={styles.khataSummaryHeader}>
+          <SkeletonLoader width={140} height={16} borderRadius={8} />
+          <SkeletonLoader width={80} height={12} borderRadius={6} />
+        </View>
+
+        {/* Content with two summary items */}
+        <View style={styles.khataSummaryContent}>
+          {/* Will Get */}
+          <View style={styles.khataSummaryItem}>
+            <SkeletonLoader width={60} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width={80} height={20} borderRadius={8} />
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+
+          {/* Will Give */}
+          <View style={styles.khataSummaryItem}>
+            <SkeletonLoader width={60} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width={80} height={20} borderRadius={8} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 // Skeleton for dashboard stats using EXACT same structure as actual cards
 export const SkeletonDashboardStats: React.FC = () => {
@@ -1028,40 +1075,71 @@ const styles = StyleSheet.create({
     // Only override specific properties, don't override glassmorphism
     // The ResponsiveLiquidGlassCard will handle the glassmorphism styling
   },
-  groupHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  groupIcon: {
+  icon: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)', // Light blue background like actual GroupItem
   },
-  groupInfo: {
+  iconText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    opacity: 0.3,
+  },
+  info: {
     flex: 1,
   },
-  groupName: {
-    marginBottom: 4,
-  },
-  groupMembers: {
-    marginBottom: 2,
-  },
-  groupDescription: {
-    opacity: 0.8,
-  },
-  groupAmount: {
+  amount: {
     alignItems: 'flex-end',
+    gap: 4,
   },
-  groupActions: {
-    marginTop: 12,
-    alignItems: 'flex-end',
+  metaBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-end',
   },
   groupList: {
     gap: 8,
+  },
+  // Khata Summary skeleton styles - EXACT match to HomeScreen Khata Summary
+  khataSummaryContainer: {
+    marginBottom: 8,
+    paddingHorizontal: 6,
+  },
+  khataSummaryCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  khataSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  khataSummaryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  khataSummaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  khataDivider: {
+    width: 1,
+    height: 40,
   },
   // Dashboard stats skeleton styles - EXACT match to actual DashboardStats
   dashboardStatsContainer: {

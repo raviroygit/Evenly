@@ -29,6 +29,7 @@ export const useGroupsInfinite = () => {
 
   const {
     data: groups,
+    totalCount,
     loading,
     loadingMore,
     error,
@@ -90,6 +91,7 @@ export const useGroupsInfinite = () => {
 
   return {
     groups,
+    totalCount,
     loading,
     loadingMore,
     error,

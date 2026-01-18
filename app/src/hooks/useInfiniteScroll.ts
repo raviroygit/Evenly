@@ -8,6 +8,7 @@ interface UseInfiniteScrollOptions {
 
 interface UseInfiniteScrollReturn<T> {
   data: T[];
+  totalCount: number;
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
@@ -21,7 +22,7 @@ interface UseInfiniteScrollReturn<T> {
 }
 
 export function useInfiniteScroll<T>(
-  fetchFunction: (page: number, pageSize: number) => Promise<{ data: T[]; hasMore: boolean }>,
+  fetchFunction: (page: number, pageSize: number) => Promise<{ data: T[]; hasMore: boolean; totalCount?: number }>,
   options: UseInfiniteScrollOptions = {}
 ): UseInfiniteScrollReturn<T> {
   const {
@@ -31,12 +32,13 @@ export function useInfiniteScroll<T>(
   } = options;
 
   const [data, setData] = useState<T[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [page, setPage] = useState(initialPage);
-  
+
   const isLoadingRef = useRef(false);
 
   const loadData = useCallback(async (pageNum: number, isLoadMore: boolean = false) => {
@@ -54,13 +56,17 @@ export function useInfiniteScroll<T>(
       setError(null);
       
       const result = await fetchFunction(pageNum, pageSize);
-      
+
       if (isLoadMore) {
         setData(prev => [...prev, ...result.data]);
       } else {
         setData(result.data);
       }
-      
+
+      if (result.totalCount !== undefined) {
+        setTotalCount(result.totalCount);
+      }
+
       setHasMore(result.hasMore);
       setPage(pageNum);
     } catch (err) {
@@ -90,6 +96,7 @@ export function useInfiniteScroll<T>(
 
   const reset = useCallback(() => {
     setData([]);
+    setTotalCount(0);
     setPage(initialPage);
     setHasMore(initialHasMore);
     setError(null);
@@ -105,6 +112,7 @@ export function useInfiniteScroll<T>(
 
   return {
     data,
+    totalCount,
     loading,
     loadingMore,
     error,

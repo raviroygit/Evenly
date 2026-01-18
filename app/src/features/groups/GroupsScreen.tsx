@@ -20,14 +20,15 @@ import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { emitGroupDeleted, emitGroupCreated, emitGroupUpdated } from '../../utils/groupEvents';
 
 export const GroupsScreen: React.FC = () => {
-  const { 
-    groups, 
-    loading, 
-    loadingMore, 
-    error, 
-    hasMore, 
-    loadMore, 
-    refresh, 
+  const {
+    groups,
+    totalCount,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
     createGroup,
     updateGroup,
     deleteGroup
@@ -284,9 +285,9 @@ export const GroupsScreen: React.FC = () => {
     <View style={styles.headerContainer}>
       <GlassListCard
         title="Your Groups"
-        subtitle={groups.length === 0 ? "No groups yet. Create your first group!" : "Manage your expense groups"}
+        subtitle={totalCount === 0 ? "No groups yet. Create your first group!" : "Manage your expense groups"}
         contentGap={8}
-        badge={groups.length > 0 ? groups.length : undefined}
+        badge={totalCount > 0 ? totalCount : undefined}
       >
         <View style={styles.emptyPlaceholder} />
       </GlassListCard>
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    marginBottom: 16,
+    marginBottom: 6,
   },
   emptyPlaceholder: {
     height: 1,
