@@ -45,6 +45,24 @@
       "key": "expenseId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "organizationId",
+      "value": "696fc87397e67400b0335682",
+      "type": "string",
+      "description": "Demo account organization ID (MongoDB)"
+    },
+    {
+      "key": "customerId",
+      "value": "",
+      "type": "string",
+      "description": "Khata customer ID"
+    },
+    {
+      "key": "transactionId",
+      "value": "",
+      "type": "string",
+      "description": "Khata transaction ID"
     }
   ],
   "item": [
@@ -899,6 +917,291 @@
         }
       ],
       "description": "Group invitation management"
+    },
+    {
+      "name": "📒 Khata (Ledger Book)",
+      "item": [
+        {
+          "name": "Get Financial Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "summary"]
+            },
+            "description": "Get financial summary (total give and total get)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers?filterType=all&sortType=most-recent",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "filterType",
+                  "value": "all",
+                  "description": "all | give | get | settled"
+                },
+                {
+                  "key": "sortType",
+                  "value": "most-recent",
+                  "description": "most-recent | oldest | highest-amount | least-amount | name-az"
+                }
+              ]
+            },
+            "description": "Get all customers with optional filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers", "{{customerId}}"]
+            },
+            "description": "Get customer by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main St, City\",\n  \"notes\": \"Regular customer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers"]
+            },
+            "description": "Create a new customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Updated\",\n  \"email\": \"john.updated@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"456 New St, City\",\n  \"notes\": \"Updated notes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers", "{{customerId}}"]
+            },
+            "description": "Update a customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers/{{customerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers", "{{customerId}}"]
+            },
+            "description": "Delete a customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/customers/{{customerId}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "customers", "{{customerId}}", "transactions"]
+            },
+            "description": "Get customer transactions"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction (JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"customer-uuid-here\",\n  \"type\": \"give\",\n  \"amount\": \"5000.00\",\n  \"currency\": \"INR\",\n  \"description\": \"Payment received\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/khata/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "transactions"]
+            },
+            "description": "Create a new transaction (supports JSON or multipart/form-data for image upload)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"6000.00\",\n  \"description\": \"Updated payment amount\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/khata/transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "transactions", "{{transactionId}}"]
+            },
+            "description": "Update a transaction (supports JSON or multipart/form-data for image upload)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/khata/transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "transactions", "{{transactionId}}"]
+            },
+            "description": "Delete a transaction"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-organization-id",
+                "value": "{{organizationId}}",
+                "type": "string"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/khata/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["khata", "upload"]
+            },
+            "description": "Upload image to Cloudinary"
+          },
+          "response": []
+        }
+      ],
+      "description": "Khata (Ledger Book) - Track customers, transactions, and balances"
     },
     {
       "name": "🏥 Health & Status",
