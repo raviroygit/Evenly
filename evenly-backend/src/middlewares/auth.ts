@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../utils/auth';
 import { UserService } from '../services/userService';
+import { OrganizationService } from '../services/organizationService';
 import { UnauthorizedError, AuthServiceError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types';
 // Removed unused imports - no longer needed after removing temporary user logic
@@ -44,6 +45,10 @@ export const authenticateToken = async (
         avatar: authResult.user.avatar,
       });
       (request as AuthenticatedRequest).user = { ...syncedUser, avatar: syncedUser.avatar || undefined };
+
+      // Extract and sync organization context
+      await extractOrganizationContext(request, token, syncedUser.id);
+
       return;
     }
 
@@ -53,6 +58,10 @@ export const authenticateToken = async (
       const user = await UserService.getUserById(local.userId);
       if (user) {
         (request as AuthenticatedRequest).user = { ...user, avatar: user.avatar || undefined } as any;
+
+        // Extract and sync organization context
+        await extractOrganizationContext(request, token, user.id);
+
         return;
       }
     }
@@ -139,3 +148,70 @@ export const requireGroupAdmin = async (
   // For now, we'll just pass through
   // TODO: Implement group admin check
 };
+
+/**
+ * Extract organization context from request header and sync to local DB
+ */
+async function extractOrganizationContext(
+  request: FastifyRequest,
+  ssoToken: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Get organization ID from header
+    const authServiceOrgId = request.headers['x-organization-id'] as string;
+
+    if (!authServiceOrgId) {
+      console.log('⚠️  OrganizationContext: No organization ID provided in header');
+      return;
+    }
+
+    console.log('🏢 OrganizationContext: Extracting org context:', authServiceOrgId);
+
+    // Check if org exists in local DB
+    let localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+
+    if (!localOrg) {
+      // Sync from auth service
+      console.log('🔄 OrganizationContext: Organization not found locally, syncing...');
+      const localOrgId = await OrganizationService.syncOrganizationFromAuthService(
+        authServiceOrgId,
+        ssoToken,
+        userId
+      );
+
+      if (localOrgId) {
+        localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+      }
+    }
+
+    if (!localOrg) {
+      console.error('❌ OrganizationContext: Failed to sync organization');
+      return;
+    }
+
+    // Verify user is a member
+    const isMember = await OrganizationService.isMember(localOrg.id, userId);
+    if (!isMember) {
+      console.error('❌ OrganizationContext: User is not a member of this organization');
+      return;
+    }
+
+    // Get membership details
+    const membership = await OrganizationService.getUserMembership(localOrg.id, userId);
+
+    // Attach to request
+    (request as any).organizationId = localOrg.id;
+    (request as any).authServiceOrgId = authServiceOrgId;
+    (request as any).organizationRole = membership?.role;
+
+    console.log('✅ OrganizationContext: Context attached:', {
+      localOrgId: localOrg.id,
+      authServiceOrgId,
+      role: membership?.role
+    });
+  } catch (error: any) {
+    console.error('❌ OrganizationContext: Failed to extract context:', error.message);
+    // Don't fail the request, just log the error
+  }
+}

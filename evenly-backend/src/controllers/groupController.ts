@@ -20,9 +20,10 @@ export class GroupController {
    */
   static createGroup = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const groupData = createGroupSchema.parse(request.body);
 
-    const group = await GroupService.createGroup(groupData, user.id);
+    const group = await GroupService.createGroup(groupData, user.id, organizationId);
 
     reply.status(201).send({
       success: true,
@@ -36,9 +37,10 @@ export class GroupController {
    */
   static getUserGroups = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const query = paginationSchema.parse(request.query);
 
-    const groups = await GroupService.getUserGroups(user.id);
+    const groups = await GroupService.getUserGroups(user.id, organizationId);
 
     reply.send({
       success: true,
@@ -52,6 +54,7 @@ export class GroupController {
    */
   static getGroupById = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
     // Check if user is a member of the group
@@ -63,7 +66,7 @@ export class GroupController {
       });
     }
 
-    const group = await GroupService.getGroupById(groupId);
+    const group = await GroupService.getGroupById(groupId, organizationId);
     if (!group) {
       return reply.status(404).send({
         success: false,

@@ -13,7 +13,8 @@ export class GroupService {
       description?: string;
       defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
     },
-    createdBy: string
+    createdBy: string,
+    organizationId?: string
   ): Promise<Group> {
     try {
       // User is already synced by auth middleware, no need to sync again
@@ -23,6 +24,7 @@ export class GroupService {
         currency: 'INR', // Default to INR
         defaultSplitType: groupData.defaultSplitType || 'equal',
         createdBy,
+        organizationId,
       };
 
       const [createdGroup] = await db
@@ -43,12 +45,17 @@ export class GroupService {
   /**
    * Get group by ID with members
    */
-  static async getGroupById(groupId: string): Promise<Group & { members: (GroupMember & { user: any })[] } | null> {
+  static async getGroupById(groupId: string, organizationId?: string): Promise<Group & { members: (GroupMember & { user: any })[] } | null> {
     try {
+      const conditions = [eq(groups.id, groupId)];
+      if (organizationId) {
+        conditions.push(eq(groups.organizationId, organizationId));
+      }
+
       const [group] = await db
         .select()
         .from(groups)
-        .where(eq(groups.id, groupId))
+        .where(and(...conditions))
         .limit(1);
 
       if (!group) {
@@ -88,7 +95,7 @@ export class GroupService {
   /**
    * Get groups for a user
    */
-  static async getUserGroups(userId: string): Promise<(Group & { memberCount: number })[]> {
+  static async getUserGroups(userId: string, organizationId?: string): Promise<(Group & { memberCount: number })[]> {
     try {
       // First, get all groups where the user is a member
       const userGroupIds = await db
@@ -106,9 +113,15 @@ export class GroupService {
       const groupIds = userGroupIds.map(g => g.groupId);
 
       // Then, get the groups with their actual member counts (count ALL active members in each group)
+      const conditions = [inArray(groups.id, groupIds)];
+      if (organizationId) {
+        conditions.push(eq(groups.organizationId, organizationId));
+      }
+
       const userGroups = await db
         .select({
           id: groups.id,
+          organizationId: groups.organizationId,
           name: groups.name,
           description: groups.description,
           currency: groups.currency,
@@ -123,7 +136,7 @@ export class GroupService {
           eq(groups.id, groupMembers.groupId),
           eq(groupMembers.isActive, true)
         ))
-        .where(inArray(groups.id, groupIds))
+        .where(and(...conditions))
         .groupBy(groups.id)
         .orderBy(desc(groups.updatedAt));
 

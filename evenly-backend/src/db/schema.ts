@@ -3,6 +3,7 @@ import { pgTable, uuid, text, timestamp, boolean, integer, decimal, pgEnum, inde
 // Enums
 export const splitTypeEnum = pgEnum('split_type', ['equal', 'percentage', 'shares', 'exact']);
 export const invitationStatusEnum = pgEnum('invitation_status', ['pending', 'accepted', 'declined', 'expired']);
+export const organizationRoleEnum = pgEnum('organization_role', ['owner', 'admin', 'member', 'guest']);
 
 // Users table
 export const users = pgTable('users', {
@@ -15,9 +16,43 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Organizations table (synced from auth service)
+export const organizations = pgTable('organizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  authServiceOrgId: text('auth_service_org_id').notNull().unique(), // MongoDB ObjectId from auth service
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  displayName: text('display_name'),
+  logo: text('logo'),
+  plan: text('plan').notNull().default('free'), // 'free', 'pro', 'enterprise'
+  maxMembers: integer('max_members').notNull().default(10),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  authServiceOrgIdIdx: index('organizations_auth_service_org_id_idx').on(table.authServiceOrgId),
+  slugIdx: index('organizations_slug_idx').on(table.slug),
+}));
+
+// Organization members table (synced from auth service)
+export const organizationMembers = pgTable('organization_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: organizationRoleEnum('role').notNull(),
+  status: text('status').notNull().default('active'), // 'active', 'suspended'
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  orgIdUserIdIdx: index('organization_members_org_user_idx').on(table.organizationId, table.userId),
+  userIdIdx: index('organization_members_user_id_idx').on(table.userId),
+}));
+
 // Groups table
 export const groups = pgTable('groups', {
   id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
   currency: text('currency').notNull().default('USD'),
@@ -25,7 +60,10 @@ export const groups = pgTable('groups', {
   createdBy: uuid('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  organizationIdIdx: index('groups_organization_id_idx').on(table.organizationId),
+  createdByIdx: index('groups_created_by_idx').on(table.createdBy),
+}));
 
 // Group members table
 export const groupMembers = pgTable('group_members', {
@@ -64,6 +102,7 @@ export const groupInvitations = pgTable('group_invitations', {
 // Expenses table
 export const expenses = pgTable('expenses', {
   id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   groupId: uuid('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
@@ -77,6 +116,7 @@ export const expenses = pgTable('expenses', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
+  organizationIdIdx: index('expenses_organization_id_idx').on(table.organizationId),
   groupIdIdx: index('expenses_group_id_idx').on(table.groupId),
   paidByIdx: index('expenses_paid_by_idx').on(table.paidBy),
   dateIdx: index('expenses_date_idx').on(table.date),
@@ -130,6 +170,7 @@ export const payments = pgTable('payments', {
 // Khata Customers table
 export const khataCustomers = pgTable('khata_customers', {
   id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   email: text('email'),
@@ -140,6 +181,7 @@ export const khataCustomers = pgTable('khata_customers', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
+  organizationIdIdx: index('khata_customers_organization_id_idx').on(table.organizationId),
   userIdIdx: index('khata_customers_user_id_idx').on(table.userId),
   emailIdx: index('khata_customers_email_idx').on(table.email),
 }));
@@ -195,6 +237,12 @@ export type NewKhataCustomer = typeof khataCustomers.$inferInsert;
 
 export type KhataTransaction = typeof khataTransactions.$inferSelect;
 export type NewKhataTransaction = typeof khataTransactions.$inferInsert;
+
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+
+export type OrganizationMember = typeof organizationMembers.$inferSelect;
+export type NewOrganizationMember = typeof organizationMembers.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

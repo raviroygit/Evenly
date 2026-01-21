@@ -20,13 +20,15 @@
     "db:studio": "drizzle-kit studio",
     "db:init": "tsx scripts/migrate.ts",
     "db:cleanup": "tsx scripts/cleanup-data.ts",
+    "db:clean": "tsx src/scripts/cleanupDatabase.ts",
     "db:reset": "npm run db:init && npm run dev",
     "dev:migrate": "npm run db:init && npm run dev",
     "start:migrate": "npm run db:init && npm start",
     "secrets:list": "node scripts/manage-secrets.js --list",
     "secrets:sync": "node scripts/manage-secrets.js",
     "secrets:update": "node scripts/manage-secrets.js --update",
-    "deploy": "node scripts/deploy.js"
+    "deploy": "node scripts/deploy.js",
+    "migrate:sync-orgs": "tsx src/migrations/syncOrganizations.ts"
   },
   "keywords": [
     "splitwise",

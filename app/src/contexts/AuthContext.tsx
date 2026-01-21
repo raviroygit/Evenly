@@ -5,12 +5,11 @@ import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  phoneNumber?: string;
-}
+import { User as UserType, Organization as OrganizationType } from '../types';
+
+// Use imported types instead of local definitions
+type User = UserType;
+type Organization = OrganizationType;
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +21,12 @@ interface AuthContextType {
   requestOTP: (email: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+
+  // Organization management
+  currentOrganization: Organization | null;
+  organizations: Organization[];
+  switchOrganization: (orgId: string) => Promise<void>;
+  refreshOrganizations: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +38,8 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Start with loading false
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const appState = useRef(AppState.currentState);
   const lastValidation = useRef<number>(Date.now());
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -53,16 +60,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Set user immediately from storage - stay logged in!
           setUser(authData.user);
 
+          // Load organizations from storage if available
+          if (authData.organizations) {
+            setOrganizations(authData.organizations);
+
+            // Restore current organization
+            const storedOrgId = await AuthStorage.getCurrentOrganizationId();
+            const storedOrg = authData.organizations.find(org => org.id === storedOrgId);
+            if (storedOrg) {
+              setCurrentOrganization(storedOrg);
+            } else if (authData.organizations.length > 0) {
+              setCurrentOrganization(authData.organizations[0]);
+            }
+          }
+
+          // Load organizations in background (non-blocking)
+          loadOrganizations().catch((error) => {
+            console.warn('[AuthContext] Failed to load organizations on init:', error);
+          });
+
           // Try to validate session with backend in background (non-blocking)
           authService.getCurrentUser()
             .then(async (currentUser) => {
               if (currentUser) {
                 // Session is still valid - update user data if changed
                 setUser(currentUser);
+
+                // Update organizations if received
+                if (currentUser.organizations) {
+                  setOrganizations(currentUser.organizations);
+                }
+
                 await AuthStorage.saveAuthData(
                   currentUser,
                   authData.accessToken,
-                  authData.refreshToken
+                  authData.refreshToken,
+                  currentUser.organizations
                 );
                 // Warm cache after validating session
                 warmAppCache().catch(() => {});
@@ -95,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  }, [authService, warmAppCache]);
+  }, [authService, warmAppCache, loadOrganizations]);
 
   // Validate session when app comes to foreground - but NEVER log out automatically
   const validateSessionOnForeground = useCallback(async () => {
@@ -122,10 +155,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Session still valid - update user data
           setUser(currentUser);
           lastValidation.current = now;
+
+          // Update organizations if received
+          if (currentUser.organizations) {
+            setOrganizations(currentUser.organizations);
+          }
+
           await AuthStorage.saveAuthData(
             currentUser,
             authData.accessToken,
-            authData.refreshToken
+            authData.refreshToken,
+            currentUser.organizations
           );
           console.log('[AuthContext] Session validated successfully');
         } else {
@@ -239,6 +279,73 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Load user's organizations and set current organization
+  const loadOrganizations = useCallback(async () => {
+    try {
+      console.log('[AuthContext] Loading user organizations...');
+      const orgs = await authService.getUserOrganizations();
+      setOrganizations(orgs);
+
+      if (orgs.length > 0) {
+        // Try to restore last selected organization from storage
+        const storedOrgId = await AuthStorage.getCurrentOrganizationId();
+        const storedOrg = orgs.find(org => org.id === storedOrgId);
+
+        if (storedOrg) {
+          console.log('[AuthContext] Restored organization from storage:', storedOrg.name);
+          setCurrentOrganization(storedOrg);
+        } else {
+          // Default to first organization (usually personal workspace)
+          console.log('[AuthContext] Using first organization:', orgs[0].name);
+          setCurrentOrganization(orgs[0]);
+          await AuthStorage.setCurrentOrganizationId(orgs[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('[AuthContext] Failed to load organizations:', error);
+      // Don't throw error - organization context is optional
+    }
+  }, [authService]);
+
+  // Switch to a different organization
+  const switchOrganization = useCallback(async (orgId: string) => {
+    try {
+      console.log('[AuthContext] Switching to organization:', orgId);
+      const response = await authService.switchOrganization(orgId);
+
+      if (response.success && response.organization) {
+        setCurrentOrganization(response.organization);
+        await AuthStorage.setCurrentOrganizationId(orgId);
+        console.log('[AuthContext] Successfully switched to:', response.organization.name);
+
+        // Refresh app data after switching organizations
+        await warmAppCache();
+      }
+    } catch (error) {
+      console.error('[AuthContext] Failed to switch organization:', error);
+      throw error;
+    }
+  }, [authService, warmAppCache]);
+
+  // Refresh the list of organizations
+  const refreshOrganizations = useCallback(async () => {
+    try {
+      console.log('[AuthContext] Refreshing organizations...');
+      const orgs = await authService.getUserOrganizations();
+      setOrganizations(orgs);
+
+      // Update current organization if it's in the list
+      if (currentOrganization) {
+        const updatedCurrent = orgs.find(org => org.id === currentOrganization.id);
+        if (updatedCurrent) {
+          setCurrentOrganization(updatedCurrent);
+        }
+      }
+    } catch (error) {
+      console.error('[AuthContext] Failed to refresh organizations:', error);
+    }
+  }, [authService, currentOrganization]);
+
   const login = useCallback(async (email: string, otp: string) => {
     try {
       const result = await authService.verifyOTP(email, otp);
@@ -246,7 +353,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If login was successful and we have user data, use it directly
       if (result.success && result.user) {
         setUser(result.user);
-        await AuthStorage.saveAuthData(result.user, result.accessToken, result.refreshToken);
+
+        // Update organizations if received from login
+        if (result.user.organizations) {
+          setOrganizations(result.user.organizations);
+          if (result.user.currentOrganization) {
+            setCurrentOrganization(result.user.currentOrganization);
+          }
+        }
+
+        await AuthStorage.saveAuthData(
+          result.user,
+          result.accessToken,
+          result.refreshToken,
+          result.user.organizations
+        );
+
+        // Load organizations after successful login (to get full list if not provided)
+        loadOrganizations().catch((error) => {
+          console.warn('[AuthContext] Failed to load organizations after login:', error);
+        });
 
         // Upgrade to 90-day session
         console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
@@ -266,7 +392,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       return { success: false, message: error.message || 'Login failed' };
     }
-  }, [authService, warmAppCache]);
+  }, [authService, warmAppCache, loadOrganizations]);
 
   const signup = useCallback(async (email: string) => {
     try {
@@ -291,10 +417,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authService.logout();
       setUser(null);
+      setCurrentOrganization(null);
+      setOrganizations([]);
       await AuthStorage.clearAuthData();
+      await AuthStorage.clearCurrentOrganization();
     } catch (error) {
       setUser(null);
+      setCurrentOrganization(null);
+      setOrganizations([]);
       await AuthStorage.clearAuthData();
+      await AuthStorage.clearCurrentOrganization();
     }
   }, [authService]);
 
@@ -306,11 +438,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const currentUser = await authService.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
+
+        // Update organizations if received
+        if (currentUser.organizations) {
+          setOrganizations(currentUser.organizations);
+        }
+
         // Re-save with existing tokens
         await AuthStorage.saveAuthData(
           currentUser,
           authData?.accessToken,
-          authData?.refreshToken
+          authData?.refreshToken,
+          currentUser.organizations
         );
       } else {
         // NEVER auto-logout - keep user logged in with local data
@@ -333,7 +472,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     requestOTP,
     logout,
     refreshUser,
-  }), [user, isLoading, isAuthenticated, setUser, login, signup, requestOTP, logout, refreshUser]);
+    currentOrganization,
+    organizations,
+    switchOrganization,
+    refreshOrganizations,
+  }), [user, isLoading, isAuthenticated, setUser, login, signup, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
 
   return (
     <AuthContext.Provider value={value}>

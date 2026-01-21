@@ -1,14 +1,17 @@
 // Storage utility for persistent login using AsyncStorage
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Organization } from '../types';
 
 interface StorageData {
   user: any;
   accessToken?: string;
   refreshToken?: string;
+  organizations?: Organization[];
   timestamp: number;
 }
 
 const STORAGE_KEY = 'evenly_auth_data';
+const ORGANIZATION_KEY = 'evenly_current_organization';
 // No local expiry - tokens managed by backend with sliding window (90 days)
 
 class StorageManager {
@@ -58,18 +61,19 @@ class StorageManager {
 const storage = new StorageManager();
 
 export const AuthStorage = {
-  async saveAuthData(user: any, accessToken?: string, refreshToken?: string): Promise<void> {
+  async saveAuthData(user: any, accessToken?: string, refreshToken?: string, organizations?: Organization[]): Promise<void> {
     const data: StorageData = {
       user,
       accessToken,
       refreshToken,
+      organizations,
       timestamp: Date.now(),
     };
 
     await storage.setItem(STORAGE_KEY, JSON.stringify(data));
   },
 
-  async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; timestamp?: number } | null> {
+  async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; organizations?: Organization[]; timestamp?: number } | null> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
 
@@ -95,6 +99,7 @@ export const AuthStorage = {
         user: data.user,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
+        organizations: data.organizations,
         timestamp: timestamp,
       };
     } catch (error) {
@@ -122,12 +127,42 @@ export const AuthStorage = {
           hasUser: !!data.user,
           hasAccessToken: !!data.accessToken,
           hasRefreshToken: !!data.refreshToken,
+          hasOrganizations: !!data.organizations,
+          organizationsCount: data.organizations?.length || 0,
           timestamp: data.timestamp,
           user: data.user
         });
       }
     } catch (error) {
       console.error('[AuthStorage] DEBUG - Error:', error);
+    }
+  },
+
+  // Organization storage methods
+  async getCurrentOrganizationId(): Promise<string | null> {
+    try {
+      return await storage.getItem(ORGANIZATION_KEY);
+    } catch (error) {
+      console.error('[AuthStorage] Error getting current organization:', error);
+      return null;
+    }
+  },
+
+  async setCurrentOrganizationId(organizationId: string): Promise<void> {
+    try {
+      await storage.setItem(ORGANIZATION_KEY, organizationId);
+      console.log('[AuthStorage] Current organization set:', organizationId);
+    } catch (error) {
+      console.error('[AuthStorage] Error setting current organization:', error);
+    }
+  },
+
+  async clearCurrentOrganization(): Promise<void> {
+    try {
+      await storage.removeItem(ORGANIZATION_KEY);
+      console.log('[AuthStorage] Current organization cleared');
+    } catch (error) {
+      console.error('[AuthStorage] Error clearing current organization:', error);
     }
   },
 };

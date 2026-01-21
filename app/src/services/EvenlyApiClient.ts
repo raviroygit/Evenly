@@ -50,6 +50,14 @@ class EvenlyApiClient {
             console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }
 
+          // Add organization context header
+          const currentOrgId = await AuthStorage.getCurrentOrganizationId();
+          if (currentOrgId) {
+            config.headers = config.headers || {};
+            config.headers['X-Organization-Id'] = currentOrgId;
+            console.log(`[${Platform.OS}] Adding organization context: ${currentOrgId}`);
+          }
+
           return config;
         } catch (error) {
           console.error('Request interceptor error:', error);

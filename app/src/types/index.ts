@@ -6,6 +6,10 @@ export interface User {
   phoneNumber?: string;
   avatar?: string;
   stats: UserStats;
+  organizations?: Organization[];
+  currentOrganization?: Organization;
+  defaultOrganizationId?: string;
+  lastOrganizationId?: string;
 }
 
 export interface UserStats {
@@ -13,6 +17,26 @@ export interface UserStats {
   totalSpent: number;
   owed: number;
 }
+
+// Organization Types
+export interface Organization {
+  id: string;
+  name: string;
+  displayName?: string;
+  domainIdentifier?: string;
+  slug: string;
+  role: OrganizationRole;
+  status: 'active' | 'suspended';
+}
+
+export type OrganizationRole =
+  | 'owner'
+  | 'admin'
+  | 'developer'
+  | 'sales'
+  | 'tester'
+  | 'user'
+  | 'guest';
 
 // Expense Types
 export interface Expense {
