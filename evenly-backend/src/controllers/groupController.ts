@@ -23,6 +23,14 @@ export class GroupController {
     const organizationId = (request as any).organizationId;
     const groupData = createGroupSchema.parse(request.body);
 
+    console.log('📝 GroupController.createGroup:', {
+      userId: user.id,
+      userEmail: user.email,
+      organizationId,
+      hasOrgId: !!organizationId,
+      groupName: groupData.name
+    });
+
     const group = await GroupService.createGroup(groupData, user.id, organizationId);
 
     reply.status(201).send({
@@ -58,7 +66,7 @@ export class GroupController {
     const { groupId } = request.params as { groupId: string };
 
     // Check if user is a member of the group
-    const isMember = await GroupService.isUserGroupMember(groupId, user.id);
+    const isMember = await GroupService.isUserGroupMember(groupId, user.id, organizationId);
     if (!isMember) {
       return reply.status(403).send({
         success: false,
@@ -86,10 +94,11 @@ export class GroupController {
    */
   static updateGroup = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
     const updateData = updateGroupSchema.parse(request.body);
 
-    const group = await GroupService.updateGroup(groupId, updateData, user.id);
+    const group = await GroupService.updateGroup(groupId, updateData, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -103,9 +112,10 @@ export class GroupController {
    */
   static deleteGroup = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    await GroupService.deleteGroup(groupId, user.id);
+    await GroupService.deleteGroup(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -118,11 +128,12 @@ export class GroupController {
    */
   static addGroupMember = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
     const memberData = addGroupMemberSchema.parse(request.body);
 
     // Check if user is an admin of the group
-    const isAdmin = await GroupService.isUserGroupAdmin(groupId, user.id);
+    const isAdmin = await GroupService.isUserGroupAdmin(groupId, user.id, organizationId);
     if (!isAdmin) {
       return reply.status(403).send({
         success: false,
@@ -139,7 +150,7 @@ export class GroupController {
       });
     }
 
-    const member = await GroupService.addGroupMember(groupId, targetUser.id, memberData.role);
+    const member = await GroupService.addGroupMember(groupId, targetUser.id, memberData.role, organizationId);
 
     reply.status(201).send({
       success: true,
@@ -153,9 +164,10 @@ export class GroupController {
    */
   static removeGroupMember = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId, userId } = request.params as { groupId: string; userId: string };
 
-    await GroupService.removeGroupMember(groupId, userId, user.id);
+    await GroupService.removeGroupMember(groupId, userId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -168,10 +180,11 @@ export class GroupController {
    */
   static updateMemberRole = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId, userId } = request.params as { groupId: string; userId: string };
     const { role } = request.body as { role: 'admin' | 'member' };
 
-    const member = await GroupService.updateMemberRole(groupId, userId, role, user.id);
+    const member = await GroupService.updateMemberRole(groupId, userId, role, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -185,10 +198,11 @@ export class GroupController {
    */
   static getGroupMembers = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
     // Check if user is a member of the group
-    const isMember = await GroupService.isUserGroupMember(groupId, user.id);
+    const isMember = await GroupService.isUserGroupMember(groupId, user.id, organizationId);
     if (!isMember) {
       return reply.status(403).send({
         success: false,
@@ -196,7 +210,7 @@ export class GroupController {
       });
     }
 
-    const members = await GroupService.getGroupMembers(groupId);
+    const members = await GroupService.getGroupMembers(groupId, organizationId);
 
     reply.send({
       success: true,
@@ -210,9 +224,10 @@ export class GroupController {
    */
   static leaveGroup = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    await GroupService.leaveGroup(groupId, user.id);
+    await GroupService.leaveGroup(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -225,10 +240,11 @@ export class GroupController {
    */
   static getGroupStats = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
     // Check if user is a member of the group
-    const isMember = await GroupService.isUserGroupMember(groupId, user.id);
+    const isMember = await GroupService.isUserGroupMember(groupId, user.id, organizationId);
     if (!isMember) {
       return reply.status(403).send({
         success: false,

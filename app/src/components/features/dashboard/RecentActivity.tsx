@@ -26,13 +26,15 @@ interface RecentActivityProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   onRefreshRef?: React.MutableRefObject<(() => void) | null>;
+  isAddingExpense?: boolean; // Show skeleton loader when adding expense
 }
 
 export const RecentActivity: React.FC<RecentActivityProps> = ({ 
   onViewAll,
   refreshing = false,
   onRefresh,
-  onRefreshRef
+  onRefreshRef,
+  isAddingExpense = false
 }) => {
   const {
     activities,
@@ -69,7 +71,10 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
 
-  if (loading) {
+  // Show skeleton loader when loading or when adding expense
+  const showSkeleton = loading || isAddingExpense;
+
+  if (showSkeleton) {
     return (
       <GlassListCard
         title="Recent Activity"
@@ -280,12 +285,12 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
     <>
       <GlassListCard
         title="Recent Activity"
-        subtitle={loading ? "Loading..." : "View your recent activities"}
+        subtitle={showSkeleton ? (isAddingExpense ? "Adding expense..." : "Loading...") : "View your recent activities"}
         contentGap={6}
-        badge={loading ? undefined : (totalCount > 0 ? totalCount : undefined)}
+        badge={showSkeleton ? undefined : (totalCount > 0 ? totalCount : undefined)}
         style={styles.glassCard}
       >
-        {loading ? (
+        {showSkeleton ? (
           <SkeletonActivityList count={3} />
         ) : activities.length === 0 ? (
           <View style={styles.emptyState}>
@@ -302,7 +307,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             )}
             keyExtractor={(activity) => activity.id}
             scrollEnabled={true}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
             style={styles.activitiesList}
             contentContainerStyle={styles.activitiesContainer}
             refreshing={refreshing}
@@ -338,6 +344,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             maxToRenderPerBatch={10}
             windowSize={10}
             initialNumToRender={5}
+            bounces={false}
             // Removed getItemLayout to allow dynamic heights and better updates
           />
         )}
@@ -470,7 +477,8 @@ const styles = StyleSheet.create({
     // Remove flex to allow natural height
   },
   activitiesList: {
-    maxHeight: 300, // Reduced height for smaller cards
+    maxHeight: 400, // Increased height to allow more scrolling
+    flexGrow: 0, // Prevent FlatList from expanding beyond maxHeight
   },
   loadingMore: {
     paddingVertical: 16,

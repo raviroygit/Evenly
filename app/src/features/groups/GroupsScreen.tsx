@@ -7,6 +7,8 @@ import { CreateGroupModal } from '../../components/modals/CreateGroupModal';
 import { InviteUserModal } from '../../components/modals/InviteUserModal';
 import { InvitationsModal } from '../../components/modals/InvitationsModal';
 import { SearchModal } from '../../components/modals/SearchModal';
+import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
+import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
 import { useGroupInvitations } from '../../hooks/useGroupInvitations';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SkeletonGroupList } from '../../components/ui/SkeletonLoader';
@@ -18,8 +20,11 @@ import ErrorHandler from '../../utils/ErrorHandler';
 import { Group } from '../../types';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { emitGroupDeleted, emitGroupCreated, emitGroupUpdated } from '../../utils/groupEvents';
+import { useAuth } from '../../contexts/AuthContext';
+import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
 export const GroupsScreen: React.FC = () => {
+  const { user } = useAuth();
   const {
     groups,
     totalCount,
@@ -78,9 +83,12 @@ export const GroupsScreen: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsModal, setShowInvitationsModal] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [selectedGroupForInvite, setSelectedGroupForInvite] = useState<{ id: string; name: string } | null>(null);
   const [processingToken, setProcessingToken] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState<{ id: string; name: string } | null>(null);
 
   // Note: Removed useFocusEffect to prevent infinite loops
   // Groups will refresh via pull-to-refresh
@@ -122,33 +130,27 @@ export const GroupsScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteGroup = async (groupId: string, groupName: string) => {
-    Alert.alert(
-      'Delete Group',
-      `Are you sure you want to delete "${groupName}"? This will also delete all expenses in this group. This action cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteGroup(groupId);
-              // Refresh groups to update the list
-              await refresh();
-              // Emit event to notify other screens
-              emitGroupDeleted(groupId);
-            } catch (err) {
-              console.error('Error deleting group:', err);
-              // Silent error - user can see it in the UI state
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteGroup = (groupId: string, groupName: string) => {
+    setDeletingGroup({ id: groupId, name: groupName });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!deletingGroup) return;
+
+    try {
+      await deleteGroup(deletingGroup.id);
+      // Refresh groups to update the list
+      await refresh();
+      // Emit event to notify other screens
+      emitGroupDeleted(deletingGroup.id);
+      // Modal will close automatically, show success alert
+      Alert.alert('Success', `"${deletingGroup.name}" has been deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      Alert.alert('Error', 'Failed to delete group. Please try again.');
+      throw error; // Re-throw to prevent modal from closing
+    }
   };
 
 
@@ -205,6 +207,37 @@ export const GroupsScreen: React.FC = () => {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to decline invitation');
     } finally {
       setProcessingToken(null);
+    }
+  };
+
+  const handleAddExpense = async (expenseData: {
+    groupId: string;
+    title: string;
+    totalAmount: string;
+    date: string;
+  }) => {
+    try {
+      // Convert date to ISO datetime format (backend requires date-time format)
+      const dateWithTime = expenseData.date.includes('T')
+        ? expenseData.date
+        : `${expenseData.date}T00:00:00.000Z`;
+
+      // Add required fields that the modal doesn't collect yet
+      const fullExpenseData = {
+        ...expenseData,
+        date: dateWithTime,
+        splitType: 'equal' as const, // Default to equal split
+        category: 'Other', // Default category
+      };
+
+      await EvenlyBackendService.createExpense(fullExpenseData);
+      // Refresh groups to show updated data
+      await refresh();
+      Alert.alert('Success', 'Expense added successfully!');
+    } catch (error: any) {
+      console.error('Error adding expense:', error);
+      Alert.alert('Error', error.message || 'Failed to add expense');
+      throw error; // Re-throw to let modal handle it
     }
   };
 
@@ -347,6 +380,14 @@ export const GroupsScreen: React.FC = () => {
             processingToken={processingToken || undefined}
           />
 
+          {/* Add Expense Modal */}
+          <AddExpenseModal
+            visible={showAddExpenseModal}
+            onClose={() => setShowAddExpenseModal(false)}
+            onAddExpense={handleAddExpense}
+            currentUserId={user?.id || ''}
+          />
+
         {/* Search Modal */}
         <SearchModal
           visible={isSearchVisible}
@@ -356,11 +397,30 @@ export const GroupsScreen: React.FC = () => {
           placeholder={getSearchPlaceholder()}
           title={getSearchTitle()}
         />
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmationModal
+          visible={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setDeletingGroup(null);
+          }}
+          onConfirm={confirmDeleteGroup}
+          title="Delete Group"
+          description={`Are you sure you want to delete "${deletingGroup?.name}"? This will also delete all expenses in this group. This action cannot be undone.`}
+        />
       </View>
 
       {/* Floating Action Button - Outside container for proper positioning */}
       <FloatingActionButton
         actions={[
+          {
+            id: 'add-expense',
+            title: 'Add Expense',
+            icon: '💰',
+            onPress: () => setShowAddExpenseModal(true),
+            color: '#10B981',
+          },
           {
             id: 'search',
             title: 'Search',

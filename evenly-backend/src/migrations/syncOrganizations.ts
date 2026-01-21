@@ -233,7 +233,7 @@ async function migrateUserOrganization(
       .from(expenses)
       .where(
         and(
-          eq(expenses.createdBy, backendUser.id),
+          eq(expenses.paidBy, backendUser.id),
           isNull(expenses.organizationId)
         )
       );
@@ -244,7 +244,7 @@ async function migrateUserOrganization(
         .set({ organizationId: localOrgId })
         .where(
           and(
-            eq(expenses.createdBy, backendUser.id),
+            eq(expenses.paidBy, backendUser.id),
             isNull(expenses.organizationId)
           )
         );

@@ -67,12 +67,6 @@ export class AuthService {
 
   async signup(email: string): Promise<AuthResponse> {
     try {
-      // Set organization ID in storage before making request
-      // The interceptor will automatically add X-Organization-Id header
-      if (ENV.ORGANIZATION_ID) {
-        await AuthStorage.setCurrentOrganizationId(ENV.ORGANIZATION_ID);
-      }
-
       const { data: response } = await this.makeRequest('/auth/signup', {
         method: 'POST',
         body: JSON.stringify({
@@ -82,26 +76,29 @@ export class AuthService {
         }),
       });
 
+      // Check backend response success field
+      if (response.success === false || !response.success) {
+        return {
+          success: false,
+          message: response.message || 'Failed to send magic link',
+        };
+      }
+
       return {
         success: true,
         message: response.message || 'Magic link sent to your email!',
       };
     } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
       return {
         success: false,
-        message: error.message || 'Failed to send magic link',
+        message: serverMsg || error.message || 'Failed to send magic link',
       };
     }
   }
 
   async requestOTP(email: string): Promise<AuthResponse> {
     try {
-      // Set organization ID in storage before making request
-      // The interceptor will automatically add X-Organization-Id header
-      if (ENV.ORGANIZATION_ID) {
-        await AuthStorage.setCurrentOrganizationId(ENV.ORGANIZATION_ID);
-      }
-
       const { data: response } = await this.makeRequest('/auth/login/otp', {
         method: 'POST',
         body: JSON.stringify({
@@ -111,26 +108,29 @@ export class AuthService {
         }),
       });
 
+      // Check backend response success field
+      if (response.success === false || !response.success) {
+        return {
+          success: false,
+          message: response.message || 'Failed to send OTP',
+        };
+      }
+
       return {
         success: true,
         message: response.message || 'OTP sent to your email!',
       };
     } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
       return {
         success: false,
-        message: error.message || 'Failed to send OTP',
+        message: serverMsg || error.message || 'Failed to send OTP',
       };
     }
   }
 
   async verifyOTP(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
     try {
-      // Set organization ID in storage before making request
-      // The interceptor will automatically add X-Organization-Id header
-      if (ENV.ORGANIZATION_ID) {
-        await AuthStorage.setCurrentOrganizationId(ENV.ORGANIZATION_ID);
-      }
-
       const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/login/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, otp }),
@@ -153,6 +153,7 @@ export class AuthService {
           id: user.id,
           email: user.email,
           name: user.name,
+          phoneNumber: user.phoneNumber,
           stats: {
             groups: 0,
             totalSpent: 0,
@@ -186,6 +187,10 @@ export class AuthService {
 
   async getCurrentUser(): Promise<User | null> {
     try {
+      // First, try to get phoneNumber from stored user data (from auth service)
+      const storedAuthData = await AuthStorage.getAuthData();
+      const storedPhoneNumber = storedAuthData?.user?.phoneNumber;
+
       const { data: response } = await this.makeRequest('/auth/me', {});
       if (response.success && response.user) {
         const organizations = response.organizations || [];
@@ -204,11 +209,15 @@ export class AuthService {
         // Sync user with evenly-backend
         await this.syncUserWithEvenlyBackend(response.user);
 
+        // Use phoneNumber from response if available, otherwise use stored phoneNumber
+        // This handles the case where evenly-backend doesn't return phoneNumber
+        const phoneNumber = response.user.phoneNumber || storedPhoneNumber;
+
         return {
           id: response.user.id,
           email: response.user.email,
           name: response.user.name,
-          phoneNumber: response.user.phoneNumber,
+          phoneNumber: phoneNumber,
           stats: { groups: 0, totalSpent: 0, owed: 0 }, // Will be updated from evenly-backend
           organizations: organizations,
           defaultOrganizationId: response.user.defaultOrganizationId,

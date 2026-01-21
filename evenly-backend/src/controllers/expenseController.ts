@@ -33,9 +33,10 @@ export class ExpenseController {
    */
   static getExpenseById = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { expenseId } = request.params as { expenseId: string };
 
-    const expense = await ExpenseService.getExpenseById(expenseId);
+    const expense = await ExpenseService.getExpenseById(expenseId, organizationId);
     if (!expense) {
       return reply.status(404).send({
         success: false,
@@ -55,6 +56,7 @@ export class ExpenseController {
    */
   static getGroupExpenses = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
     const query = paginationSchema.parse(request.query);
 
@@ -63,6 +65,7 @@ export class ExpenseController {
       limit: query.limit,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
+      organizationId,
     });
 
     reply.send({
@@ -85,10 +88,11 @@ export class ExpenseController {
    */
   static updateExpense = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { expenseId } = request.params as { expenseId: string };
     const updateData = updateExpenseSchema.parse(request.body);
 
-    const expense = await ExpenseService.updateExpense(expenseId, updateData, user.id);
+    const expense = await ExpenseService.updateExpense(expenseId, updateData, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -102,9 +106,10 @@ export class ExpenseController {
    */
   static deleteExpense = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { expenseId } = request.params as { expenseId: string };
 
-    await ExpenseService.deleteExpense(expenseId, user.id);
+    await ExpenseService.deleteExpense(expenseId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -130,6 +135,7 @@ export class ExpenseController {
    */
   static getUserExpenses = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const query = paginationSchema.parse(request.query);
 
     // TODO: Implement getUserExpenses in ExpenseService

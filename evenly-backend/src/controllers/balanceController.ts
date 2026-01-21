@@ -9,9 +9,10 @@ export class BalanceController {
    */
   static getGroupBalances = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    const balances = await BalanceService.getGroupBalances(groupId, user.id);
+    const balances = await BalanceService.getGroupBalances(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -25,8 +26,9 @@ export class BalanceController {
    */
   static getUserBalances = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
 
-    const balances = await BalanceService.getUserBalances(user.id);
+    const balances = await BalanceService.getUserBalances(user.id, organizationId);
 
     reply.send({
       success: true,
@@ -40,9 +42,10 @@ export class BalanceController {
    */
   static getSimplifiedDebts = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    const simplifiedDebts = await BalanceService.getSimplifiedDebts(groupId, user.id);
+    const simplifiedDebts = await BalanceService.getSimplifiedDebts(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -56,8 +59,9 @@ export class BalanceController {
    */
   static getUserNetBalance = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
 
-    const netBalance = await BalanceService.getUserNetBalance(user.id);
+    const netBalance = await BalanceService.getUserNetBalance(user.id, organizationId);
 
     reply.send({
       success: true,
@@ -71,9 +75,10 @@ export class BalanceController {
    */
   static getGroupBalanceSummary = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    const summary = await BalanceService.getGroupBalanceSummary(groupId, user.id);
+    const summary = await BalanceService.getGroupBalanceSummary(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -87,9 +92,10 @@ export class BalanceController {
    */
   static recalculateGroupBalances = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    await BalanceService.recalculateGroupBalances(groupId, user.id);
+    await BalanceService.recalculateGroupBalances(groupId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -102,9 +108,10 @@ export class BalanceController {
    */
   static getBalanceHistory = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId, userId } = request.params as { groupId: string; userId: string };
 
-    const history = await BalanceService.getBalanceHistory(groupId, user.id, userId);
+    const history = await BalanceService.getBalanceHistory(groupId, user.id, userId, organizationId);
 
     reply.send({
       success: true,
@@ -117,9 +124,10 @@ export class BalanceController {
    * Validate group balance consistency
    */
   static validateGroupBalanceConsistency = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    const validation = await BalanceService.validateGroupBalanceConsistency(groupId);
+    const validation = await BalanceService.validateGroupBalanceConsistency(groupId, organizationId);
 
     reply.send({
       success: true,

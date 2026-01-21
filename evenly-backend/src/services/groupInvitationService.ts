@@ -12,9 +12,23 @@ export class GroupInvitationService {
   static async sendInvitation(
     groupId: string,
     invitedBy: string,
-    invitedEmail: string
+    invitedEmail: string,
+    organizationId?: string
   ): Promise<GroupInvitation> {
     try {
+      // Validate group exists and belongs to organization (if specified)
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Validate group exists and user is a member
       const group = await db.select().from(groups).where(eq(groups.id, groupId)).limit(1);
       if (!group.length) {
@@ -176,16 +190,33 @@ export class GroupInvitationService {
   /**
    * Get pending invitations for a user
    */
-  static async getPendingInvitations(userId: string): Promise<(GroupInvitation & { group: any; inviter: any })[]> {
+  static async getPendingInvitations(userId: string, organizationId?: string): Promise<(GroupInvitation & { group: any; inviter: any })[]> {
     try {
       // First, get the user's email to match invitations
       const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       if (!user.length) {
-        throw new NotFoundError('User not found');
+        console.warn('[GroupInvitationService] User not found in local DB, returning empty invitations');
+        return [];
       }
 
       const userEmail = user[0].email;
       console.log(`[GroupInvitationService] Getting pending invitations for user: ${userId}, email: ${userEmail}`);
+
+      // Build where conditions
+      const whereConditions = [
+        or(
+          eq(groupInvitations.invitedUserId, userId), // User has signed up
+          eq(groupInvitations.invitedEmail, userEmail) // User hasn't signed up yet but has email
+        ),
+        eq(groupInvitations.status, 'pending'),
+        // Check if invitation is not expired
+        // Note: This would need a proper date comparison in a real implementation
+      ];
+
+      // Add organization filter if specified
+      if (organizationId) {
+        whereConditions.push(eq(groups.organizationId, organizationId));
+      }
 
       const invitations = await db
         .select({
@@ -196,15 +227,7 @@ export class GroupInvitationService {
         .from(groupInvitations)
         .innerJoin(groups, eq(groupInvitations.groupId, groups.id))
         .innerJoin(users, eq(groupInvitations.invitedBy, users.id))
-        .where(and(
-          or(
-            eq(groupInvitations.invitedUserId, userId), // User has signed up
-            eq(groupInvitations.invitedEmail, userEmail) // User hasn't signed up yet but has email
-          ),
-          eq(groupInvitations.status, 'pending'),
-          // Check if invitation is not expired
-          // Note: This would need a proper date comparison in a real implementation
-        ));
+        .where(and(...whereConditions));
 
       console.log(`[GroupInvitationService] Found ${invitations.length} pending invitations`);
       console.log(`[GroupInvitationService] Invitations:`, invitations.map(inv => ({
@@ -221,14 +244,17 @@ export class GroupInvitationService {
       }));
     } catch (error) {
       console.error('Error getting pending invitations:', error);
-      throw new DatabaseError('Failed to get pending invitations');
+      // Return empty array instead of throwing error for better UX
+      // New users or users with no data should see empty state, not error
+      console.warn('[GroupInvitationService] Returning empty invitations due to error');
+      return [];
     }
   }
 
   /**
    * Accept a group invitation
    */
-  static async acceptInvitation(token: string, userId: string): Promise<void> {
+  static async acceptInvitation(token: string, userId: string, organizationId?: string): Promise<void> {
     try {
       // Find invitation by token
       const invitation = await db
@@ -245,6 +271,19 @@ export class GroupInvitationService {
       }
 
       const inv = invitation[0];
+
+      // Validate group belongs to organization (if specified)
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, inv.groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
 
       // Check if invitation is expired
       if (new Date() > inv.expiresAt) {
@@ -307,7 +346,7 @@ export class GroupInvitationService {
   /**
    * Decline a group invitation
    */
-  static async declineInvitation(token: string, userId: string): Promise<void> {
+  static async declineInvitation(token: string, userId: string, organizationId?: string): Promise<void> {
     try {
       // Find invitation by token
       const invitation = await db
@@ -324,6 +363,19 @@ export class GroupInvitationService {
       }
 
       const inv = invitation[0];
+
+      // Validate group belongs to organization (if specified)
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, inv.groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
 
       // Check if user matches the invited user (if specified)
       if (inv.invitedUserId && inv.invitedUserId !== userId) {
@@ -352,8 +404,19 @@ export class GroupInvitationService {
   /**
    * Get invitation details by token (for public invitation page)
    */
-  static async getInvitationByToken(token: string): Promise<GroupInvitation & { group: any; inviter: any } | null> {
+  static async getInvitationByToken(token: string, organizationId?: string): Promise<GroupInvitation & { group: any; inviter: any } | null> {
     try {
+      // Build where conditions
+      const whereConditions = [
+        eq(groupInvitations.token, token),
+        eq(groupInvitations.status, 'pending')
+      ];
+
+      // Add organization filter if specified
+      if (organizationId) {
+        whereConditions.push(eq(groups.organizationId, organizationId));
+      }
+
       const result = await db
         .select({
           invitation: groupInvitations,
@@ -363,10 +426,7 @@ export class GroupInvitationService {
         .from(groupInvitations)
         .innerJoin(groups, eq(groupInvitations.groupId, groups.id))
         .innerJoin(users, eq(groupInvitations.invitedBy, users.id))
-        .where(and(
-          eq(groupInvitations.token, token),
-          eq(groupInvitations.status, 'pending')
-        ))
+        .where(and(...whereConditions))
         .limit(1);
 
       if (!result.length) {

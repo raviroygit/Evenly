@@ -187,6 +187,8 @@ async function extractOrganizationContext(
 
     if (!localOrg) {
       console.error('❌ OrganizationContext: Failed to sync organization');
+      console.error('❌ OrganizationContext: Auth service org ID:', authServiceOrgId);
+      console.error('❌ OrganizationContext: User ID:', userId);
       return;
     }
 
@@ -194,6 +196,8 @@ async function extractOrganizationContext(
     const isMember = await OrganizationService.isMember(localOrg.id, userId);
     if (!isMember) {
       console.error('❌ OrganizationContext: User is not a member of this organization');
+      console.error('❌ OrganizationContext: Local org ID:', localOrg.id);
+      console.error('❌ OrganizationContext: User ID:', userId);
       return;
     }
 

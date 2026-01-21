@@ -1,0 +1,977 @@
+{
+  "info": {
+    "name": "Evenly Backend API",
+    "description": "Complete API collection for Evenly Backend with organization-based authentication",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://evenly-backend-374738393915.us-central1.run.app/api",
+      "type": "string"
+    },
+    {
+      "key": "localUrl",
+      "value": "http://localhost:3002/api",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ssoToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "groupId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expenseId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Signup (Send Magic Link)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Signup successful:', jsonData.message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"your-email@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            },
+            "description": "Send magic link for signup. Backend automatically adds organization context (EvenlySplit)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Request OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('OTP sent:', jsonData.message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ravi140398@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login/otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login", "otp"]
+            },
+            "description": "Request OTP for login. Only works for users who are members of EvenlySplit organization."
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    ",
+                  "    // Store tokens",
+                  "    if (jsonData.data.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "        console.log('Access token saved');",
+                  "    }",
+                  "    ",
+                  "    if (jsonData.data.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                  "        console.log('Refresh token saved');",
+                  "    }",
+                  "    ",
+                  "    if (jsonData.ssoToken) {",
+                  "        pm.collectionVariables.set('ssoToken', jsonData.ssoToken);",
+                  "        console.log('SSO token saved');",
+                  "    }",
+                  "    ",
+                  "    // Store user ID",
+                  "    if (jsonData.data.user && jsonData.data.user.id) {",
+                  "        pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "        console.log('User ID saved:', jsonData.data.user.id);",
+                  "    }",
+                  "    ",
+                  "    console.log('Login successful!');",
+                  "    console.log('User:', jsonData.data.user);",
+                  "    console.log('Organization:', jsonData.data.organization);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ravi140398@gmail.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login", "verify-otp"]
+            },
+            "description": "Verify OTP and complete login. Returns user, organization, accessToken, and refreshToken."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User (/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    console.log('Current user:', jsonData.data.user);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user information"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "        console.log('Access token refreshed');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "description": "Refresh access token using refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Mobile - Refresh Token (90-day)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    }",
+                  "    if (jsonData.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    }",
+                  "    console.log('Mobile tokens refreshed');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/mobile/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "mobile", "refresh"]
+            },
+            "description": "Silent token refresh for mobile apps (90-day sessions)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints with organization-based access control"
+    },
+    {
+      "name": "👥 Groups",
+      "item": [
+        {
+          "name": "Create Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('groupId', jsonData.data.id);",
+                  "        console.log('Group created with ID:', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weekend Trip\",\n  \"description\": \"Our weekend getaway expenses\",\n  \"defaultSplitType\": \"equal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups"]
+            },
+            "description": "Create a new group within the user's organization"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Groups",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups"]
+            },
+            "description": "Get all groups for the current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups", "{{groupId}}"]
+            },
+            "description": "Get detailed information about a specific group"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups", "{{groupId}}"]
+            },
+            "description": "Update group information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups", "{{groupId}}"]
+            },
+            "description": "Delete a group"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Group Member",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-id-here\",\n  \"role\": \"member\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/groups/{{groupId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["groups", "{{groupId}}", "members"]
+            },
+            "description": "Add a member to the group"
+          },
+          "response": []
+        }
+      ],
+      "description": "Group management endpoints"
+    },
+    {
+      "name": "💰 Expenses",
+      "item": [
+        {
+          "name": "Create Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('expenseId', jsonData.data.id);",
+                  "        console.log('Expense created with ID:', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Dinner at Restaurant\",\n  \"description\": \"Team dinner\",\n  \"totalAmount\": \"150.00\",\n  \"currency\": \"USD\",\n  \"splitType\": \"equal\",\n  \"category\": \"Food\",\n  \"date\": \"2026-01-21T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["expenses"]
+            },
+            "description": "Create a new expense in a group"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Expenses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses/group/{{groupId}}?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["expenses", "group", "{{groupId}}"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all expenses for a specific group"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["expenses", "{{expenseId}}"]
+            },
+            "description": "Get detailed information about a specific expense"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Expense Title\",\n  \"description\": \"Updated description\",\n  \"totalAmount\": \"175.00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["expenses", "{{expenseId}}"]
+            },
+            "description": "Update expense information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["expenses", "{{expenseId}}"]
+            },
+            "description": "Delete an expense"
+          },
+          "response": []
+        }
+      ],
+      "description": "Expense management endpoints"
+    },
+    {
+      "name": "💳 Balances",
+      "item": [
+        {
+          "name": "Get Group Balances",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/balances/group/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["balances", "group", "{{groupId}}"]
+            },
+            "description": "Get all balances for a specific group"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Balance in Group",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/balances/group/{{groupId}}/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["balances", "group", "{{groupId}}", "user", "{{userId}}"]
+            },
+            "description": "Get balance for a specific user in a group"
+          },
+          "response": []
+        }
+      ],
+      "description": "Balance tracking endpoints"
+    },
+    {
+      "name": "🏦 Payments",
+      "item": [
+        {
+          "name": "Record Payment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"toUserId\": \"user-id-here\",\n  \"amount\": \"50.00\",\n  \"currency\": \"USD\",\n  \"description\": \"Settling up\",\n  \"paymentMethod\": \"cash\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments"]
+            },
+            "description": "Record a payment between users"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Payments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/group/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "group", "{{groupId}}"]
+            },
+            "description": "Get all payments for a specific group"
+          },
+          "response": []
+        }
+      ],
+      "description": "Payment tracking endpoints"
+    },
+    {
+      "name": "📧 Group Invitations",
+      "item": [
+        {
+          "name": "Send Group Invitation",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"invitedEmail\": \"friend@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": ["{{baseUrl}}"],
+              "path": ["invitations"]
+            },
+            "description": "Send an invitation to join a group"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Group Invitations",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/group/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["invitations", "group", "{{groupId}}"]
+            },
+            "description": "Get all invitations for a group"
+          },
+          "response": []
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/accept/:token",
+              "host": ["{{baseUrl}}"],
+              "path": ["invitations", "accept", ":token"],
+              "variable": [
+                {
+                  "key": "token",
+                  "value": "invitation-token-here"
+                }
+              ]
+            },
+            "description": "Accept a group invitation using the token from email"
+          },
+          "response": []
+        }
+      ],
+      "description": "Group invitation management"
+    },
+    {
+      "name": "🏥 Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API is running"
+          },
+          "response": []
+        },
+        {
+          "name": "API Documentation (Swagger)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://evenly-backend-374738393915.us-central1.run.app/docs",
+              "protocol": "https",
+              "host": ["evenly-backend-374738393915", "us-central1", "run", "app"],
+              "path": ["docs"]
+            },
+            "description": "View interactive API documentation"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health check and API status endpoints"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Automatically use baseUrl or localUrl based on environment",
+          "// Change the active URL in collection variables"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script - runs after every request",
+          "if (pm.response.code === 401) {",
+          "    console.log('⚠️ Unauthorized - Token may have expired');",
+          "}",
+          "",
+          "if (pm.response.code >= 500) {",
+          "    console.log('❌ Server error:', pm.response.json());",
+          "}"
+        ]
+      }
+    }
+  ]
+}

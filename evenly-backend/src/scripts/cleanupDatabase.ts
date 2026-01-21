@@ -16,7 +16,7 @@ import {
   groups,
   groupMembers,
   expenses,
-  expenseParticipants,
+  expenseSplits,
   payments,
   khataCustomers,
   khataTransactions,
@@ -46,7 +46,7 @@ interface CleanupStats {
   groups: number;
   groupMembers: number;
   expenses: number;
-  expenseParticipants: number;
+  expenseSplits: number;
   payments: number;
   khataCustomers: number;
   khataTransactions: number;
@@ -63,7 +63,7 @@ async function cleanupDatabase(): Promise<CleanupStats> {
     groups: 0,
     groupMembers: 0,
     expenses: 0,
-    expenseParticipants: 0,
+    expenseSplits: 0,
     payments: 0,
     khataCustomers: 0,
     khataTransactions: 0,
@@ -83,7 +83,7 @@ async function cleanupDatabase(): Promise<CleanupStats> {
 
     try {
       const result = await db.delete(table).returning();
-      return result.length;
+      return Array.isArray(result) ? result.length : 0;
     } catch (error: any) {
       // Table doesn't exist yet (before migration) or column doesn't exist
       if (error.code === '42P01' || error.code === '42703') {
@@ -168,7 +168,7 @@ async function countDocuments() {
       groups: await safeCount(groups, 'groups'),
       groupMembers: await safeCount(groupMembers, 'groupMembers'),
       expenses: await safeCount(expenses, 'expenses'),
-      expenseParticipants: await safeCount(expenseParticipants, 'expenseParticipants'),
+      expenseSplits: await safeCount(expenseSplits, 'expenseSplits'),
       payments: await safeCount(payments, 'payments'),
       khataCustomers: await safeCount(khataCustomers, 'khataCustomers'),
       khataTransactions: await safeCount(khataTransactions, 'khataTransactions'),
@@ -200,7 +200,7 @@ async function main() {
     console.log(`  Groups:                ${beforeCounts.groups}`);
     console.log(`  Group Members:         ${beforeCounts.groupMembers}`);
     console.log(`  Expenses:              ${beforeCounts.expenses}`);
-    console.log(`  Expense Participants:  ${beforeCounts.expenseParticipants}`);
+    console.log(`  Expense Splits:        ${beforeCounts.expenseSplits}`);
     console.log(`  Payments:              ${beforeCounts.payments}`);
     console.log(`  Khata Customers:       ${beforeCounts.khataCustomers}`);
     console.log(`  Khata Transactions:    ${beforeCounts.khataTransactions}`);
@@ -219,7 +219,7 @@ async function main() {
     console.log(`Groups deleted:                ${stats.groups} ✅`);
     console.log(`Group members deleted:         ${stats.groupMembers} ✅`);
     console.log(`Expenses deleted:              ${stats.expenses} ✅`);
-    console.log(`Expense participants deleted:  ${stats.expenseParticipants} ✅`);
+    console.log(`Expense splits deleted:        ${stats.expenseSplits} ✅`);
     console.log(`Payments deleted:              ${stats.payments} ✅`);
     console.log(`Khata customers deleted:       ${stats.khataCustomers} ✅`);
     console.log(`Khata transactions deleted:    ${stats.khataTransactions} ✅`);
@@ -241,7 +241,7 @@ async function main() {
       if (afterCounts.groups > 0) console.log(`  Groups: ${afterCounts.groups}`);
       if (afterCounts.groupMembers > 0) console.log(`  Group Members: ${afterCounts.groupMembers}`);
       if (afterCounts.expenses > 0) console.log(`  Expenses: ${afterCounts.expenses}`);
-      if (afterCounts.expenseParticipants > 0) console.log(`  Expense Participants: ${afterCounts.expenseParticipants}`);
+      if (afterCounts.expenseSplits > 0) console.log(`  Expense Splits: ${afterCounts.expenseSplits}`);
       if (afterCounts.payments > 0) console.log(`  Payments: ${afterCounts.payments}`);
       if (afterCounts.khataCustomers > 0) console.log(`  Khata Customers: ${afterCounts.khataCustomers}`);
       if (afterCounts.khataTransactions > 0) console.log(`  Khata Transactions: ${afterCounts.khataTransactions}`);

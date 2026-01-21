@@ -1,5 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthService } from '../services/authService';
+import { OrganizationService } from '../services/organizationService';
+import { UserService } from '../services/userService';
 import { z } from 'zod';
 
 // Validation schemas
@@ -34,6 +36,14 @@ export class AuthController {
 
       const result = await AuthService.signup(email);
 
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          message: result.message,
+          data: null,
+        });
+      }
+
       return reply.status(200).send({
         success: true,
         message: result.message,
@@ -41,7 +51,7 @@ export class AuthController {
       });
     } catch (error: any) {
       console.error('Signup error:', error);
-      
+
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -113,6 +123,14 @@ export class AuthController {
 
       const result = await AuthService.requestOTP(email);
 
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          message: result.message,
+          data: null,
+        });
+      }
+
       return reply.status(200).send({
         success: true,
         message: result.message,
@@ -120,7 +138,7 @@ export class AuthController {
       });
     } catch (error: any) {
       console.error('Request OTP error:', error);
-      
+
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -155,11 +173,49 @@ export class AuthController {
           path: '/',
         });
 
+        // Sync user to local database
+        try {
+          await UserService.createOrUpdateUser({
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            avatar: result.user.avatar,
+          });
+          console.log('✅ User synced to local DB:', result.user.id);
+        } catch (syncError: any) {
+          console.error('⚠️ Failed to sync user to local DB:', syncError.message);
+        }
+
+        // Sync organization to local database if provided
+        if (result.organization) {
+          try {
+            console.log('🔄 Syncing organization from login response data:', result.organization);
+            const localOrgId = await OrganizationService.syncOrganizationFromData(
+              {
+                id: result.organization.id,
+                name: result.organization.name,
+                displayName: result.organization.displayName,
+                domainIdentifier: result.organization.domainIdentifier,
+                role: result.organization.role,
+              },
+              result.user.id
+            );
+            if (localOrgId) {
+              console.log('✅ Organization synced to local DB from login data:', localOrgId);
+            } else {
+              console.warn('⚠️ Failed to sync organization to local DB');
+            }
+          } catch (orgSyncError: any) {
+            console.error('⚠️ Organization sync error:', orgSyncError.message);
+          }
+        }
+
         return reply.status(200).send({
           success: true,
           message: result.message,
           data: {
             user: result.user,
+            organization: result.organization,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
           },
@@ -243,6 +299,7 @@ export class AuthController {
           message: 'User retrieved successfully',
           data: {
             user: result.user,
+            organization: result.organization, // Include organization in response
           },
         });
       }

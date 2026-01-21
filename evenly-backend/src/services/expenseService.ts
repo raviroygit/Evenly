@@ -35,6 +35,16 @@ export class ExpenseService {
       // Set paidBy to current user if not provided
       const paidBy = expenseData.paidBy || createdBy;
       
+      // Get group to extract organizationId
+      const [group] = await db
+        .select()
+        .from(groups)
+        .where(eq(groups.id, expenseData.groupId));
+
+      if (!group) {
+        throw new NotFoundError('Group not found');
+      }
+
       // Validate group membership
       const isMember = await GroupService.isUserGroupMember(expenseData.groupId, createdBy);
       if (!isMember) {
@@ -80,6 +90,7 @@ export class ExpenseService {
 
       // Create expense
       const newExpense: NewExpense = {
+        organizationId: group.organizationId,
         groupId: expenseData.groupId,
         title: expenseData.title,
         description: expenseData.description,
@@ -145,8 +156,21 @@ export class ExpenseService {
   /**
    * Get expense by ID with splits
    */
-  static async getExpenseById(expenseId: string): Promise<(Expense & { splits: (ExpenseSplit & { user: any })[] }) | null> {
+  static async getExpenseById(expenseId: string, organizationId?: string): Promise<(Expense & { splits: (ExpenseSplit & { user: any })[] }) | null> {
     try {
+      // Validate organizationId if provided
+      if (organizationId) {
+        const [expense] = await db
+          .select()
+          .from(expenses)
+          .where(and(eq(expenses.id, expenseId), eq(expenses.organizationId, organizationId)))
+          .limit(1);
+
+        if (!expense) {
+          throw new NotFoundError('Expense not found or does not belong to your organization');
+        }
+      }
+
       const [expense] = await db
         .select()
         .from(expenses)
@@ -183,6 +207,9 @@ export class ExpenseService {
         splits,
       };
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       console.error('Error fetching expense:', error);
       throw new DatabaseError('Failed to fetch expense');
     }
@@ -338,6 +365,7 @@ export class ExpenseService {
       limit?: number;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
+      organizationId?: string;
     } = {}
   ): Promise<{
     expenses: EnhancedExpense[];
@@ -345,6 +373,19 @@ export class ExpenseService {
   }> {
     console.log('getGroupExpenses called with:', { groupId, userId, options });
     try {
+      // Validate organizationId if provided
+      if (options.organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, options.organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       console.log('Checking group membership:', { groupId, userId });
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
@@ -370,6 +411,7 @@ export class ExpenseService {
       const expensesList = await db
         .select({
           id: expenses.id,
+          organizationId: expenses.organizationId,
           groupId: expenses.groupId,
           title: expenses.title,
           description: expenses.description,
@@ -470,7 +512,7 @@ export class ExpenseService {
         total: totalResult.count,
       };
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error fetching group expenses:', error);
@@ -497,9 +539,23 @@ export class ExpenseService {
       date?: string;
       receipt?: string;
     },
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<Expense> {
     try {
+      // Validate organizationId if provided
+      if (organizationId) {
+        const [expense] = await db
+          .select()
+          .from(expenses)
+          .where(and(eq(expenses.id, expenseId), eq(expenses.organizationId, organizationId)))
+          .limit(1);
+
+        if (!expense) {
+          throw new NotFoundError('Expense not found or does not belong to your organization');
+        }
+      }
+
       // Get expense to check permissions
       const expense = await this.getExpenseById(expenseId);
       if (!expense) {
@@ -544,8 +600,21 @@ export class ExpenseService {
   /**
    * Delete expense
    */
-  static async deleteExpense(expenseId: string, userId: string): Promise<void> {
+  static async deleteExpense(expenseId: string, userId: string, organizationId?: string): Promise<void> {
     try {
+      // Validate organizationId if provided
+      if (organizationId) {
+        const [expense] = await db
+          .select()
+          .from(expenses)
+          .where(and(eq(expenses.id, expenseId), eq(expenses.organizationId, organizationId)))
+          .limit(1);
+
+        if (!expense) {
+          throw new NotFoundError('Expense not found or does not belong to your organization');
+        }
+      }
+
       // Get expense to check permissions
       const expense = await this.getExpenseById(expenseId);
       if (!expense) {

@@ -3,12 +3,31 @@ import * as ejs from 'ejs';
 import * as path from 'path';
 import { config } from '../config/config';
 
-// Create a transporter object using SMTP settings
+// Create a transporter object using Zoho SMTP settings (matching nxgenaidev_auth)
 const transporter = nodemailer.createTransport({
   host: config.email.host,
   port: config.email.port,
   secure: config.email.secure, // true for 465, false for other ports
-  auth: config.email.auth
+  auth: {
+    user: config.email.auth.user,
+    pass: config.email.auth.pass
+  },
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000, // 30 seconds
+  socketTimeout: 60000, // 60 seconds
+  pool: false, // Disable pooling for Zoho
+  tls: {
+    rejectUnauthorized: false
+  }
+} as nodemailer.TransportOptions);
+
+// Verify connection configuration
+transporter.verify((error, success) => {
+  if (error) {
+    console.log('❌ EmailService - SMTP connection verification failed:', error);
+  } else {
+    console.log('✅ EmailService - SMTP connection verified successfully');
+  }
 });
 
 /**
@@ -30,6 +49,14 @@ async function renderTemplate(templateName: string, data: any): Promise<string> 
  */
 export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<void> {
   try {
+    console.log("📧 EmailService - Preparing to send email to:", to);
+    console.log("📧 EmailService - Email config:", {
+      host: config.email.host,
+      port: config.email.port,
+      secure: config.email.secure,
+      user: config.email.auth.user
+    });
+
     const mailOptions = {
       from: `"Evenly" <${config.email.auth.user}>`,
       to,
@@ -37,10 +64,25 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
       html: htmlBody
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully to ${to}: ${info.messageId}`);
+    console.log("📤 EmailService - Sending email via transporter");
+
+    // Add timeout to prevent hanging
+    const sendMailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000);
+    });
+
+    const info = await Promise.race([sendMailPromise, timeoutPromise]) as any;
+    console.log(`✅ EmailService - Email sent to ${to}: ${info.messageId}`);
   } catch (error: any) {
-    console.error('💥 Error sending email:', error);
+    console.error('💥 EmailService - Error sending email:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      response: error.response,
+      responseCode: error.responseCode
+    });
 
     // Log detailed error information
     if (error.code === 'EAUTH' || error.responseCode === 535) {
@@ -58,7 +100,7 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
 
     // For other errors, also throw so system knows email failed
     console.error(`🚨 Email sending failed for ${to}:`, error.message);
-    throw new Error(`EMAIL_SEND_FAILED: ${error.message}`);
+    throw error;
   }
 }
 
@@ -604,7 +646,7 @@ export async function sendCustomerAddedEmail(
   customerName: string,
   userName: string
 ): Promise<void> {
-  console.log('sendCustomerAddedEmail called with:', {
+  console.log('📧 sendCustomerAddedEmail called with:', {
     to: customerEmail,
     customerName,
     userName
@@ -614,19 +656,27 @@ export async function sendCustomerAddedEmail(
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
 
+    console.log('🎨 Rendering customerAdded.ejs template...');
     const htmlBody = await renderTemplate('customerAdded.ejs', {
       customerName,
       userName,
       appOpenLink,
       year: new Date().getFullYear()
     });
+    console.log('✅ Template rendered successfully');
 
     const subject = `You've been added to ${userName}'s Khata on Evenly`;
 
+    console.log('📤 Sending customer added email...');
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('Customer added email sent successfully to:', customerEmail);
-  } catch (error) {
-    console.error('Error in sendCustomerAddedEmail:', error);
+    console.log('✅ Customer added email sent successfully to:', customerEmail);
+  } catch (error: any) {
+    console.error('❌ Error in sendCustomerAddedEmail:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      to: customerEmail
+    });
     // Don't throw - email failure shouldn't break customer creation
   }
 }

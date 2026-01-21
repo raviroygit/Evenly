@@ -10,6 +10,7 @@ import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
  */
 class EvenlyApiClient {
   private client: AxiosInstance;
+  private currentOrganizationId: string | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -23,6 +24,40 @@ class EvenlyApiClient {
     });
 
     this.setupInterceptors();
+    this.initializeOrganizationId();
+  }
+
+  /**
+   * Initialize organization ID from storage on app startup
+   */
+  private async initializeOrganizationId() {
+    try {
+      const authData = await AuthStorage.getAuthData();
+      if (authData?.user?.currentOrganization?.id) {
+        this.currentOrganizationId = authData.user.currentOrganization.id;
+        console.log('[EvenlyApiClient] Initialized with organization ID:', this.currentOrganizationId);
+      } else if (authData?.user?.organizations && authData.user.organizations.length > 0) {
+        this.currentOrganizationId = authData.user.organizations[0].id;
+        console.log('[EvenlyApiClient] Initialized with first organization ID:', this.currentOrganizationId);
+      }
+    } catch (error) {
+      console.error('[EvenlyApiClient] Failed to initialize organization ID:', error);
+    }
+  }
+
+  /**
+   * Set the current organization ID (called when user logs in or switches org)
+   */
+  setOrganizationId(organizationId: string | null) {
+    this.currentOrganizationId = organizationId;
+    console.log('[EvenlyApiClient] Organization ID updated:', organizationId);
+  }
+
+  /**
+   * Get the current organization ID
+   */
+  getOrganizationId(): string | null {
+    return this.currentOrganizationId;
   }
 
   private setupInterceptors() {
@@ -50,12 +85,14 @@ class EvenlyApiClient {
             console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }
 
-          // Add organization context header
-          const currentOrgId = await AuthStorage.getCurrentOrganizationId();
-          if (currentOrgId) {
+          // Add organization context header from in-memory storage
+          // Backend requires this to filter data by organization
+          if (this.currentOrganizationId) {
             config.headers = config.headers || {};
-            config.headers['X-Organization-Id'] = currentOrgId;
-            console.log(`[${Platform.OS}] Adding organization context: ${currentOrgId}`);
+            config.headers['x-organization-id'] = this.currentOrganizationId;
+            console.log(`[${Platform.OS}] ✅ Added organization ID header:`, this.currentOrganizationId);
+          } else {
+            console.warn(`[${Platform.OS}] ⚠️ No organization ID available - request will fail on backend`);
           }
 
           return config;

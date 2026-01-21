@@ -7,6 +7,7 @@ interface AuthResponse {
   success: boolean;
   message: string;
   user?: any;
+  organization?: any;
   ssoToken?: string;
   accessToken?: string;
   refreshToken?: string;
@@ -26,12 +27,13 @@ export class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-Organization-Id': config.auth.organizationId,
         },
         timeout: 30000, // Increased timeout to 30 seconds
       });
 
       return {
-        success: true,
+        success: response.data.success !== false,
         message: response.data.message || 'Magic link sent to your email!',
       };
     } catch (error: any) {
@@ -54,12 +56,13 @@ export class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-Organization-Id': config.auth.organizationId,
         },
         timeout: 30000, // Increased timeout to 30 seconds
       });
 
       return {
-        success: true,
+        success: response.data.success !== false,
         message: response.data.message || 'OTP sent to your email!',
       };
     } catch (error: any) {
@@ -83,6 +86,7 @@ export class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-Organization-Id': config.auth.organizationId,
         },
         timeout: 30000, // Increased timeout to 30 seconds
       });
@@ -91,9 +95,9 @@ export class AuthService {
         // Extract sso_token from response headers
         const setCookieHeader = response.headers['set-cookie'];
         let ssoToken = null;
-        
+
         if (setCookieHeader) {
-          const ssoTokenMatch = setCookieHeader.find(cookie => 
+          const ssoTokenMatch = setCookieHeader.find(cookie =>
             cookie.startsWith('sso_token=')
           );
           if (ssoTokenMatch) {
@@ -107,6 +111,7 @@ export class AuthService {
           email: response.data.user.email,
           name: response.data.user.name,
           avatar: response.data.user.avatar,
+          phoneNumber: response.data.user.phoneNumber, // Sync phoneNumber to database
         });
 
         return {
@@ -117,7 +122,10 @@ export class AuthService {
             email: syncedUser.email,
             name: syncedUser.name,
             avatar: syncedUser.avatar,
+            phoneNumber: syncedUser.phoneNumber, // Return phoneNumber from synced user
+            role: response.data.user.role,
           },
+          organization: response.data.organization,
           ssoToken: ssoToken || undefined, // Use the actual sso_token from cookie
           accessToken: response.data.accessToken,
           refreshToken: response.data.refreshToken,
@@ -232,13 +240,15 @@ export class AuthService {
         timeout: 30000, // Increased timeout to 30 seconds
       });
 
-      if (response.data.user) {
+      // Auth service returns: { success: true, user: {...}, organization: {...} }
+      if (response.data.success && response.data.user) {
         // Sync user with local database
         const syncedUser = await UserService.createOrUpdateUser({
           id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           avatar: response.data.user.avatar,
+          phoneNumber: response.data.user.phoneNumber, // Sync phoneNumber to database
         });
 
         return {
@@ -249,7 +259,9 @@ export class AuthService {
             email: syncedUser.email,
             name: syncedUser.name,
             avatar: syncedUser.avatar,
+            phoneNumber: syncedUser.phoneNumber, // Return phoneNumber from synced user
           },
+          organization: response.data.organization, // Include organization from auth service
         };
       }
 

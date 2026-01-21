@@ -1,5 +1,5 @@
 import { eq, and, desc, count } from 'drizzle-orm';
-import { db, payments, userBalances, users, type Payment, type NewPayment } from '../db';
+import { db, payments, userBalances, users, groups, type Payment, type NewPayment } from '../db';
 import { alias } from 'drizzle-orm/pg-core';
 import { GroupService } from './groupService';
 import { NotFoundError, ForbiddenError, ValidationError, DatabaseError } from '../utils/errors';
@@ -17,9 +17,23 @@ export class PaymentService {
       currency?: string;
       description?: string;
     },
-    createdBy: string
+    createdBy: string,
+    organizationId?: string
   ): Promise<Payment> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, paymentData.groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Validate group membership
       const isMember = await GroupService.isUserGroupMember(paymentData.groupId, createdBy);
       if (!isMember) {
@@ -29,7 +43,7 @@ export class PaymentService {
       // Validate both users are group members
       const isFromUserMember = await GroupService.isUserGroupMember(paymentData.groupId, paymentData.fromUserId);
       const isToUserMember = await GroupService.isUserGroupMember(paymentData.groupId, paymentData.toUserId);
-      
+
       if (!isFromUserMember || !isToUserMember) {
         throw new ValidationError('Both users must be members of the group');
       }
@@ -41,8 +55,8 @@ export class PaymentService {
       }
 
       // Check if there's actually a debt to settle
-      const fromUserBalance = await this.getUserBalanceInGroup(paymentData.fromUserId, paymentData.groupId);
-      const toUserBalance = await this.getUserBalanceInGroup(paymentData.toUserId, paymentData.groupId);
+      const fromUserBalance = await this.getUserBalanceInGroup(paymentData.fromUserId, paymentData.groupId, organizationId);
+      const toUserBalance = await this.getUserBalanceInGroup(paymentData.toUserId, paymentData.groupId, organizationId);
 
       // fromUserBalance should be negative (they owe money)
       // toUserBalance should be positive (they are owed money)
@@ -73,7 +87,7 @@ export class PaymentService {
 
       return createdPayment;
     } catch (error) {
-      if (error instanceof ForbiddenError || error instanceof ValidationError) {
+      if (error instanceof ForbiddenError || error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error creating payment:', error);
@@ -84,16 +98,47 @@ export class PaymentService {
   /**
    * Get payment by ID
    */
-  static async getPaymentById(paymentId: string): Promise<Payment | null> {
+  static async getPaymentById(paymentId: string, organizationId?: string): Promise<Payment | null> {
     try {
-      const [payment] = await db
-        .select()
-        .from(payments)
-        .where(eq(payments.id, paymentId))
-        .limit(1);
+      if (organizationId) {
+        // Validate payment belongs to organization via groups table
+        const [payment] = await db
+          .select({
+            id: payments.id,
+            fromUserId: payments.fromUserId,
+            toUserId: payments.toUserId,
+            groupId: payments.groupId,
+            amount: payments.amount,
+            currency: payments.currency,
+            description: payments.description,
+            paymentMethod: payments.paymentMethod,
+            status: payments.status,
+            createdAt: payments.createdAt,
+            updatedAt: payments.updatedAt,
+          })
+          .from(payments)
+          .innerJoin(groups, eq(payments.groupId, groups.id))
+          .where(and(eq(payments.id, paymentId), eq(groups.organizationId, organizationId)))
+          .limit(1);
 
-      return payment || null;
+        if (!payment) {
+          throw new NotFoundError('Payment not found or does not belong to your organization');
+        }
+
+        return payment;
+      } else {
+        const [payment] = await db
+          .select()
+          .from(payments)
+          .where(eq(payments.id, paymentId))
+          .limit(1);
+
+        return payment || null;
+      }
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       console.error('Error fetching payment:', error);
       throw new DatabaseError('Failed to fetch payment');
     }
@@ -109,12 +154,26 @@ export class PaymentService {
       page?: number;
       limit?: number;
       status?: 'pending' | 'completed' | 'cancelled';
-    } = {}
+    } = {},
+    organizationId?: string
   ): Promise<{
     payments: (Payment & { fromUser: any; toUser: any })[];
     total: number;
   }> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
@@ -180,7 +239,7 @@ export class PaymentService {
         total: totalResult.count,
       };
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error fetching group payments:', error);
@@ -198,7 +257,8 @@ export class PaymentService {
       limit?: number;
       status?: 'pending' | 'completed' | 'cancelled';
       type?: 'sent' | 'received';
-    } = {}
+    } = {},
+    organizationId?: string
   ): Promise<{
     payments: (Payment & { fromUser: any; toUser: any })[];
     total: number;
@@ -211,7 +271,7 @@ export class PaymentService {
       const fromUser = alias(users, 'fromUser');
       const toUser = alias(users, 'toUser');
 
-      // Build query conditions
+      // Build query conditions - start with user filter
       let whereConditions: any;
       if (type === 'sent') {
         whereConditions = eq(payments.fromUserId, userId);
@@ -232,14 +292,22 @@ export class PaymentService {
         }
       }
 
-      // Get total count
-      const [totalResult] = await db
-        .select({ count: count() })
-        .from(payments)
-        .where(whereConditions);
+      // Add organizationId filter if provided
+      if (organizationId) {
+        whereConditions = whereConditions
+          ? and(whereConditions, eq(groups.organizationId, organizationId))
+          : eq(groups.organizationId, organizationId);
+      }
 
-      // Get payments
-      const paymentsList = await db
+      // Get total count - join with groups if organizationId is provided
+      let totalCountQuery = db.select({ count: count() }).from(payments);
+      if (organizationId) {
+        totalCountQuery = totalCountQuery.innerJoin(groups, eq(payments.groupId, groups.id)) as any;
+      }
+      const [totalResult] = await totalCountQuery.where(whereConditions);
+
+      // Get payments - join with groups if organizationId is provided
+      let paymentsQuery = db
         .select({
           id: payments.id,
           fromUserId: payments.fromUserId,
@@ -265,7 +333,13 @@ export class PaymentService {
             avatar: fromUser.avatar,
           },
         })
-        .from(payments)
+        .from(payments);
+
+      if (organizationId) {
+        paymentsQuery = paymentsQuery.innerJoin(groups, eq(payments.groupId, groups.id)) as any;
+      }
+
+      const paymentsList = await paymentsQuery
         .leftJoin(fromUser, eq(payments.fromUserId, fromUser.id))
         .leftJoin(toUser, eq(payments.toUserId, toUser.id))
         .where(whereConditions)
@@ -289,10 +363,11 @@ export class PaymentService {
   static async updatePaymentStatus(
     paymentId: string,
     status: 'pending' | 'completed' | 'cancelled',
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<Payment> {
     try {
-      const payment = await this.getPaymentById(paymentId);
+      const payment = await this.getPaymentById(paymentId, organizationId);
       if (!payment) {
         throw new NotFoundError('Payment');
       }
@@ -326,7 +401,7 @@ export class PaymentService {
 
       // If payment is completed, update user balances
       if (status === 'completed') {
-        await this.updateBalancesAfterPayment(paymentId);
+        await this.updateBalancesAfterPayment(paymentId, organizationId);
       }
 
       return updatedPayment;
@@ -342,9 +417,9 @@ export class PaymentService {
   /**
    * Delete payment
    */
-  static async deletePayment(paymentId: string, userId: string): Promise<void> {
+  static async deletePayment(paymentId: string, userId: string, organizationId?: string): Promise<void> {
     try {
-      const payment = await this.getPaymentById(paymentId);
+      const payment = await this.getPaymentById(paymentId, organizationId);
       if (!payment) {
         throw new NotFoundError('Payment');
       }
@@ -375,8 +450,21 @@ export class PaymentService {
   /**
    * Get user balance in a specific group
    */
-  private static async getUserBalanceInGroup(userId: string, groupId: string): Promise<number> {
+  private static async getUserBalanceInGroup(userId: string, groupId: string, organizationId?: string): Promise<number> {
     try {
+      // Validate group belongs to organization if provided
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       const [balance] = await db
         .select()
         .from(userBalances)
@@ -385,6 +473,9 @@ export class PaymentService {
 
       return balance ? parseFloat(balance.balance) : 0;
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       console.error('Error fetching user balance:', error);
       return 0;
     }
@@ -393,9 +484,9 @@ export class PaymentService {
   /**
    * Update user balances after payment completion
    */
-  private static async updateBalancesAfterPayment(paymentId: string): Promise<void> {
+  private static async updateBalancesAfterPayment(paymentId: string, organizationId?: string): Promise<void> {
     try {
-      const payment = await this.getPaymentById(paymentId);
+      const payment = await this.getPaymentById(paymentId, organizationId);
       if (!payment || payment.status !== 'completed') {
         return;
       }
@@ -406,7 +497,7 @@ export class PaymentService {
       const toUserId = payment.toUserId;
 
       // Update from user's balance (reduce their debt)
-      const fromUserBalance = await this.getUserBalanceInGroup(fromUserId, groupId);
+      const fromUserBalance = await this.getUserBalanceInGroup(fromUserId, groupId, organizationId);
       const newFromUserBalance = fromUserBalance + amount; // fromUserBalance is negative, so adding amount reduces debt
 
       await db
@@ -418,7 +509,7 @@ export class PaymentService {
         .where(and(eq(userBalances.userId, fromUserId), eq(userBalances.groupId, groupId)));
 
       // Update to user's balance (reduce what they are owed)
-      const toUserBalance = await this.getUserBalanceInGroup(toUserId, groupId);
+      const toUserBalance = await this.getUserBalanceInGroup(toUserId, groupId, organizationId);
       const newToUserBalance = toUserBalance - amount; // toUserBalance is positive, so subtracting amount reduces what they're owed
 
       await db
@@ -429,6 +520,9 @@ export class PaymentService {
         })
         .where(and(eq(userBalances.userId, toUserId), eq(userBalances.groupId, groupId)));
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       console.error('Error updating balances after payment:', error);
       throw new DatabaseError('Failed to update balances after payment');
     }
@@ -437,7 +531,7 @@ export class PaymentService {
   /**
    * Get payment statistics for a group
    */
-  static async getGroupPaymentStats(groupId: string, userId: string): Promise<{
+  static async getGroupPaymentStats(groupId: string, userId: string, organizationId?: string): Promise<{
     totalPayments: number;
     totalAmount: number;
     pendingPayments: number;
@@ -445,6 +539,19 @@ export class PaymentService {
     cancelledPayments: number;
   }> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
@@ -460,7 +567,7 @@ export class PaymentService {
         cancelledPayments: 0,
       };
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error fetching payment statistics:', error);

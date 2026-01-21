@@ -18,9 +18,10 @@ import { PrivacySecurityModal } from '../../components/modals/PrivacySecurityMod
 import { PersonalInfoModal } from '../../components/modals/PersonalInfoModal';
 import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
+import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, currentOrganization } = useAuth();
   const { colors, toggleTheme } = useTheme();
   const router = useRouter();
   const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
@@ -184,6 +185,13 @@ export const ProfileScreen: React.FC = () => {
         onThemeToggle={toggleTheme}
       />
 
+      {/* Organization Switcher - Only for owners */}
+      {currentOrganization?.role === 'owner' && (
+        <View style={styles.orgSwitcherContainer}>
+          <OrganizationSwitcher />
+        </View>
+      )}
+
       {/* Balance Summary */}
       <GlassMenuCard
         title="Balance Summary"
@@ -255,20 +263,6 @@ export const ProfileScreen: React.FC = () => {
             subtitle: "Update your details",
             onPress: () => {
               setShowPersonalInfoModal(true);
-            },
-          },
-          {
-            title: "Payment Methods",
-            subtitle: "Manage cards and accounts",
-            onPress: () => {
-              // Handle payment methods
-            },
-          },
-          {
-            title: "Notifications",
-            subtitle: "Configure alerts",
-            onPress: () => {
-              // Handle notifications
             },
           },
           {
@@ -387,5 +381,8 @@ const styles = StyleSheet.create({
   balanceLabel: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  orgSwitcherContainer: {
+    marginBottom: 20,
   },
 });

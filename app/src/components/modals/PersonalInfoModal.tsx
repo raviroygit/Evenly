@@ -115,11 +115,13 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         // Update local state with the response data
         const updated = result.data?.user;
         if (updated) {
+          // Preserve all existing user fields and update with new data
           setUser({
-            id: updated.id,
-            email: updated.email,
-            name: updated.name,
-            phoneNumber: updated.phoneNumber
+            ...user,
+            id: updated.id || user?.id,
+            email: updated.email || user?.email,
+            name: updated.name || user?.name,
+            phoneNumber: updated.phoneNumber || user?.phoneNumber
           });
         } else if (user) {
           // Fallback: update with the payload if no user data in response

@@ -10,7 +10,7 @@ import {
   type NewKhataTransaction,
 } from '../db';
 import { NotFoundError, ValidationError, DatabaseError } from '../utils/errors';
-import { sendKhataTransactionEmail } from './emailService';
+import { sendKhataTransactionEmail, sendCustomerAddedEmail } from './emailService';
 
 export class KhataService {
   /**
@@ -22,13 +22,23 @@ export class KhataService {
       search?: string;
       filterType?: 'all' | 'give' | 'get' | 'settled';
       sortType?: 'most-recent' | 'oldest' | 'highest-amount' | 'least-amount' | 'name-az';
+      organizationId?: string;
     } = {}
   ): Promise<Array<KhataCustomer & { balance: string; type: 'give' | 'get' | 'settled' }>> {
     try {
-      const { search, filterType = 'all', sortType = 'most-recent' } = options;
+      const { search, filterType = 'all', sortType = 'most-recent', organizationId } = options;
 
-      // Get all customers for the user
-      const whereConditions = [eq(khataCustomers.userId, userId)];
+      // If no organizationId provided, return empty array
+      if (!organizationId) {
+        console.warn('[KhataService] No organizationId provided, returning empty customers list');
+        return [];
+      }
+
+      // Get all customers for the user and organization
+      const whereConditions = [
+        eq(khataCustomers.userId, userId),
+        eq(khataCustomers.organizationId, organizationId)
+      ];
 
       if (search) {
         whereConditions.push(
@@ -127,9 +137,27 @@ export class KhataService {
    */
   static async getCustomerById(
     customerId: string,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<KhataCustomer & { balance: string; type: 'give' | 'get' | 'settled' }> {
     try {
+      // Validate organizationId if provided
+      if (organizationId) {
+        const [customer] = await db
+          .select()
+          .from(khataCustomers)
+          .where(and(
+            eq(khataCustomers.id, customerId),
+            eq(khataCustomers.userId, userId),
+            eq(khataCustomers.organizationId, organizationId)
+          ))
+          .limit(1);
+
+        if (!customer) {
+          throw new NotFoundError('Customer not found or does not belong to your organization');
+        }
+      }
+
       const customer = await db
         .select()
         .from(khataCustomers)
@@ -189,10 +217,12 @@ export class KhataService {
       avatar?: string;
       notes?: string;
     },
-    userId: string
+    userId: string,
+    organizationId: string
   ): Promise<KhataCustomer> {
     try {
       const newCustomer: NewKhataCustomer = {
+        organizationId,
         userId,
         name: customerData.name,
         email: customerData.email || null,
@@ -203,6 +233,37 @@ export class KhataService {
       };
 
       const [customer] = await db.insert(khataCustomers).values(newCustomer).returning();
+
+      // Send email notification to customer in background (non-blocking)
+      if (customer.email) {
+        const customerEmail = customer.email; // Capture for closure
+        // Fire-and-forget: Don't await, let it run in background
+        (async () => {
+          try {
+            // Get user's name for the email
+            const [user] = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, userId))
+              .limit(1);
+
+            if (user) {
+              console.log('📧 [Background] Sending customer added email to:', customerEmail);
+              await sendCustomerAddedEmail(
+                customerEmail,
+                customer.name,
+                user.name || 'User'
+              );
+              console.log('✅ [Background] Customer added email sent successfully');
+            }
+          } catch (emailError: any) {
+            console.error('⚠️ [Background] Failed to send customer added email:', emailError.message);
+            // Email failure doesn't affect customer creation
+          }
+        })().catch((err) => {
+          console.error('⚠️ [Background] Email promise rejected:', err);
+        });
+      }
 
       return customer;
     } catch (error: any) {
@@ -224,11 +285,12 @@ export class KhataService {
       avatar?: string;
       notes?: string;
     },
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<KhataCustomer> {
     try {
-      // Verify ownership
-      const customer = await this.getCustomerById(customerId, userId);
+      // Verify ownership and organizationId
+      const customer = await this.getCustomerById(customerId, userId, organizationId);
 
       const updateData: Partial<NewKhataCustomer> = {
         updatedAt: new Date(),
@@ -260,10 +322,10 @@ export class KhataService {
   /**
    * Delete a customer
    */
-  static async deleteCustomer(customerId: string, userId: string): Promise<void> {
+  static async deleteCustomer(customerId: string, userId: string, organizationId?: string): Promise<void> {
     try {
-      // Verify ownership
-      await this.getCustomerById(customerId, userId);
+      // Verify ownership and organizationId
+      await this.getCustomerById(customerId, userId, organizationId);
 
       await db.delete(khataCustomers).where(eq(khataCustomers.id, customerId));
     } catch (error: any) {
@@ -280,11 +342,12 @@ export class KhataService {
    */
   static async getCustomerTransactions(
     customerId: string,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<KhataTransaction[]> {
     try {
-      // Verify customer ownership
-      await this.getCustomerById(customerId, userId);
+      // Verify customer ownership and organizationId
+      await this.getCustomerById(customerId, userId, organizationId);
 
       const transactions = await db
         .select()
@@ -315,11 +378,12 @@ export class KhataService {
       imageUrl?: string;
       transactionDate?: string;
     },
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<KhataTransaction> {
     try {
-      // Verify customer ownership
-      const customer = await this.getCustomerById(transactionData.customerId, userId);
+      // Verify customer ownership and organizationId
+      const customer = await this.getCustomerById(transactionData.customerId, userId, organizationId);
 
       // Get current balance
       const lastTransaction = await db
@@ -366,29 +430,36 @@ export class KhataService {
         .values(newTransaction)
         .returning();
 
-      // Get user info for email notification
-      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-
-      // Send email notification if customer has email
-      if (customer.email && user) {
-        try {
-          await sendKhataTransactionEmail(
-            customer.email,
-            customer.name,
-            user.name,
-            {
-              type: transactionData.type,
-              amount: transactionData.amount,
-              currency: transactionData.currency || 'INR',
-              description: transactionData.description,
-              balance: newBalance.toFixed(2),
-              date: transaction.transactionDate.toISOString(),
+      // Send email notification in background (non-blocking)
+      if (customer.email) {
+        const customerEmail = customer.email; // Capture for closure
+        // Fire-and-forget: Don't await, let it run in background
+        (async () => {
+          try {
+            const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+            if (user) {
+              console.log('📧 [Background] Sending transaction email to:', customerEmail);
+              await sendKhataTransactionEmail(
+                customerEmail,
+                customer.name,
+                user.name,
+                {
+                  type: transactionData.type,
+                  amount: transactionData.amount,
+                  currency: transactionData.currency || 'INR',
+                  description: transactionData.description,
+                  balance: newBalance.toFixed(2),
+                  date: transaction.transactionDate.toISOString(),
+                }
+              );
+              console.log('✅ [Background] Transaction email sent successfully');
             }
-          );
-        } catch (emailError) {
-          console.error('Error sending email notification:', emailError);
-          // Don't fail the transaction if email fails
-        }
+          } catch (emailError) {
+            console.error('⚠️ [Background] Error sending transaction email:', emailError);
+          }
+        })().catch((err) => {
+          console.error('⚠️ [Background] Transaction email promise rejected:', err);
+        });
       }
 
       return transaction;
@@ -414,7 +485,8 @@ export class KhataService {
       imageUrl?: string;
       transactionDate?: string;
     },
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<KhataTransaction> {
     try {
       // Get the transaction and verify ownership
@@ -428,8 +500,8 @@ export class KhataService {
         throw new NotFoundError('Transaction not found');
       }
 
-      // Verify customer ownership
-      await this.getCustomerById(existingTransaction.customerId, userId);
+      // Verify customer ownership and organizationId
+      await this.getCustomerById(existingTransaction.customerId, userId, organizationId);
 
       // Update the transaction
       const updateData: any = {};
@@ -469,7 +541,7 @@ export class KhataService {
   /**
    * Delete a transaction
    */
-  static async deleteTransaction(transactionId: string, userId: string): Promise<void> {
+  static async deleteTransaction(transactionId: string, userId: string, organizationId?: string): Promise<void> {
     try {
       // Get the transaction and verify ownership
       const [transaction] = await db
@@ -482,8 +554,8 @@ export class KhataService {
         throw new NotFoundError('Transaction not found');
       }
 
-      // Verify customer ownership
-      await this.getCustomerById(transaction.customerId, userId);
+      // Verify customer ownership and organizationId
+      await this.getCustomerById(transaction.customerId, userId, organizationId);
 
       // Delete the transaction
       await db.delete(khataTransactions).where(eq(khataTransactions.id, transactionId));
@@ -538,13 +610,13 @@ export class KhataService {
   /**
    * Get financial summary (total give and total get)
    */
-  static async getFinancialSummary(userId: string): Promise<{
+  static async getFinancialSummary(userId: string, organizationId?: string): Promise<{
     totalGive: string;
     totalGet: string;
   }> {
     try {
       // Get all customers
-      const customers = await this.getCustomers(userId);
+      const customers = await this.getCustomers(userId, { organizationId });
 
       let totalGive = 0;
       let totalGet = 0;

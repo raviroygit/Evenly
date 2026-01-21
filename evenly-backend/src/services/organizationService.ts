@@ -29,8 +29,10 @@ export class OrganizationService {
     try {
       console.log('🔍 OrganizationService: Fetching org from auth service:', orgId);
 
+      // Remove '/auth' from URL since organizations endpoint is at /api/v1/organizations not /api/v1/auth/organizations
+      const baseUrl = this.authServiceUrl.replace(/\/auth$/, '');
       const response = await axios.get(
-        `${this.authServiceUrl}/organizations/${orgId}`,
+        `${baseUrl}/organizations/${orgId}`,
         {
           headers: {
             Cookie: `sso_token=${ssoToken}`,
@@ -168,6 +170,77 @@ export class OrganizationService {
       return newOrg.id;
     } catch (error: any) {
       console.error('❌ OrganizationService: Failed to sync organization:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Sync organization from data (already have the organization data from login response)
+   */
+  static async syncOrganizationFromData(
+    orgData: {
+      id: string;
+      name: string;
+      displayName?: string;
+      domainIdentifier?: string;
+      role?: string;
+    },
+    userId: string
+  ): Promise<string | null> {
+    try {
+      // Check if org already exists in local DB
+      const existingOrgs = await db
+        .select()
+        .from(organizations)
+        .where(eq(organizations.authServiceOrgId, orgData.id))
+        .limit(1);
+
+      if (existingOrgs.length > 0) {
+        console.log('✅ OrganizationService: Organization already exists in local DB');
+        // Make sure membership exists
+        if (orgData.role) {
+          await db.insert(organizationMembers).values({
+            organizationId: existingOrgs[0].id,
+            userId: userId,
+            role: orgData.role as 'owner' | 'admin' | 'member' | 'guest',
+            status: 'active',
+          }).onConflictDoNothing();
+        }
+        return existingOrgs[0].id;
+      }
+
+      // Create local organization record using the data we already have
+      const [newOrg] = await db
+        .insert(organizations)
+        .values({
+          authServiceOrgId: orgData.id,
+          name: orgData.name,
+          slug: orgData.domainIdentifier || orgData.name.toLowerCase().replace(/\s+/g, '-'),
+          displayName: orgData.displayName || orgData.name,
+          logo: null,
+          plan: 'free',
+          maxMembers: 10,
+          createdBy: userId,
+        })
+        .returning();
+
+      console.log('✅ OrganizationService: Organization created in local DB:', newOrg.id);
+
+      // Create local membership record
+      if (orgData.role) {
+        await db.insert(organizationMembers).values({
+          organizationId: newOrg.id,
+          userId: userId,
+          role: orgData.role as 'owner' | 'admin' | 'member' | 'guest',
+          status: 'active',
+        }).onConflictDoNothing();
+
+        console.log('✅ OrganizationService: Membership created in local DB');
+      }
+
+      return newOrg.id;
+    } catch (error: any) {
+      console.error('❌ OrganizationService: Failed to sync organization from data:', error.message);
       return null;
     }
   }

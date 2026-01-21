@@ -9,6 +9,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import cookie from '@fastify/cookie';
 import { config } from './config/config';
 import { testConnection, closePool } from './config/database';
+import { initializeDatabase } from './utils/migrate';
 import { groupRoutes } from './routes/groupRoutes';
 import { expenseRoutes } from './routes/expenseRoutes';
 import { balanceRoutes } from './routes/balanceRoutes';
@@ -284,12 +285,21 @@ const start = async () => {
       console.error('⚠️  Continuing startup - basic routes are available');
     }
 
+    // Run database migrations before starting the server
+    console.log('🔄 Running database migrations...');
+    const migrationSuccess = await initializeDatabase();
+    if (!migrationSuccess) {
+      console.error('❌ Database migration failed!');
+      process.exit(1);
+    }
+    console.log('✅ Database migrations completed successfully');
+
     // Now start the server after plugins and routes are registered
     const port = config.server.port || parseInt(process.env.PORT || '8080', 10);
     const host = config.server.host || '0.0.0.0';
-    
+
     console.log(`🔧 Starting server on ${host}:${port}...`);
-    
+
     await fastify.listen({
       port: port,
       host: host,

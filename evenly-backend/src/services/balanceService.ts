@@ -1,5 +1,5 @@
 import { eq, and, desc, sum } from 'drizzle-orm';
-import { db, userBalances, users, type UserBalance, type SimplifiedDebt } from '../db';
+import { db, userBalances, users, groups, type UserBalance, type SimplifiedDebt } from '../db';
 import { GroupService } from './groupService';
 import { NotFoundError, ForbiddenError, DatabaseError } from '../utils/errors';
 
@@ -9,9 +9,23 @@ export class BalanceService {
    */
   static async getGroupBalances(
     groupId: string,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<(UserBalance & { user: any })[]> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
@@ -39,7 +53,7 @@ export class BalanceService {
 
       return balances;
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error fetching group balances:', error);
@@ -50,20 +64,37 @@ export class BalanceService {
   /**
    * Get user's balances across all groups
    */
-  static async getUserBalances(userId: string): Promise<UserBalance[]> {
+  static async getUserBalances(userId: string, organizationId?: string): Promise<UserBalance[]> {
     try {
-      const balances = await db
-        .select({
-          id: userBalances.id,
-          userId: userBalances.userId,
-          groupId: userBalances.groupId,
-          balance: userBalances.balance,
-          updatedAt: userBalances.updatedAt,
-        })
-        .from(userBalances)
-        .where(eq(userBalances.userId, userId));
+      if (organizationId) {
+        // Filter by organizationId using inner join with groups table
+        const balances = await db
+          .select({
+            id: userBalances.id,
+            userId: userBalances.userId,
+            groupId: userBalances.groupId,
+            balance: userBalances.balance,
+            updatedAt: userBalances.updatedAt,
+          })
+          .from(userBalances)
+          .innerJoin(groups, eq(userBalances.groupId, groups.id))
+          .where(and(eq(userBalances.userId, userId), eq(groups.organizationId, organizationId)));
 
-      return balances;
+        return balances;
+      } else {
+        const balances = await db
+          .select({
+            id: userBalances.id,
+            userId: userBalances.userId,
+            groupId: userBalances.groupId,
+            balance: userBalances.balance,
+            updatedAt: userBalances.updatedAt,
+          })
+          .from(userBalances)
+          .where(eq(userBalances.userId, userId));
+
+        return balances;
+      }
     } catch (error) {
       console.error('Error fetching user balances:', error);
       throw new DatabaseError('Failed to fetch user balances');
@@ -75,16 +106,30 @@ export class BalanceService {
    */
   static async getSimplifiedDebts(
     groupId: string,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<SimplifiedDebt[]> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
         throw new ForbiddenError('You are not a member of this group');
       }
 
-      const balances = await this.getGroupBalances(groupId, userId);
+      const balances = await this.getGroupBalances(groupId, userId, organizationId);
       
       // Separate creditors (positive balance) and debtors (negative balance)
       const creditors = balances.filter(b => parseFloat(b.balance) > 0);
@@ -136,7 +181,7 @@ export class BalanceService {
 
       return simplifiedDebts;
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error calculating simplified debts:', error);
@@ -147,13 +192,13 @@ export class BalanceService {
   /**
    * Get user's net balance (total owed - total owing)
    */
-  static async getUserNetBalance(userId: string): Promise<{
+  static async getUserNetBalance(userId: string, organizationId?: string): Promise<{
     totalOwed: number;
     totalOwing: number;
     netBalance: number;
   }> {
     try {
-      const balances = await this.getUserBalances(userId);
+      const balances = await this.getUserBalances(userId, organizationId);
 
       let totalOwed = 0;
       let totalOwing = 0;
@@ -183,7 +228,8 @@ export class BalanceService {
    */
   static async getGroupBalanceSummary(
     groupId: string,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<{
     totalExpenses: number;
     totalMembers: number;
@@ -194,14 +240,27 @@ export class BalanceService {
     simplifiedDebts: SimplifiedDebt[];
   }> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
         throw new ForbiddenError('You are not a member of this group');
       }
 
-      const balances = await this.getGroupBalances(groupId, userId);
-      const simplifiedDebts = await this.getSimplifiedDebts(groupId, userId);
+      const balances = await this.getGroupBalances(groupId, userId, organizationId);
+      const simplifiedDebts = await this.getSimplifiedDebts(groupId, userId, organizationId);
 
       let totalOwed = 0;
       let totalOwing = 0;
@@ -229,7 +288,7 @@ export class BalanceService {
         simplifiedDebts,
       };
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error calculating group balance summary:', error);
@@ -240,8 +299,21 @@ export class BalanceService {
   /**
    * Recalculate all balances for a group (useful for data consistency)
    */
-  static async recalculateGroupBalances(groupId: string, userId: string): Promise<void> {
+  static async recalculateGroupBalances(groupId: string, userId: string, organizationId?: string): Promise<void> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is an admin of the group
       const isAdmin = await GroupService.isUserGroupAdmin(groupId, userId);
       if (!isAdmin) {
@@ -257,7 +329,7 @@ export class BalanceService {
 
       console.log(`Recalculating balances for group ${groupId}`);
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error recalculating group balances:', error);
@@ -271,9 +343,23 @@ export class BalanceService {
   static async getBalanceHistory(
     groupId: string,
     userId: string,
-    targetUserId: string
+    targetUserId: string,
+    organizationId?: string
   ): Promise<any[]> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is a member of the group
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
       if (!isMember) {
@@ -284,7 +370,7 @@ export class BalanceService {
       // This would require a balance_history table to track changes over time
       return [];
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error fetching balance history:', error);
@@ -295,12 +381,25 @@ export class BalanceService {
   /**
    * Validate group balance consistency
    */
-  static async validateGroupBalanceConsistency(groupId: string): Promise<{
+  static async validateGroupBalanceConsistency(groupId: string, organizationId?: string): Promise<{
     isValid: boolean;
     totalBalance: number;
     issues: string[];
   }> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       const balances = await db
         .select()
         .from(userBalances)
@@ -325,6 +424,9 @@ export class BalanceService {
         issues,
       };
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       console.error('Error validating group balance consistency:', error);
       throw new DatabaseError('Failed to validate group balance consistency');
     }

@@ -22,6 +22,7 @@ export class UserService {
     email: string;
     name: string;
     avatar?: string;
+    phoneNumber?: string;
   }): Promise<User> {
     try {
       console.log('🔍 Checking if user exists in evenly database:', {
@@ -53,6 +54,7 @@ export class UserService {
             email: userData.email,
             name: userData.name,
             avatar: userData.avatar,
+            phoneNumber: userData.phoneNumber,
             updatedAt: new Date(),
           })
           .where(eq(users.authServiceId, userData.id))
@@ -79,6 +81,7 @@ export class UserService {
             email: userData.email,
             name: userData.name,
             avatar: userData.avatar,
+            phoneNumber: userData.phoneNumber,
           })
           .returning();
 

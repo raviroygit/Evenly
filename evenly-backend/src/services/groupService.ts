@@ -1,7 +1,7 @@
 import { eq, and, desc, count, inArray } from 'drizzle-orm';
 import { db, groups, groupMembers, users, type Group, type NewGroup, type GroupMember, type NewGroupMember } from '../db';
 import { UserService } from './userService';
-import { NotFoundError, ForbiddenError, ConflictError, DatabaseError } from '../utils/errors';
+import { NotFoundError, ForbiddenError, ConflictError, DatabaseError, ValidationError } from '../utils/errors';
 
 export class GroupService {
   /**
@@ -17,6 +17,19 @@ export class GroupService {
     organizationId?: string
   ): Promise<Group> {
     try {
+      console.log('🆕 Creating group:', {
+        groupName: groupData.name,
+        createdBy,
+        organizationId,
+        hasOrgId: !!organizationId
+      });
+
+      // Validate organizationId is provided
+      if (!organizationId) {
+        console.error('❌ CreateGroup: Organization ID is missing!');
+        throw new ValidationError('Organization ID is required');
+      }
+
       // User is already synced by auth middleware, no need to sync again
       const newGroup: NewGroup = {
         name: groupData.name,
@@ -33,11 +46,14 @@ export class GroupService {
         .returning();
 
       // Add creator as admin member
-      await this.addGroupMember(createdGroup.id, createdBy, 'admin');
+      await this.addGroupMember(createdGroup.id, createdBy, 'admin', organizationId);
 
       return createdGroup;
     } catch (error) {
       console.error('Error creating group:', error);
+      if (error instanceof ValidationError || error instanceof DatabaseError || error instanceof NotFoundError) {
+        throw error;
+      }
       throw new DatabaseError('Failed to create group');
     }
   }
@@ -159,13 +175,32 @@ export class GroupService {
       currency?: string;
       defaultSplitType?: 'equal' | 'percentage' | 'shares' | 'exact';
     },
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<Group> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is admin of the group
-      const isAdmin = await this.isUserGroupAdmin(groupId, userId);
+      const isAdmin = await this.isUserGroupAdmin(groupId, userId, organizationId);
       if (!isAdmin) {
         throw new ForbiddenError('Only group admins can update group details');
+      }
+
+      const conditions = [eq(groups.id, groupId)];
+      if (organizationId) {
+        conditions.push(eq(groups.organizationId, organizationId));
       }
 
       const [updatedGroup] = await db
@@ -174,7 +209,7 @@ export class GroupService {
           ...updateData,
           updatedAt: new Date(),
         })
-        .where(eq(groups.id, groupId))
+        .where(and(...conditions))
         .returning();
 
       if (!updatedGroup) {
@@ -194,21 +229,38 @@ export class GroupService {
   /**
    * Delete group
    */
-  static async deleteGroup(groupId: string, userId: string): Promise<void> {
+  static async deleteGroup(groupId: string, userId: string, organizationId?: string): Promise<void> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is admin of the group
-      const isAdmin = await this.isUserGroupAdmin(groupId, userId);
+      const isAdmin = await this.isUserGroupAdmin(groupId, userId, organizationId);
       if (!isAdmin) {
         throw new ForbiddenError('Only group admins can delete the group');
       }
 
       // Delete group - cascade will handle related expenses, splits, balances, etc.
       // The database schema has onDelete: 'cascade' for all related tables
-      await db.delete(groups).where(eq(groups.id, groupId));
-      
+      const conditions = [eq(groups.id, groupId)];
+      if (organizationId) {
+        conditions.push(eq(groups.organizationId, organizationId));
+      }
+      await db.delete(groups).where(and(...conditions));
+
       console.log(`Group ${groupId} deleted successfully with all related data`);
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error deleting group:', error);
@@ -222,9 +274,23 @@ export class GroupService {
   static async addGroupMember(
     groupId: string,
     userId: string,
-    role: 'admin' | 'member' = 'member'
+    role: 'admin' | 'member' = 'member',
+    organizationId?: string
   ): Promise<GroupMember> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // User is already synced by auth middleware, no need to sync again
       // Check if user is already a member
       const existingMember = await db
@@ -250,7 +316,7 @@ export class GroupService {
 
       return createdMember;
     } catch (error) {
-      if (error instanceof ConflictError) {
+      if (error instanceof ConflictError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error adding group member:', error);
@@ -264,11 +330,25 @@ export class GroupService {
   static async removeGroupMember(
     groupId: string,
     userId: string,
-    removedBy: string
+    removedBy: string,
+    organizationId?: string
   ): Promise<void> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if the person removing is an admin
-      const isAdmin = await this.isUserGroupAdmin(groupId, removedBy);
+      const isAdmin = await this.isUserGroupAdmin(groupId, removedBy, organizationId);
       if (!isAdmin) {
         throw new ForbiddenError('Only group admins can remove members');
       }
@@ -287,7 +367,7 @@ export class GroupService {
         .delete(groupMembers)
         .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error removing group member:', error);
@@ -302,11 +382,25 @@ export class GroupService {
     groupId: string,
     userId: string,
     newRole: 'admin' | 'member',
-    updatedBy: string
+    updatedBy: string,
+    organizationId?: string
   ): Promise<GroupMember> {
     try {
+      // Validate group belongs to organization
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if the person updating is an admin
-      const isAdmin = await this.isUserGroupAdmin(groupId, updatedBy);
+      const isAdmin = await this.isUserGroupAdmin(groupId, updatedBy, organizationId);
       if (!isAdmin) {
         throw new ForbiddenError('Only group admins can update member roles');
       }
@@ -346,13 +440,27 @@ export class GroupService {
   /**
    * Check if user is a member of the group
    */
-  static async isUserGroupMember(groupId: string, userId: string): Promise<boolean> {
+  static async isUserGroupMember(groupId: string, userId: string, organizationId?: string): Promise<boolean> {
     try {
+      // Validate group belongs to organization if provided
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          console.log('Group not found or does not belong to organization');
+          return false;
+        }
+      }
+
       const member = await db
         .select()
         .from(groupMembers)
         .where(and(
-          eq(groupMembers.groupId, groupId), 
+          eq(groupMembers.groupId, groupId),
           eq(groupMembers.userId, userId),
           eq(groupMembers.isActive, true)
         ))
@@ -369,8 +477,22 @@ export class GroupService {
   /**
    * Check if user is an admin of the group
    */
-  static async isUserGroupAdmin(groupId: string, userId: string): Promise<boolean> {
+  static async isUserGroupAdmin(groupId: string, userId: string, organizationId?: string): Promise<boolean> {
     try {
+      // Validate group belongs to organization if provided
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          console.log('Group not found or does not belong to organization');
+          return false;
+        }
+      }
+
       const member = await db
         .select()
         .from(groupMembers)
@@ -393,8 +515,22 @@ export class GroupService {
   /**
    * Get group members
    */
-  static async getGroupMembers(groupId: string): Promise<(GroupMember & { user: any })[]> {
+  static async getGroupMembers(groupId: string, organizationId?: string): Promise<(GroupMember & { user: any })[]> {
     try {
+      // Validate group belongs to organization if provided
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          console.warn('Group not found or does not belong to organization');
+          return [];
+        }
+      }
+
       const members = await db
         .select({
           id: groupMembers.id,
@@ -424,10 +560,23 @@ export class GroupService {
   /**
    * Leave group
    */
-  static async leaveGroup(groupId: string, userId: string): Promise<void> {
+  static async leaveGroup(groupId: string, userId: string, organizationId?: string): Promise<void> {
     try {
+      // Validate group belongs to organization if provided
+      if (organizationId) {
+        const [group] = await db
+          .select()
+          .from(groups)
+          .where(and(eq(groups.id, groupId), eq(groups.organizationId, organizationId)))
+          .limit(1);
+
+        if (!group) {
+          throw new NotFoundError('Group not found or does not belong to your organization');
+        }
+      }
+
       // Check if user is the last admin
-      const isAdmin = await this.isUserGroupAdmin(groupId, userId);
+      const isAdmin = await this.isUserGroupAdmin(groupId, userId, organizationId);
       if (isAdmin) {
         const adminCount = await db
           .select({ count: count() })
@@ -443,7 +592,7 @@ export class GroupService {
         .delete(groupMembers)
         .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
     } catch (error) {
-      if (error instanceof ForbiddenError) {
+      if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
       console.error('Error leaving group:', error);

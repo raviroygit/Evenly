@@ -109,9 +109,11 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setPhone('');
       setErrors({});
 
-      // Refresh list first, then close modal
-      await onSuccess();
+      // Close modal immediately for better UX
       onClose();
+
+      // Then refresh list in background
+      await onSuccess();
     } catch (error: any) {
       console.error(editCustomer ? 'Error updating customer:' : 'Error creating customer:', error);
       Alert.alert(

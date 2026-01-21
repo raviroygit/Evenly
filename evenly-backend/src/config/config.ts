@@ -18,6 +18,7 @@ export const config = {
     apiKey: process.env.AUTH_SERVICE_API_KEY || '',
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    organizationId: process.env.ORGANIZATION_ID || '',
   },
   cors: {
     origin: process.env.CORS_ORIGIN || '',

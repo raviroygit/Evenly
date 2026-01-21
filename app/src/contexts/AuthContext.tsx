@@ -4,6 +4,7 @@ import { AuthService } from '../services/AuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
+import { evenlyApiClient } from '../services/EvenlyApiClient';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -48,6 +49,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const authService = useMemo(() => new AuthService(), []);
   const isAuthenticated = !!user;
 
+  const warmAppCache = useCallback(async () => {
+    const TTL = 3 * 60 * 1000; // 3 minutes
+    try {
+      await Promise.all([
+        EvenlyBackendService.getGroups({ cacheTTLMs: TTL }),
+        EvenlyBackendService.getAllExpenses({ page: 1, limit: 20, sortOrder: 'desc', cacheTTLMs: TTL }),
+        EvenlyBackendService.getUserBalances({ cacheTTLMs: TTL }),
+        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: TTL }),
+      ]);
+    } catch {
+      // ignore warmup errors
+    }
+  }, []);
+
   // Initialize user from storage on app start - STAY LOGGED IN
   useEffect(() => {
     const initializeAuth = async () => {
@@ -69,26 +84,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const storedOrg = authData.organizations.find(org => org.id === storedOrgId);
             if (storedOrg) {
               setCurrentOrganization(storedOrg);
+              evenlyApiClient.setOrganizationId(storedOrg.id);
             } else if (authData.organizations.length > 0) {
               setCurrentOrganization(authData.organizations[0]);
+              evenlyApiClient.setOrganizationId(authData.organizations[0].id);
             }
           }
 
-          // Load organizations in background (non-blocking)
-          loadOrganizations().catch((error) => {
-            console.warn('[AuthContext] Failed to load organizations on init:', error);
-          });
-
           // Try to validate session with backend in background (non-blocking)
+          // Preserve phoneNumber from stored user before refreshing
+          const storedPhoneNumber = authData.user?.phoneNumber;
+          
           authService.getCurrentUser()
             .then(async (currentUser) => {
               if (currentUser) {
+                // Preserve phoneNumber if it's missing from the response
+                if (!currentUser.phoneNumber && storedPhoneNumber) {
+                  currentUser.phoneNumber = storedPhoneNumber;
+                }
+
                 // Session is still valid - update user data if changed
                 setUser(currentUser);
 
                 // Update organizations if received
                 if (currentUser.organizations) {
                   setOrganizations(currentUser.organizations);
+
+                  // Update current organization if not set
+                  if (!currentOrganization && currentUser.organizations.length > 0) {
+                    const storedOrgId = await AuthStorage.getCurrentOrganizationId();
+                    const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
+                    if (storedOrg) {
+                      setCurrentOrganization(storedOrg);
+                      evenlyApiClient.setOrganizationId(storedOrg.id);
+                    } else {
+                      setCurrentOrganization(currentUser.organizations[0]);
+                      evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
+                    }
+                  }
                 }
 
                 await AuthStorage.saveAuthData(
@@ -128,7 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  }, [authService, warmAppCache, loadOrganizations]);
+  }, [authService, warmAppCache]);
 
   // Validate session when app comes to foreground - but NEVER log out automatically
   const validateSessionOnForeground = useCallback(async () => {
@@ -148,10 +181,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('[AuthContext] Validating session on foreground');
       const authData = await AuthStorage.getAuthData();
+      // Preserve phoneNumber from stored user before refreshing
+      const storedPhoneNumber = authData?.user?.phoneNumber;
 
       if (authData && authData.accessToken) {
         const currentUser = await authService.getCurrentUser();
         if (currentUser) {
+          // Preserve phoneNumber if it's missing from the response
+          if (!currentUser.phoneNumber && storedPhoneNumber) {
+            currentUser.phoneNumber = storedPhoneNumber;
+          }
+
           // Session still valid - update user data
           setUser(currentUser);
           lastValidation.current = now;
@@ -159,6 +199,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Update organizations if received
           if (currentUser.organizations) {
             setOrganizations(currentUser.organizations);
+
+            // Update current organization if not set
+            if (!currentOrganization && currentUser.organizations.length > 0) {
+              const storedOrgId = await AuthStorage.getCurrentOrganizationId();
+              const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
+              if (storedOrg) {
+                setCurrentOrganization(storedOrg);
+                evenlyApiClient.setOrganizationId(storedOrg.id);
+              } else {
+                setCurrentOrganization(currentUser.organizations[0]);
+                evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
+              }
+            }
           }
 
           await AuthStorage.saveAuthData(
@@ -265,47 +318,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [user]);
 
-  const warmAppCache = useCallback(async () => {
-    const TTL = 3 * 60 * 1000; // 3 minutes
-    try {
-      await Promise.all([
-        EvenlyBackendService.getGroups({ cacheTTLMs: TTL }),
-        EvenlyBackendService.getAllExpenses({ page: 1, limit: 20, sortOrder: 'desc', cacheTTLMs: TTL }),
-        EvenlyBackendService.getUserBalances({ cacheTTLMs: TTL }),
-        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: TTL }),
-      ]);
-    } catch {
-      // ignore warmup errors
-    }
-  }, []);
-
-  // Load user's organizations and set current organization
-  const loadOrganizations = useCallback(async () => {
-    try {
-      console.log('[AuthContext] Loading user organizations...');
-      const orgs = await authService.getUserOrganizations();
-      setOrganizations(orgs);
-
-      if (orgs.length > 0) {
-        // Try to restore last selected organization from storage
-        const storedOrgId = await AuthStorage.getCurrentOrganizationId();
-        const storedOrg = orgs.find(org => org.id === storedOrgId);
-
-        if (storedOrg) {
-          console.log('[AuthContext] Restored organization from storage:', storedOrg.name);
-          setCurrentOrganization(storedOrg);
-        } else {
-          // Default to first organization (usually personal workspace)
-          console.log('[AuthContext] Using first organization:', orgs[0].name);
-          setCurrentOrganization(orgs[0]);
-          await AuthStorage.setCurrentOrganizationId(orgs[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('[AuthContext] Failed to load organizations:', error);
-      // Don't throw error - organization context is optional
-    }
-  }, [authService]);
+  // Organizations are now loaded from auth responses only
+  // No separate API call needed
 
   // Switch to a different organization
   const switchOrganization = useCallback(async (orgId: string) => {
@@ -316,6 +330,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.organization) {
         setCurrentOrganization(response.organization);
         await AuthStorage.setCurrentOrganizationId(orgId);
+        evenlyApiClient.setOrganizationId(orgId);
         console.log('[AuthContext] Successfully switched to:', response.organization.name);
 
         // Refresh app data after switching organizations
@@ -327,18 +342,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService, warmAppCache]);
 
-  // Refresh the list of organizations
+  // Refresh the list of organizations by fetching current user
   const refreshOrganizations = useCallback(async () => {
     try {
-      console.log('[AuthContext] Refreshing organizations...');
-      const orgs = await authService.getUserOrganizations();
-      setOrganizations(orgs);
+      console.log('[AuthContext] Refreshing organizations via /auth/me...');
+      const currentUser = await authService.getCurrentUser();
 
-      // Update current organization if it's in the list
-      if (currentOrganization) {
-        const updatedCurrent = orgs.find(org => org.id === currentOrganization.id);
-        if (updatedCurrent) {
-          setCurrentOrganization(updatedCurrent);
+      if (currentUser && currentUser.organizations) {
+        setOrganizations(currentUser.organizations);
+
+        // Update current organization if it's in the list
+        if (currentOrganization) {
+          const updatedCurrent = currentUser.organizations.find(org => org.id === currentOrganization.id);
+          if (updatedCurrent) {
+            setCurrentOrganization(updatedCurrent);
+          }
         }
       }
     } catch (error) {
@@ -355,11 +373,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(result.user);
 
         // Update organizations if received from login
+        console.log('[AuthContext] Login result user:', result.user);
+        console.log('[AuthContext] User organizations:', result.user.organizations);
+        console.log('[AuthContext] User currentOrganization:', result.user.currentOrganization);
+
         if (result.user.organizations) {
           setOrganizations(result.user.organizations);
           if (result.user.currentOrganization) {
+            console.log('[AuthContext] Setting organization from currentOrganization:', result.user.currentOrganization.id);
             setCurrentOrganization(result.user.currentOrganization);
+            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
+            evenlyApiClient.setOrganizationId(result.user.currentOrganization.id);
+          } else if (result.user.organizations.length > 0) {
+            // Set first organization as current if not specified
+            console.log('[AuthContext] Setting organization from first org:', result.user.organizations[0].id);
+            setCurrentOrganization(result.user.organizations[0]);
+            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
+            evenlyApiClient.setOrganizationId(result.user.organizations[0].id);
           }
+        } else {
+          console.warn('[AuthContext] ⚠️ No organizations in login result!');
         }
 
         await AuthStorage.saveAuthData(
@@ -368,11 +401,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           result.refreshToken,
           result.user.organizations
         );
-
-        // Load organizations after successful login (to get full list if not provided)
-        loadOrganizations().catch((error) => {
-          console.warn('[AuthContext] Failed to load organizations after login:', error);
-        });
 
         // Upgrade to 90-day session
         console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
@@ -392,7 +420,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       return { success: false, message: error.message || 'Login failed' };
     }
-  }, [authService, warmAppCache, loadOrganizations]);
+  }, [authService, warmAppCache]);
 
   const signup = useCallback(async (email: string) => {
     try {
@@ -419,12 +447,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
+      evenlyApiClient.setOrganizationId(null);
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
     } catch (error) {
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
+      evenlyApiClient.setOrganizationId(null);
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
     }
@@ -434,9 +464,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Get current tokens from storage
       const authData = await AuthStorage.getAuthData();
+      // Preserve phoneNumber from stored user before refreshing
+      const storedPhoneNumber = authData?.user?.phoneNumber;
 
       const currentUser = await authService.getCurrentUser();
       if (currentUser) {
+        // Preserve phoneNumber if it's missing from the response
+        if (!currentUser.phoneNumber && storedPhoneNumber) {
+          currentUser.phoneNumber = storedPhoneNumber;
+        }
+
         setUser(currentUser);
 
         // Update organizations if received
@@ -444,7 +481,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setOrganizations(currentUser.organizations);
         }
 
-        // Re-save with existing tokens
+        // Re-save with existing tokens (including preserved phoneNumber)
         await AuthStorage.saveAuthData(
           currentUser,
           authData?.accessToken,

@@ -6,9 +6,6 @@ export const ENV = {
   VOAGENTS_API_URL: process.env.EXPO_PUBLIC_VOAGENTS_API_URL,
   VOAGENTS_AGENT_ID: process.env.EXPO_PUBLIC_VOAGENTS_AGENT_ID,
 
-  // Organization configuration
-  ORGANIZATION_ID: process.env.EXPO_PUBLIC_ORGANIZATION_ID,
-
   // App configuration
   APP_NAME: process.env.EXPO_PUBLIC_APP_NAME || 'Evenly',
   APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION || '1.0.0',
@@ -36,10 +33,6 @@ const validateEnvironment = () => {
     missingVars.push('EXPO_PUBLIC_EVENLY_BACKEND_URL');
   }
 
-  if (!ENV.ORGANIZATION_ID) {
-    missingVars.push('EXPO_PUBLIC_ORGANIZATION_ID');
-  }
-
   if (!ENV.VOAGENTS_API_URL) {
     missingVars.push('EXPO_PUBLIC_VOAGENTS_API_URL');
   }
@@ -53,7 +46,6 @@ const validateEnvironment = () => {
       `Please create a .env file in the app root with these variables.\n` +
       `Example:\n` +
       `EXPO_PUBLIC_EVENLY_BACKEND_URL=https://your-backend.com\n` +
-      `EXPO_PUBLIC_ORGANIZATION_ID=your-organization-id\n` +
       `EXPO_PUBLIC_VOAGENTS_API_URL=https://your-voagents-api.com\n` +
       `EXPO_PUBLIC_VOAGENTS_AGENT_ID=your-agent-id`;
 

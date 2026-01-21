@@ -11,10 +11,11 @@ import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
 import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
-import { SkeletonExpenseList, SkeletonLoader, SkeletonExpenseSummary } from '../../components/ui/SkeletonLoader';
+import { SkeletonExpenseList, SkeletonLoader, SkeletonExpenseSummary, SkeletonExpenseItem } from '../../components/ui/SkeletonLoader';
 import { EnhancedExpense } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
+import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 
 export const GroupDetailsScreen: React.FC = () => {
   const router = useRouter();
@@ -29,7 +30,9 @@ export const GroupDetailsScreen: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<EnhancedExpense | null>(null);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [isUpdatingExpense, setIsUpdatingExpense] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingExpense, setDeletingExpense] = useState<{ id: string; title: string } | null>(null);
@@ -74,18 +77,22 @@ export const GroupDetailsScreen: React.FC = () => {
     };
   }, [expenses]);
 
-  const loadExpenses = async () => {
+  const loadExpenses = async (skipLoadingState = false) => {
     if (!groupId) return;
     
     try {
-      setLoading(true);
+      if (!skipLoadingState) {
+        setLoading(true);
+      }
       const response = await EvenlyBackendService.getGroupExpenses(groupId);
       setExpenses(response.expenses || []);
       setHasMore(false); // For now, we'll load all expenses
     } catch (error) {
       console.error('Error loading group expenses:', error);
     } finally {
-      setLoading(false);
+      if (!skipLoadingState) {
+        setLoading(false);
+      }
     }
   };
 
@@ -93,6 +100,57 @@ export const GroupDetailsScreen: React.FC = () => {
     setRefreshing(true);
     await loadExpenses();
     setRefreshing(false);
+  };
+
+  const handleAddExpense = async (expenseData: {
+    groupId: string;
+    title: string;
+    totalAmount: string;
+    date: string;
+  }) => {
+    try {
+      // Convert date to ISO datetime format (backend requires date-time format)
+      const dateWithTime = expenseData.date.includes('T')
+        ? expenseData.date
+        : `${expenseData.date}T00:00:00.000Z`;
+
+      // Add required fields
+      const fullExpenseData = {
+        ...expenseData,
+        date: dateWithTime,
+        splitType: 'equal' as const,
+        category: 'Other',
+      };
+
+      // Create expense first
+      await EvenlyBackendService.createExpense(fullExpenseData);
+
+      // Set loading state BEFORE closing modal so skeleton is ready
+      setIsAddingExpense(true);
+
+      // Close modal to allow skeleton to show in background
+      setShowAddExpenseModal(false);
+
+      // Wait a bit for modal close animation to complete
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Reload expenses to show new expense (skip loading state since we're using isAddingExpense)
+      await loadExpenses(true);
+
+      // Wait a bit to ensure skeleton is visible and data is rendered
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Show success message
+      Alert.alert('Success', 'Expense added successfully!');
+    } catch (error: any) {
+      console.error('Error adding expense:', error);
+      // Don't show alert here - let the modal handle error display
+      // Re-throw so modal can handle it and keep modal open
+      throw error;
+    } finally {
+      // Hide skeleton loader after everything is done
+      setIsAddingExpense(false);
+    }
   };
 
   const handleUpdateExpense = async (expenseId: string, expenseData: {
@@ -183,7 +241,7 @@ export const GroupDetailsScreen: React.FC = () => {
 
       {/* Summary Cards */}
       <View style={styles.summaryContainer}>
-        {loading || refreshing ? (
+        {loading || refreshing || isAddingExpense ? (
           <SkeletonExpenseSummary />
         ) : (
           <ExpenseSummary
@@ -195,6 +253,60 @@ export const GroupDetailsScreen: React.FC = () => {
       </View>
     </>
   );
+
+  // Show skeleton items when adding expense (in footer if items exist, or as main content if list is empty)
+  const ListFooterComponent = () => {
+    // Don't show footer skeleton - we'll show skeleton items in the main list instead
+    return null;
+  };
+
+  // Render skeleton items when adding expense
+  const renderSkeletonItem = () => {
+    return <SkeletonExpenseItem />;
+  };
+
+  // If adding expense and list is empty, show skeleton items as the main content
+  if (isAddingExpense && expenses.length === 0 && !loading) {
+    return (
+      <>
+        <View style={[styles.fullScreenContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <ListHeaderComponent />
+            <View style={styles.contentContainer}>
+              <SkeletonExpenseList count={5} />
+            </View>
+          </View>
+        </View>
+        {/* Keep modals available */}
+        <GroupInfoModal
+          visible={showGroupInfoModal}
+          onClose={() => setShowGroupInfoModal(false)}
+          groupId={groupId}
+        />
+        {user && groupId && (
+          <AddExpenseModal
+            visible={showAddExpenseModal}
+            onClose={() => setShowAddExpenseModal(false)}
+            onAddExpense={handleAddExpense}
+            currentUserId={user.id}
+            preselectedGroupId={groupId}
+          />
+        )}
+        <FloatingActionButton
+          actions={[
+            {
+              id: 'add-expense',
+              title: 'Add Expense',
+              icon: '💰',
+              onPress: () => setShowAddExpenseModal(true),
+              color: '#10B981',
+            },
+          ]}
+          position="bottom-right"
+        />
+      </>
+    );
+  }
 
   // Show skeleton loading state while groups are loading
   if (groupsLoading) {
@@ -260,18 +372,26 @@ export const GroupDetailsScreen: React.FC = () => {
       <View style={[styles.fullScreenContainer, { backgroundColor: colors.background }]}>
         <View style={[styles.container, { backgroundColor: colors.background }]}>
           <InfiniteScrollScreen
-            data={expenses}
-            renderItem={renderExpenseItem}
-            keyExtractor={(expense) => expense.id}
-            loading={loading}
+            data={isAddingExpense && expenses.length > 0 
+              ? (Array.from({ length: Math.min(expenses.length + 3, 10) }).fill(null) as EnhancedExpense[])
+              : expenses}
+            renderItem={isAddingExpense && expenses.length > 0 
+              ? (renderSkeletonItem as any)
+              : renderExpenseItem}
+            keyExtractor={(item, index) => 
+              isAddingExpense && expenses.length > 0 
+                ? `skeleton-${index}` 
+                : ((item as EnhancedExpense)?.id || `expense-${index}`)}
+            loading={loading || (isAddingExpense && expenses.length === 0)}
             loadingMore={loadingMore}
             hasMore={hasMore}
             onLoadMore={() => {}}
             onRefresh={onRefresh}
             refreshing={refreshing}
             emptyMessage="No transactions in this group yet."
-            loadingMessage="Loading transactions..."
+            loadingMessage={isAddingExpense ? "Adding expense..." : "Loading transactions..."}
             ListHeaderComponent={ListHeaderComponent}
+            ListFooterComponent={ListFooterComponent}
             contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
             showsVerticalScrollIndicator={false}
             style={{ backgroundColor: colors.background, flex: 1 }}
@@ -285,6 +405,17 @@ export const GroupDetailsScreen: React.FC = () => {
         onClose={() => setShowGroupInfoModal(false)}
         groupId={groupId}
       />
+
+      {/* Add Expense Modal */}
+      {user && groupId && (
+        <AddExpenseModal
+          visible={showAddExpenseModal}
+          onClose={() => setShowAddExpenseModal(false)}
+          onAddExpense={handleAddExpense}
+          currentUserId={user.id}
+          preselectedGroupId={groupId}
+        />
+      )}
 
       {/* Edit Expense Modal */}
       {user && (
@@ -312,6 +443,20 @@ export const GroupDetailsScreen: React.FC = () => {
         onConfirm={confirmDeleteExpense}
         title="Delete Expense"
         description={`Are you sure you want to delete "${deletingExpense?.title}"? This action cannot be undone.`}
+      />
+
+      {/* Floating Action Button */}
+      <FloatingActionButton
+        actions={[
+          {
+            id: 'add-expense',
+            title: 'Add Expense',
+            icon: '💰',
+            onPress: () => setShowAddExpenseModal(true),
+            color: '#10B981',
+          },
+        ]}
+        position="bottom-right"
       />
     </>
   );
@@ -399,6 +544,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 8,
+  },
+  skeletonFooterContainer: {
+    paddingTop: 8,
+  },
+  skeletonItemContainer: {
+    marginBottom: 8,
   },
 });
 

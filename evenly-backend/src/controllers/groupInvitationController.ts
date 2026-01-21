@@ -17,12 +17,14 @@ export class GroupInvitationController {
    */
   static sendInvitation = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId, invitedEmail } = sendInvitationSchema.parse(request.body);
 
     const invitation = await GroupInvitationService.sendInvitation(
       groupId,
       user.id,
-      invitedEmail
+      invitedEmail,
+      organizationId
     );
 
     // Check if email was sent successfully
@@ -44,8 +46,9 @@ export class GroupInvitationController {
    */
   static getPendingInvitations = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
 
-    const invitations = await GroupInvitationService.getPendingInvitations(user.id);
+    const invitations = await GroupInvitationService.getPendingInvitations(user.id, organizationId);
 
     reply.send({
       success: true,
@@ -59,9 +62,10 @@ export class GroupInvitationController {
    */
   static acceptInvitation = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { token } = acceptInvitationSchema.parse(request.body);
 
-    await GroupInvitationService.acceptInvitation(token, user.id);
+    await GroupInvitationService.acceptInvitation(token, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -74,9 +78,10 @@ export class GroupInvitationController {
    */
   static declineInvitation = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { token } = declineInvitationSchema.parse(request.body);
 
-    await GroupInvitationService.declineInvitation(token, user.id);
+    await GroupInvitationService.declineInvitation(token, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -88,9 +93,10 @@ export class GroupInvitationController {
    * Get invitation details by token (public endpoint)
    */
   static getInvitationByToken = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const organizationId = (request as any).organizationId;
     const { token } = request.params as { token: string };
 
-    const invitation = await GroupInvitationService.getInvitationByToken(token);
+    const invitation = await GroupInvitationService.getInvitationByToken(token, organizationId);
 
     if (!invitation) {
       return reply.status(404).send({

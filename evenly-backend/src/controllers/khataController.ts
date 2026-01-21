@@ -10,6 +10,7 @@ export class KhataController {
    */
   static getCustomers = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const query = request.query as {
       search?: string;
       filterType?: 'all' | 'give' | 'get' | 'settled';
@@ -20,6 +21,7 @@ export class KhataController {
       search: query.search,
       filterType: query.filterType || 'all',
       sortType: query.sortType || 'most-recent',
+      organizationId,
     });
 
     reply.send({
@@ -34,9 +36,10 @@ export class KhataController {
    */
   static getCustomerById = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { customerId } = request.params as { customerId: string };
 
-    const customer = await KhataService.getCustomerById(customerId, user.id);
+    const customer = await KhataService.getCustomerById(customerId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -66,7 +69,15 @@ export class KhataController {
       });
     }
 
-    const customer = await KhataService.createCustomer(body, user.id);
+    const organizationId = (request as any).organizationId;
+    if (!organizationId) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Organization ID is required',
+      });
+    }
+
+    const customer = await KhataService.createCustomer(body, user.id, organizationId);
 
     reply.status(201).send({
       success: true,
@@ -80,6 +91,7 @@ export class KhataController {
    */
   static updateCustomer = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { customerId } = request.params as { customerId: string };
     const body = request.body as {
       name?: string;
@@ -90,7 +102,7 @@ export class KhataController {
       notes?: string;
     };
 
-    const customer = await KhataService.updateCustomer(customerId, body, user.id);
+    const customer = await KhataService.updateCustomer(customerId, body, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -104,9 +116,10 @@ export class KhataController {
    */
   static deleteCustomer = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { customerId } = request.params as { customerId: string };
 
-    await KhataService.deleteCustomer(customerId, user.id);
+    await KhataService.deleteCustomer(customerId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -120,9 +133,10 @@ export class KhataController {
   static getCustomerTransactions = asyncHandler(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { user } = request as AuthenticatedRequest;
+      const organizationId = (request as any).organizationId;
       const { customerId } = request.params as { customerId: string };
 
-      const transactions = await KhataService.getCustomerTransactions(customerId, user.id);
+      const transactions = await KhataService.getCustomerTransactions(customerId, user.id, organizationId);
 
       reply.send({
         success: true,
@@ -137,7 +151,8 @@ export class KhataController {
    */
   static createTransaction = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
-    
+    const organizationId = (request as any).organizationId;
+
     // Handle multipart form data (for image upload)
     let imageUrl: string | undefined;
     const data: any = {};
@@ -241,7 +256,7 @@ export class KhataController {
       });
     }
 
-    const transaction = await KhataService.createTransaction(data, user.id);
+    const transaction = await KhataService.createTransaction(data, user.id, organizationId);
 
     reply.status(201).send({
       success: true,
@@ -255,6 +270,7 @@ export class KhataController {
    */
   static updateTransaction = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { transactionId } = request.params as { transactionId: string };
 
     // Handle multipart form data (for image upload)
@@ -332,7 +348,7 @@ export class KhataController {
       Object.assign(data, body);
     }
 
-    const transaction = await KhataService.updateTransaction(transactionId, data, user.id);
+    const transaction = await KhataService.updateTransaction(transactionId, data, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -346,9 +362,10 @@ export class KhataController {
    */
   static deleteTransaction = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { transactionId } = request.params as { transactionId: string };
 
-    await KhataService.deleteTransaction(transactionId, user.id);
+    await KhataService.deleteTransaction(transactionId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -362,8 +379,9 @@ export class KhataController {
   static getFinancialSummary = asyncHandler(
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { user } = request as AuthenticatedRequest;
+      const organizationId = (request as any).organizationId;
 
-      const summary = await KhataService.getFinancialSummary(user.id);
+      const summary = await KhataService.getFinancialSummary(user.id, organizationId);
 
       reply.send({
         success: true,

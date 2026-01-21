@@ -22,8 +22,8 @@ export const OrganizationSwitcher: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
 
-  // Don't show anything if no organizations
-  if (!currentOrganization || organizations.length === 0) {
+  // Don't show anything if no organizations or user is not an owner
+  if (!currentOrganization || organizations.length === 0 || currentOrganization.role !== 'owner') {
     return null;
   }
 
@@ -162,9 +162,11 @@ export const OrganizationSwitcher: React.FC = () => {
                                   {org.role.toUpperCase()}
                                 </Text>
                               </LinearGradient>
-                              <Text style={[styles.planText, { color: colors.subtext }]}>
-                                {org.plan.charAt(0).toUpperCase() + org.plan.slice(1)} Plan
-                              </Text>
+                              {org.plan && (
+                                <Text style={[styles.planText, { color: colors.subtext }]}>
+                                  {org.plan.charAt(0).toUpperCase() + org.plan.slice(1)} Plan
+                                </Text>
+                              )}
                             </View>
                           </View>
 
@@ -172,18 +174,7 @@ export const OrganizationSwitcher: React.FC = () => {
                           {switching && isSelected ? (
                             <ActivityIndicator size="small" color="#6366f1" />
                           ) : isSelected ? (
-                            <View style={styles.selectedActions}>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  setModalVisible(false);
-                                  router.push('/organizations/settings');
-                                }}
-                                style={styles.iconButton}
-                              >
-                                <Ionicons name="settings-outline" size={20} color="#6366f1" />
-                              </TouchableOpacity>
-                              <Ionicons name="checkmark-circle" size={24} color="#6366f1" />
-                            </View>
+                            <Ionicons name="checkmark-circle" size={24} color="#6366f1" />
                           ) : (
                             <Ionicons
                               name="chevron-forward"
@@ -196,20 +187,6 @@ export const OrganizationSwitcher: React.FC = () => {
                     );
                   })}
                 </ScrollView>
-
-                {/* Footer */}
-                <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-                  <TouchableOpacity
-                    style={styles.footerButton}
-                    onPress={() => {
-                      setModalVisible(false);
-                      router.push('/organizations/create');
-                    }}
-                  >
-                    <Ionicons name="add-circle-outline" size={20} color="#6366f1" />
-                    <Text style={styles.footerButtonText}>Create New Organization</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -337,31 +314,5 @@ const styles = StyleSheet.create({
   planText: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  selectedActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
-  },
-
-  // Footer Styles
-  modalFooter: {
-    borderTopWidth: 1,
-    padding: 16,
-  },
-  footerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 12,
-  },
-  footerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6366f1',
   },
 });

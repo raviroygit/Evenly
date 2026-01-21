@@ -24,6 +24,7 @@ interface AddExpenseModalProps {
   }) => Promise<void>;
   currentUserId: string;
   editExpense?: EnhancedExpense | null;
+  preselectedGroupId?: string; // Optional: preselect and disable group selection
 }
 
 export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
@@ -33,6 +34,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   onUpdateExpense,
   currentUserId,
   editExpense,
+  preselectedGroupId,
 }) => {
   const { groups, refreshGroups } = useGroups();
   const { colors } = useTheme();
@@ -51,9 +53,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     if (visible) {
       refreshGroups();
     }
-  }, [visible, refreshGroups]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
-  // Populate form when editing
+  // Populate form when editing or preselecting group
   useEffect(() => {
     if (editExpense) {
       setTitle(editExpense.title);
@@ -69,11 +72,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     } else {
       // Reset form when creating
       setTitle('');
-      setSelectedGroupId('');
+      setSelectedGroupId(preselectedGroupId || '');
       setTotalAmount('');
       setDate(new Date().toISOString().split('T')[0]);
     }
-  }, [editExpense]);
+  }, [editExpense, preselectedGroupId]);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -100,27 +103,45 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           totalAmount: totalAmount.trim(),
           date,
         });
+        // Reset form and close modal after successful update
+        handleClose();
       } else {
+        // For add mode, call onAddExpense and wait for it to complete
+        // The parent component will close the modal after success
         await onAddExpense({
           groupId: selectedGroupId,
           title: title.trim(),
           totalAmount: totalAmount.trim(),
           date,
         });
+        // Reset form fields after successful add
+        setTitle('');
+        setSelectedGroupId(preselectedGroupId || '');
+        setTotalAmount('');
+        setDate(new Date().toISOString().split('T')[0]);
+        // Close modal after successful add (parent may have already closed it, but this ensures it closes)
+        // Also handles cases where parent doesn't close it (other screens)
+        if (visible) {
+          onClose();
+        }
       }
-      
-      onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'add'} expense`);
+      // Error is already handled by parent component or Alert.alert
+      // Don't close modal on error so user can retry
+      // Don't reset form on error so user can see what they entered
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleClose = () => {
+    // Don't allow closing while loading
+    if (isLoading) {
+      return;
+    }
     // Reset form when closing
     setTitle('');
-    setSelectedGroupId('');
+    setSelectedGroupId(preselectedGroupId || '');
     setTotalAmount('');
     setDate(new Date().toISOString().split('T')[0]);
     setShowGroupDropdown(false);
@@ -162,11 +183,13 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               Group *
             </Text>
             <TouchableOpacity
-              style={[styles.inputContainer, { 
-                backgroundColor: colors.background,
-                borderColor: colors.border 
+              style={[styles.inputContainer, {
+                backgroundColor: preselectedGroupId ? colors.muted : colors.background,
+                borderColor: colors.border,
+                opacity: preselectedGroupId ? 0.6 : 1
               }]}
-              onPress={() => setShowGroupDropdown(!showGroupDropdown)}
+              onPress={() => !preselectedGroupId && setShowGroupDropdown(!showGroupDropdown)}
+              disabled={!!preselectedGroupId}
             >
               <Text style={[styles.dropdownText, { 
                 color: selectedGroup ? colors.foreground : colors.mutedForeground 
@@ -323,12 +346,14 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               title: "Cancel",
               onPress: handleClose,
               variant: "destructive",
+              disabled: isLoading, // Disable cancel button while loading
             },
             {
               title: isEditMode ? "Update Expense" : "Add Expense",
               onPress: handleSubmit,
               variant: "primary",
               loading: isLoading,
+              disabled: isLoading, // Disable button while loading (loading prop handles spinner)
             },
           ]}
           style={styles.buttonRow}

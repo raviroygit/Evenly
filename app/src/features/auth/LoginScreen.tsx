@@ -81,8 +81,8 @@ export const LoginScreen: React.FC = () => {
     try {
       const result = await login(email, otp);
       if (result.success) {
-        Alert.alert('Success', result.message);
-        // Navigate to home screen
+        // Navigate immediately without alert to avoid timing issues
+        // Alert can cause navigation to fail with "attempted to navigate before mounting" error
         router.replace('/tabs');
       } else {
         setErrors({ otp: result.message });
@@ -90,13 +90,13 @@ export const LoginScreen: React.FC = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMessage = 'Login failed. Please try again.';
-      
+
       if (error.message.includes('400') || error.message.includes('Invalid')) {
         errorMessage = 'Invalid or expired OTP. Please try again or request a new code.';
       } else if (error.message.includes('Request failed')) {
         errorMessage = 'Network error. Please check your connection and try again.';
       }
-      
+
       setErrors({ otp: errorMessage });
     } finally {
       setIsLoading(false);

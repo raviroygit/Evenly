@@ -21,7 +21,6 @@ import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { useRouter } from 'expo-router';
-import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -483,11 +482,6 @@ export const HomeScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Organization Switcher */}
-        <View style={styles.orgSwitcherContainer}>
-          <OrganizationSwitcher />
-        </View>
-
         {/* Welcome Header */}
         <ResponsiveLiquidGlassCard
           padding={{
@@ -570,6 +564,7 @@ export const HomeScreen: React.FC = () => {
           refreshing={refreshing}
           onRefresh={onRefresh}
           onRefreshRef={activitiesRefreshRef}
+          isAddingExpense={isAddingExpense}
         />
       </PullToRefreshScrollView>
 
@@ -635,10 +630,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 10 : 20,
     paddingBottom: 100,
-  },
-  orgSwitcherContainer: {
-    marginBottom: 16,
-    alignItems: 'flex-start',
   },
   headerCard: {
     marginBottom: 24,

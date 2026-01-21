@@ -17,9 +17,10 @@ export class PaymentController {
    */
   static createPayment = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const paymentData = createPaymentSchema.parse(request.body);
 
-    const payment = await PaymentService.createPayment(paymentData, user.id);
+    const payment = await PaymentService.createPayment(paymentData, user.id, organizationId);
 
     reply.status(201).send({
       success: true,
@@ -33,9 +34,10 @@ export class PaymentController {
    */
   static getPaymentById = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { paymentId } = request.params as { paymentId: string };
 
-    const payment = await PaymentService.getPaymentById(paymentId);
+    const payment = await PaymentService.getPaymentById(paymentId, organizationId);
     if (!payment) {
       return reply.status(404).send({
         success: false,
@@ -55,6 +57,7 @@ export class PaymentController {
    */
   static getGroupPayments = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
     const query = paginationSchema.parse(request.query);
     const { status } = request.query as { status?: 'pending' | 'completed' | 'cancelled' };
@@ -63,7 +66,7 @@ export class PaymentController {
       page: query.page,
       limit: query.limit,
       status,
-    });
+    }, organizationId);
 
     reply.send({
       success: true,
@@ -85,8 +88,9 @@ export class PaymentController {
    */
   static getUserPayments = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const query = paginationSchema.parse(request.query);
-    const { status, type } = request.query as { 
+    const { status, type } = request.query as {
       status?: 'pending' | 'completed' | 'cancelled';
       type?: 'sent' | 'received';
     };
@@ -96,7 +100,7 @@ export class PaymentController {
       limit: query.limit,
       status,
       type,
-    });
+    }, organizationId);
 
     reply.send({
       success: true,
@@ -118,10 +122,11 @@ export class PaymentController {
    */
   static updatePaymentStatus = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { paymentId } = request.params as { paymentId: string };
     const { status } = request.body as { status: 'pending' | 'completed' | 'cancelled' };
 
-    const payment = await PaymentService.updatePaymentStatus(paymentId, status, user.id);
+    const payment = await PaymentService.updatePaymentStatus(paymentId, status, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -135,9 +140,10 @@ export class PaymentController {
    */
   static deletePayment = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { paymentId } = request.params as { paymentId: string };
 
-    await PaymentService.deletePayment(paymentId, user.id);
+    await PaymentService.deletePayment(paymentId, user.id, organizationId);
 
     reply.send({
       success: true,
@@ -150,9 +156,10 @@ export class PaymentController {
    */
   static getGroupPaymentStats = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
+    const organizationId = (request as any).organizationId;
     const { groupId } = request.params as { groupId: string };
 
-    const stats = await PaymentService.getGroupPaymentStats(groupId, user.id);
+    const stats = await PaymentService.getGroupPaymentStats(groupId, user.id, organizationId);
 
     reply.send({
       success: true,

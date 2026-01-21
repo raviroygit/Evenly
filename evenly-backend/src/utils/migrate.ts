@@ -72,6 +72,14 @@ async function createTablesFromSchema(sql: any): Promise<void> {
     END $$;
   `;
 
+  await sql`
+    DO $$ BEGIN
+      CREATE TYPE organization_role AS ENUM ('owner', 'admin', 'member', 'guest');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
+  `;
+
   // Create users table
   await sql`
     CREATE TABLE IF NOT EXISTS users (
@@ -80,15 +88,54 @@ async function createTablesFromSchema(sql: any): Promise<void> {
       email TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       avatar TEXT,
+      phone_number TEXT,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     )
   `;
 
+  // Create organizations table
+  await sql`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      auth_service_org_id TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      display_name TEXT,
+      logo TEXT,
+      plan TEXT NOT NULL DEFAULT 'free',
+      max_members INTEGER NOT NULL DEFAULT 10,
+      created_by UUID NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS organizations_auth_service_org_id_idx ON organizations(auth_service_org_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS organizations_slug_idx ON organizations(slug)`;
+
+  // Create organization_members table
+  await sql`
+    CREATE TABLE IF NOT EXISTS organization_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role organization_role NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS organization_members_org_user_idx ON organization_members(organization_id, user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS organization_members_user_id_idx ON organization_members(user_id)`;
+
   // Create groups table
   await sql`
     CREATE TABLE IF NOT EXISTS groups (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       description TEXT,
       currency TEXT NOT NULL DEFAULT 'INR',
@@ -98,6 +145,16 @@ async function createTablesFromSchema(sql: any): Promise<void> {
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     )
   `;
+
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE groups ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS groups_organization_id_idx ON groups(organization_id)`;
 
   // Create group_members table
   await sql`
@@ -129,6 +186,17 @@ async function createTablesFromSchema(sql: any): Promise<void> {
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     )
   `;
+
+  // Add organization_id to expenses table
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE expenses ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS expenses_organization_id_idx ON expenses(organization_id)`;
 
   // Create expense_splits table
   await sql`
@@ -292,6 +360,14 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   await sql`
     DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_service_id TEXT UNIQUE;
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number TEXT;
     EXCEPTION
       WHEN duplicate_column THEN null;
     END $$;
@@ -484,6 +560,7 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   await sql`
     CREATE TABLE IF NOT EXISTS khata_customers (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       email TEXT,
@@ -495,6 +572,16 @@ async function createTablesFromSchema(sql: any): Promise<void> {
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     )
   `;
+
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE khata_customers ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS khata_customers_organization_id_idx ON khata_customers(organization_id)`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS khata_transactions (
