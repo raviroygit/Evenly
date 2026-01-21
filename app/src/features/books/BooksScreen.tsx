@@ -37,6 +37,8 @@ interface Customer {
 }
 
 export const BooksScreen: React.FC = () => {
+  console.log('🔵 [BooksScreen] Component rendering...');
+
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { setActiveSwipeId } = useSwipeAction();
@@ -82,20 +84,31 @@ export const BooksScreen: React.FC = () => {
   };
 
   const loadCustomers = useCallback(async (isRefresh = false) => {
+    console.log('📒 [BooksScreen] loadCustomers called, isRefresh:', isRefresh);
+    console.log('📒 [BooksScreen] Params - search:', searchQuery, 'filter:', filterType, 'sort:', sortType);
+
     try {
       if (isRefresh) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
+
+      console.log('📒 [BooksScreen] Making API calls to backend...');
+
       const [customersData, summaryData] = await Promise.all([
         EvenlyBackendService.getKhataCustomers({
           search: searchQuery || undefined,
           filterType,
           sortType,
+          cacheTTLMs: 0, // Force bypass cache
         }),
         EvenlyBackendService.getKhataFinancialSummary(),
       ]);
+
+      console.log('✅ [BooksScreen] API Response - Customers count:', customersData.length);
+      console.log('✅ [BooksScreen] API Response - First customer:', customersData[0]);
+      console.log('✅ [BooksScreen] API Response - Summary:', summaryData);
 
       const formattedCustomers: Customer[] = customersData.map((c) => ({
         id: c.id,
@@ -111,15 +124,20 @@ export const BooksScreen: React.FC = () => {
 
       setCustomers(formattedCustomers);
       setSummary(summaryData);
+
+      console.log('✅ [BooksScreen] State updated - Customers:', formattedCustomers.length);
     } catch (error) {
-      console.error('Error loading customers:', error);
+      console.error('❌ [BooksScreen] Error loading customers:', error);
+      console.error('❌ [BooksScreen] Error details:', JSON.stringify(error, null, 2));
     } finally {
       setLoading(false);
       setRefreshing(false);
+      console.log('🏁 [BooksScreen] loadCustomers finished');
     }
   }, [searchQuery, filterType, sortType]);
 
   useEffect(() => {
+    console.log('🎯 [BooksScreen] useEffect triggered - calling loadCustomers');
     loadCustomers();
   }, [loadCustomers]);
 
@@ -292,7 +310,7 @@ export const BooksScreen: React.FC = () => {
                 You will get
               </Text>
               <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
-                ₹{formatAmount(summary.totalGive)}
+                ₹{formatAmount(summary.totalGet)}
               </Text>
 
             </ResponsiveLiquidGlassCard>
@@ -310,7 +328,7 @@ export const BooksScreen: React.FC = () => {
                 You will give
               </Text>
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
-                ₹{formatAmount(summary.totalGet)}
+                ₹{formatAmount(summary.totalGive)}
               </Text>
 
             </ResponsiveLiquidGlassCard>

@@ -602,10 +602,15 @@ export class EvenlyBackendService {
     balance: string;
     type: 'give' | 'get' | 'settled';
   }>> {
+    console.log('🔷 [EvenlyBackendService] getKhataCustomers called with options:', options);
+
     const queryParams = new URLSearchParams();
     if (options.search) queryParams.append('search', options.search);
     if (options.filterType) queryParams.append('filterType', options.filterType);
     if (options.sortType) queryParams.append('sortType', options.sortType);
+
+    const endpoint = `/khata/customers?${queryParams.toString()}`;
+    console.log('🔷 [EvenlyBackendService] Calling endpoint:', endpoint);
 
     const response = await this.makeRequest<Array<{
       id: string;
@@ -621,12 +626,14 @@ export class EvenlyBackendService {
       balance: string;
       type: 'give' | 'get' | 'settled';
     }>>(
-      `/khata/customers?${queryParams.toString()}`,
+      endpoint,
       {
         method: 'GET',
         cacheTTLMs: options.cacheTTLMs || 30000,
       }
     );
+
+    console.log('✅ [EvenlyBackendService] getKhataCustomers response - count:', response.data.length);
 
     return response.data;
   }
@@ -961,13 +968,17 @@ export class EvenlyBackendService {
     totalGive: string;
     totalGet: string;
   }> {
+    console.log('🔷 [EvenlyBackendService] getKhataFinancialSummary called');
+
     const response = await this.makeRequest<{
       totalGive: string;
       totalGet: string;
     }>('/khata/summary', {
       method: 'GET',
-      cacheTTLMs: 30000,
+      cacheTTLMs: 0, // Force bypass cache
     });
+
+    console.log('✅ [EvenlyBackendService] getKhataFinancialSummary response:', response.data);
 
     return response.data;
   }
