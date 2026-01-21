@@ -306,9 +306,9 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
               <ActivityItemComponent key={activity.id} activity={activity} />
             )}
             keyExtractor={(activity) => activity.id}
-            scrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={false}
             style={styles.activitiesList}
             contentContainerStyle={styles.activitiesContainer}
             refreshing={refreshing}
