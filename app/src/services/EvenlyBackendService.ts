@@ -239,7 +239,10 @@ export class EvenlyBackendService {
 
       return data;
     } catch (error: any) {
-      console.error(`API request failed for ${endpoint}:`, error);
+      console.error(`❌ [makeRequest] API request failed for ${endpoint}:`, error);
+      console.error(`❌ [makeRequest] Error response:`, error.response?.data);
+      console.error(`❌ [makeRequest] Error status:`, error.response?.status);
+      console.error(`❌ [makeRequest] Error message:`, error.message);
       throw error;
     }
   }
