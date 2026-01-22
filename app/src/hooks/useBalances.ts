@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { UserBalance, SimplifiedDebt } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
+import { CacheManager } from '../utils/cacheManager';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 export const useBalances = (groupId?: string) => {
   const [balances, setBalances] = useState<UserBalance[]>([]);
@@ -14,13 +16,35 @@ export const useBalances = (groupId?: string) => {
     }
   }, [groupId]);
 
+  // Listen for token refresh events to reload data with fresh token
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('[useBalances] Token refreshed event received, reloading balances...');
+      if (groupId) {
+        loadGroupBalances(groupId);
+      }
+    };
+
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, [groupId]);
+
   const loadGroupBalances = async (groupId: string) => {
     try {
       setLoading(true);
       setError(null);
+
+      // Use token's remaining lifetime as cache TTL
+      const cacheTTL = await CacheManager.getCacheTTL();
+
+      console.log('[useBalances] Loading group balances with cache TTL:', cacheTTL);
+
       const [balancesData, debtsData] = await Promise.all([
-        EvenlyBackendService.getGroupBalances(groupId),
-        EvenlyBackendService.getSimplifiedDebts(groupId),
+        EvenlyBackendService.getGroupBalances(groupId, { cacheTTLMs: cacheTTL }),
+        EvenlyBackendService.getSimplifiedDebts(groupId, { cacheTTLMs: cacheTTL }),
       ]);
       setBalances(balancesData);
       setSimplifiedDebts(debtsData);
@@ -92,13 +116,33 @@ export const useUserBalances = () => {
     loadUserBalances();
   }, []);
 
+  // Listen for token refresh events to reload data with fresh token
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('[useUserBalances] Token refreshed event received, reloading balances...');
+      loadUserBalances();
+    };
+
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, []);
+
   const loadUserBalances = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Use token's remaining lifetime as cache TTL
+      const cacheTTL = await CacheManager.getCacheTTL();
+
+      console.log('[useUserBalances] Loading with cache TTL:', cacheTTL);
+
       const [balancesData, netBalanceData] = await Promise.all([
-        EvenlyBackendService.getUserBalances(),
-        EvenlyBackendService.getUserNetBalance(),
+        EvenlyBackendService.getUserBalances({ cacheTTLMs: cacheTTL }),
+        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: cacheTTL }),
       ]);
       setBalances(balancesData);
       setNetBalance(netBalanceData);

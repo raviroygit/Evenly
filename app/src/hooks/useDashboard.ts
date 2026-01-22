@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGroups } from './useGroups';
 import { useUserBalances } from './useBalances';
 import { usePayments } from './usePayments';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 interface DashboardStats {
   totalGroups: number;
@@ -115,14 +116,14 @@ export const useDashboard = (): DashboardData => {
   const refresh = async () => {
     setRefreshing(true);
     setError(null);
-    
+
     try {
       const promises = [];
-      
+
       if (refreshGroups) promises.push(refreshGroups());
       if (refreshUserBalances) promises.push(refreshUserBalances());
       // if (refreshPayments) promises.push(refreshPayments());
-      
+
       await Promise.all(promises);
       setLastRefresh(new Date());
     } catch (err) {
@@ -131,6 +132,23 @@ export const useDashboard = (): DashboardData => {
       setRefreshing(false);
     }
   };
+
+  // Listen for token refresh events to reload dashboard data
+  // Note: This will trigger refresh of underlying hooks (useGroups, useUserBalances)
+  // which will automatically update dashboard stats
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('[useDashboard] Token refreshed event received');
+      // The underlying hooks (useGroups, useUserBalances) will auto-reload
+      // Dashboard stats will update reactively via useMemo
+    };
+
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, []);
 
   // Calculate overall loading state
   const loading = groupsLoading || balancesLoading || refreshing;

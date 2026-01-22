@@ -61,7 +61,7 @@ class EvenlyApiClient {
   }
 
   private setupInterceptors() {
-    // Request interceptor to automatically add authentication
+    // Request interceptor to automatically add authentication and proactively refresh tokens
     this.client.interceptors.request.use(
       async (config) => {
         try {
@@ -78,9 +78,33 @@ class EvenlyApiClient {
           const accessToken = authData?.accessToken;
 
           if (accessToken) {
-            // Use Bearer token authentication for mobile apps
-            config.headers = config.headers || {};
-            config.headers['Authorization'] = `Bearer ${accessToken}`;
+            // Check if token needs urgent refresh (< 5 minutes remaining)
+            const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(accessToken);
+
+            if (tokenInfo.needsUrgentRefresh && !tokenInfo.isExpired) {
+              console.log(`[EvenlyApiClient] Token has ${tokenInfo.minutesUntilExpiry} min remaining, refreshing before request`);
+
+              // Attempt refresh before making request
+              const refreshed = await SilentTokenRefresh.refresh();
+
+              if (refreshed) {
+                console.log('[EvenlyApiClient] ✅ Refresh successful');
+
+                // Get new token
+                const newAuthData = await AuthStorage.getAuthData();
+                config.headers = config.headers || {};
+                config.headers['Authorization'] = `Bearer ${newAuthData?.accessToken}`;
+              } else {
+                console.warn('[EvenlyApiClient] ⚠️ Refresh failed, using existing token');
+                // Use existing token (still has a few minutes left)
+                config.headers = config.headers || {};
+                config.headers['Authorization'] = `Bearer ${accessToken}`;
+              }
+            } else {
+              // Token is healthy or already expired (will be handled by response interceptor)
+              config.headers = config.headers || {};
+              config.headers['Authorization'] = `Bearer ${accessToken}`;
+            }
 
             console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }

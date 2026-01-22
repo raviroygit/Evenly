@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Expense, EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
+import { CacheManager } from '../utils/cacheManager';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 export const useExpenses = (groupId?: string) => {
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
@@ -13,11 +15,35 @@ export const useExpenses = (groupId?: string) => {
     }
   }, [groupId]);
 
+  // Listen for token refresh events to reload data with fresh token
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('[useExpenses] Token refreshed event received, reloading expenses...');
+      if (groupId) {
+        loadGroupExpenses(groupId);
+      }
+    };
+
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, [groupId]);
+
   const loadGroupExpenses = async (groupId: string) => {
     try {
       setLoading(true);
       setError(null);
-      const { expenses: expensesData } = await EvenlyBackendService.getGroupExpenses(groupId);
+
+      // Use token's remaining lifetime as cache TTL
+      const cacheTTL = await CacheManager.getCacheTTL();
+
+      console.log('[useExpenses] Loading group expenses with cache TTL:', cacheTTL);
+
+      const { expenses: expensesData } = await EvenlyBackendService.getGroupExpenses(groupId, {
+        cacheTTLMs: cacheTTL
+      });
       setExpenses(expensesData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';

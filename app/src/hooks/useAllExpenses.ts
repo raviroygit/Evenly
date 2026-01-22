@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Expense, EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
+import { CacheManager } from '../utils/cacheManager';
 import { useGroups } from './useGroups';
 import { emitExpenseCreated, emitExpensesRefreshNeeded, groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 export const useAllExpenses = () => {
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
@@ -59,41 +61,60 @@ export const useAllExpenses = () => {
     };
   }, [groups, groupsLoading, expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Listen for token refresh events to reload data with fresh token
+  useEffect(() => {
+    const handleTokenRefreshed = () => {
+      console.log('[useAllExpenses] Token refreshed event received, reloading expenses...');
+      loadAllExpenses();
+    };
+
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, []);
+
   const loadAllExpenses = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Use the latest groups from the hook
       const currentGroups = groups;
-      
+
       console.log('[useAllExpenses] loadAllExpenses called', {
         groupsCount: currentGroups.length,
         groupsLoading
       });
-      
+
       if (currentGroups.length === 0) {
         console.log('[useAllExpenses] No groups, setting empty expenses');
         setExpenses([]);
         setLoading(false);
         return;
       }
-      
-      // Fetch expenses from all groups - force fresh data
-      const allExpensesPromises = currentGroups.map(group => 
-        EvenlyBackendService.getGroupExpenses(group.id, { cacheTTLMs: 0 })
+
+      // Use token's remaining lifetime as cache TTL
+      const cacheTTL = await CacheManager.getCacheTTL();
+
+      console.log('[useAllExpenses] Loading all expenses with cache TTL:', cacheTTL);
+
+      // Fetch expenses from all groups with token-based cache TTL
+      const allExpensesPromises = currentGroups.map(group =>
+        EvenlyBackendService.getGroupExpenses(group.id, { cacheTTLMs: cacheTTL })
       );
-      
+
       const allExpensesResults = await Promise.all(allExpensesPromises);
-      
+
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
-      
+
       console.log('[useAllExpenses] Expenses loaded', {
         totalExpenses: allExpenses.length,
         expenses: allExpenses.map(e => ({ id: e.id, title: e.title || e.description }))
       });
-      
+
       // Force update by creating new array reference
       setExpenses(() => [...allExpenses]);
     } catch (err) {

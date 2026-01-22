@@ -6,6 +6,8 @@ import { SwipeActionProvider } from '../src/contexts/SwipeActionContext';
 import { AuthInitializer } from '../src/components/auth/AuthInitializer';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+// Temporarily disabled - requires native modules (expo prebuild)
+// import { registerBackgroundRefresh, unregisterBackgroundRefresh } from '../src/utils/backgroundTokenRefresh';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -90,6 +92,30 @@ export default function RootLayout() {
       subscription.remove();
     };
   }, [router]);
+
+  // Register background token refresh task on app startup
+  // Temporarily disabled - requires native modules (expo prebuild)
+  // To enable: Run `npx expo prebuild` then `npx expo run:ios` or `npx expo run:android`
+  /*
+  useEffect(() => {
+    console.log('[App] Registering background token refresh task...');
+
+    registerBackgroundRefresh()
+      .then(() => {
+        console.log('[App] ✅ Background refresh task registered successfully');
+      })
+      .catch((error) => {
+        console.error('[App] ❌ Failed to register background refresh task:', error);
+      });
+
+    // Cleanup on unmount (when app is closed)
+    return () => {
+      unregisterBackgroundRefresh().catch((error) => {
+        console.error('[App] Failed to unregister background refresh:', error);
+      });
+    };
+  }, []);
+  */
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

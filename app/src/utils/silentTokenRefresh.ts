@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ENV } from '../config/env';
 import { AuthStorage } from './storage';
 
@@ -17,7 +18,7 @@ let refreshPromise: Promise<boolean> | null = null;
 
 export class SilentTokenRefresh {
   /**
-   * Check if access token is expired or about to expire (< 5 minutes)
+   * Check if access token is expired or about to expire (< 5 minutes by default)
    * Returns true if token needs refresh, false otherwise
    */
   static isTokenExpiredOrExpiring(accessToken: string, thresholdMinutes: number = 5): boolean {
@@ -35,6 +36,71 @@ export class SilentTokenRefresh {
       console.warn('[SilentRefresh] Failed to decode token, assuming expired:', error);
       // If we can't decode, assume token needs refresh
       return true;
+    }
+  }
+
+  /**
+   * Get detailed token expiry information
+   * Returns comprehensive status about token expiry state
+   */
+  static getTokenExpiryInfo(accessToken: string): {
+    isExpired: boolean;
+    minutesUntilExpiry: number;
+    expiryTimestamp: number;
+    needsRefresh: boolean;        // < 1 hour
+    needsUrgentRefresh: boolean;  // < 5 minutes
+  } {
+    try {
+      // Decode JWT to check expiry
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      const timeUntilExpiry = expiryTime - currentTime;
+      const minutesUntilExpiry = Math.floor(timeUntilExpiry / 60000);
+
+      return {
+        isExpired: minutesUntilExpiry <= 0,
+        minutesUntilExpiry: Math.max(0, minutesUntilExpiry),
+        expiryTimestamp: expiryTime,
+        needsRefresh: minutesUntilExpiry < 60,        // Less than 1 hour
+        needsUrgentRefresh: minutesUntilExpiry < 5,   // Less than 5 minutes
+      };
+    } catch (error) {
+      console.warn('[SilentRefresh] Failed to decode token:', error);
+      // If we can't decode, assume token is expired
+      return {
+        isExpired: true,
+        minutesUntilExpiry: 0,
+        expiryTimestamp: 0,
+        needsRefresh: true,
+        needsUrgentRefresh: true,
+      };
+    }
+  }
+
+  /**
+   * Save timestamp of last successful refresh
+   */
+  static async saveRefreshTimestamp(): Promise<void> {
+    try {
+      await AsyncStorage.setItem('evenly_last_refresh', Date.now().toString());
+      console.log('[SilentRefresh] Saved refresh timestamp');
+    } catch (error) {
+      console.error('[SilentRefresh] Failed to save refresh timestamp:', error);
+    }
+  }
+
+  /**
+   * Get timestamp of last successful refresh
+   * Returns null if no refresh has been recorded
+   */
+  static async getLastRefreshTimestamp(): Promise<number | null> {
+    try {
+      const timestamp = await AsyncStorage.getItem('evenly_last_refresh');
+      return timestamp ? parseInt(timestamp, 10) : null;
+    } catch (error) {
+      console.error('[SilentRefresh] Failed to get refresh timestamp:', error);
+      return null;
     }
   }
 
@@ -86,6 +152,9 @@ export class SilentTokenRefresh {
             response.data.refreshToken
           );
 
+          // Save refresh timestamp for cache invalidation tracking
+          await this.saveRefreshTimestamp();
+
           isRefreshing = false;
           refreshPromise = null;
           resolve(true);
@@ -118,8 +187,9 @@ export class SilentTokenRefresh {
   /**
    * Check if session needs refresh and refresh if needed
    * Call this periodically in background
+   * @param thresholdMinutes - Minutes before expiry to trigger refresh (default 5)
    */
-  static async checkAndRefresh(): Promise<void> {
+  static async checkAndRefresh(thresholdMinutes: number = 5): Promise<void> {
     try {
       const authData = await AuthStorage.getAuthData();
 
@@ -129,7 +199,7 @@ export class SilentTokenRefresh {
       }
 
       // Check if token is expired or about to expire
-      if (this.isTokenExpiredOrExpiring(authData.accessToken, 5)) {
+      if (this.isTokenExpiredOrExpiring(authData.accessToken, thresholdMinutes)) {
         // Calculate exact minutes for logging
         try {
           const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));

@@ -4,6 +4,8 @@ import { AuthService } from '../services/AuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
+import { CacheManager } from '../utils/cacheManager';
+import { emitTokenRefreshed } from '../utils/sessionEvents';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
@@ -168,23 +170,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Only validate if user is logged in
     if (!user) return;
 
-    // Only validate once per 5 minutes to avoid excessive API calls
     const now = Date.now();
     const timeSinceLastValidation = now - lastValidation.current;
     const VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
-    if (timeSinceLastValidation < VALIDATION_INTERVAL) {
-      console.log('[AuthContext] Skipping validation - validated recently');
-      return;
-    }
-
     try {
-      console.log('[AuthContext] Validating session on foreground');
+      // Always check token expiry status (lightweight check)
       const authData = await AuthStorage.getAuthData();
-      // Preserve phoneNumber from stored user before refreshing
-      const storedPhoneNumber = authData?.user?.phoneNumber;
+      if (!authData?.accessToken) {
+        console.log('[AuthContext] No access token found');
+        return;
+      }
 
-      if (authData && authData.accessToken) {
+      const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(authData.accessToken);
+
+      // Skip validation if:
+      // 1. Validated recently (< 5 minutes ago)
+      // 2. AND token is healthy (> 5 minutes remaining)
+      if (timeSinceLastValidation < VALIDATION_INTERVAL && !tokenInfo.needsUrgentRefresh) {
+        console.log(`[AuthContext] Skipping validation - validated ${Math.floor(timeSinceLastValidation / 1000)}s ago, token has ${tokenInfo.minutesUntilExpiry} min left`);
+        return;
+      }
+
+      console.log('[AuthContext] Validating session on foreground');
+
+      // Check if token needs urgent refresh (< 5 minutes)
+      if (tokenInfo.needsUrgentRefresh || tokenInfo.isExpired) {
+        console.log(`[AuthContext] Token ${tokenInfo.isExpired ? 'expired' : `has ${tokenInfo.minutesUntilExpiry} min left`} - attempting refresh`);
+
+        // Attempt silent refresh
+        const refreshed = await SilentTokenRefresh.refresh();
+
+        if (refreshed) {
+          console.log('[AuthContext] ✅ Token refreshed on foreground');
+
+          // Invalidate cache to force fresh data load
+          console.log('[AuthContext] Invalidating cache to load fresh data');
+          await CacheManager.invalidateAllData();
+
+          // Emit token refreshed event to notify all screens to reload data
+          emitTokenRefreshed();
+
+          // Warm cache with fresh data (non-blocking)
+          warmAppCache().catch((err) => {
+            console.error('[AuthContext] Cache warmup failed:', err);
+          });
+
+          lastValidation.current = now;
+        } else {
+          console.warn('[AuthContext] ⚠️ Refresh failed - keeping user logged in with cached data');
+          lastValidation.current = now;
+        }
+      } else {
+        // Token is healthy, just validate with backend to get fresh user data
+        console.log(`[AuthContext] Token healthy (${tokenInfo.minutesUntilExpiry} min left) - validating user data`);
+
+        const storedPhoneNumber = authData.user?.phoneNumber;
+
         const currentUser = await authService.getCurrentUser();
         if (currentUser) {
           // Preserve phoneNumber if it's missing from the response
@@ -233,7 +275,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // NEVER log out on network errors - user might be offline
       lastValidation.current = now; // Mark as validated to avoid spamming retries
     }
-  }, [user, authService]);
+  }, [user, authService, currentOrganization, warmAppCache]);
 
   // Listen to app state changes (foreground/background)
   useEffect(() => {
@@ -252,7 +294,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [validateSessionOnForeground]);
 
-  // Background token refresh timer - checks every 15 minutes and refreshes if needed
+  // Background token refresh timer - checks every 10 minutes and refreshes if needed
   useEffect(() => {
     if (!user) {
       // Clear timer if user is not logged in
@@ -265,18 +307,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('[AuthContext] Starting background token refresh timer');
 
-    // Check and refresh immediately on mount
+    // Check and refresh immediately on mount (5-minute threshold)
     SilentTokenRefresh.checkAndRefresh().catch(err => {
       console.error('[AuthContext] Initial token refresh check failed:', err);
     });
 
-    // Then check every 15 minutes
+    // Then check every 2 minutes (more frequent since we only refresh at < 5 min)
     const interval = setInterval(() => {
       console.log('[AuthContext] Running scheduled token refresh check...');
       SilentTokenRefresh.checkAndRefresh().catch(err => {
         console.error('[AuthContext] Scheduled token refresh check failed:', err);
       });
-    }, 15 * 60 * 1000); // 15 minutes
+    }, 2 * 60 * 1000); // 2 minutes
 
     refreshTimerRef.current = interval;
 

@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Group } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
+import { CacheManager } from '../utils/cacheManager';
 import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 export const useGroups = () => {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -18,17 +20,25 @@ export const useGroups = () => {
         setLoading(false);
       }
     });
-    
+
     // Listen for group events to refresh when groups are created/updated/deleted from other screens
     const handleGroupsRefreshNeeded = () => {
       console.log('[useGroups] Groups refresh needed event received, refreshing...');
       loadGroups();
     };
-    
+
+    // Listen for token refresh events to reload data with fresh token
+    const handleTokenRefreshed = () => {
+      console.log('[useGroups] Token refreshed event received, reloading groups...');
+      loadGroups();
+    };
+
     groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
-    
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
     return () => {
       groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
     };
   }, []);
 
@@ -36,8 +46,17 @@ export const useGroups = () => {
     try {
       setLoading(true);
       setError(null);
-      // Force fresh data by not using cache
-      const groupsData = await EvenlyBackendService.getGroups({ cacheTTLMs: 0 });
+
+      // Use token's remaining lifetime as cache TTL
+      const cacheTTL = await CacheManager.getCacheTTL();
+
+      console.log('[useGroups] Loading with cache TTL:', cacheTTL);
+
+      // Fetch groups with token-based cache TTL
+      const groupsData = await EvenlyBackendService.getGroups({
+        cacheTTLMs: cacheTTL
+      });
+
       // Force update by replacing the entire array - this ensures React detects the change
       setGroups(() => [...groupsData]);
     } catch (err) {
