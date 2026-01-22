@@ -81,9 +81,9 @@ export const LoginScreen: React.FC = () => {
     try {
       const result = await login(email, otp);
       if (result.success) {
-        // Navigate immediately without alert to avoid timing issues
-        // Alert can cause navigation to fail with "attempted to navigate before mounting" error
-        router.replace('/tabs');
+        // Don't navigate here - let PublicRoute handle navigation automatically
+        // when isAuthenticated becomes true to avoid race condition
+        // Navigation will happen automatically via PublicRoute useEffect
       } else {
         setErrors({ otp: result.message });
       }
