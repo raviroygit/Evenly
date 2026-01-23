@@ -12,10 +12,11 @@ import { GlassListCard } from '../../components/ui/GlassListCard';
 import { SectionHeader } from '../../components/common/SectionHeader';
 import { CreateGroupModal } from '../../components/modals/CreateGroupModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
-import { DashboardStats } from '../../components/features/dashboard/DashboardStats';
+import { DashboardSummaryCard } from '../../components/features/dashboard/DashboardSummaryCard';
 import { RecentActivity } from '../../components/features/dashboard/RecentActivity';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { CustomersListModal } from '../../components/modals/CustomersListModal';
+import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { SkeletonKhataSummary } from '../../components/ui/SkeletonLoader';
 import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
@@ -27,7 +28,7 @@ export const HomeScreen: React.FC = () => {
   const { colors, theme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const { stats, loading: dashboardLoading, refresh: refreshDashboard } = useDashboard();
-  const { createGroup, refreshGroups } = useGroups();
+  const { groups, createGroup, refreshGroups, loading: groupsLoading } = useGroups();
   const { refreshExpenses } = useAllExpenses();
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,6 +40,7 @@ export const HomeScreen: React.FC = () => {
   const [khataLoading, setKhataLoading] = useState(true);
   const [customerCount, setCustomerCount] = useState(0);
   const [showCustomersListModal, setShowCustomersListModal] = useState(false);
+  const [showGroupsListModal, setShowGroupsListModal] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
 
   // Note: Removed useFocusEffect to prevent infinite loops
@@ -378,6 +380,18 @@ export const HomeScreen: React.FC = () => {
     }, 300);
   };
 
+  const handleGroupsSummaryPress = () => {
+    setShowGroupsListModal(true);
+  };
+
+  const handleGroupPress = (groupId: string) => {
+    setShowGroupsListModal(false);
+    // Small delay to allow modal to close smoothly before navigation
+    setTimeout(() => {
+      router.push(`/tabs/groups/${groupId}` as any);
+    }, 300);
+  };
+
   // Create pull-to-refresh handlers
   const { handleScroll, handleScrollBeginDrag, handleScrollEndDrag } = createPullToRefreshHandlers({
     onRefresh,
@@ -445,30 +459,6 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
-  // Prepare dashboard stats
-  const dashboardStats = [
-    {
-      label: 'Total Groups',
-      value: stats.totalGroups,
-      color: '#2196F3',
-    },
-    {
-      label: 'Net Balance',
-      value: `₹${stats.netBalance.toFixed(2)}`,
-      color: stats.netBalance >= 0 ? '#4CAF50' : '#F44336',
-    },
-    {
-      label: 'You Owe',
-      value: `₹${stats.totalOwing.toFixed(2)}`,
-      color: '#F44336',
-    },
-    {
-      label: 'You\'re Owed',
-      value: `₹${stats.totalOwed.toFixed(2)}`,
-      color: '#4CAF50',
-    },
-  ];
-
   return (
     <>
       <PullToRefreshSpinner refreshing={refreshing} />
@@ -506,8 +496,15 @@ export const HomeScreen: React.FC = () => {
           />
         </ResponsiveLiquidGlassCard>
 
-        {/* Dashboard Stats */}
-        <DashboardStats stats={dashboardStats} loading={dashboardLoading || isCreatingGroup || isAddingExpense} />
+        {/* Dashboard Summary Card */}
+        <DashboardSummaryCard
+          totalGroups={stats.totalGroups}
+          netBalance={stats.netBalance}
+          youOwe={stats.totalOwing}
+          youreOwed={stats.totalOwed}
+          loading={dashboardLoading || isCreatingGroup || isAddingExpense}
+          onPress={handleGroupsSummaryPress}
+        />
 
         {/* Khata Summary Card */}
         {khataLoading ? (
@@ -591,6 +588,15 @@ export const HomeScreen: React.FC = () => {
         customers={customers}
         onCustomerPress={handleCustomerPress}
         loading={khataLoading}
+      />
+
+      {/* Groups List Modal */}
+      <GroupsListModal
+        visible={showGroupsListModal}
+        onClose={() => setShowGroupsListModal(false)}
+        groups={groups}
+        onGroupPress={handleGroupPress}
+        loading={groupsLoading}
       />
 
       {/* Floating Action Button - Outside container for proper positioning */}

@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly-split",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "web": {
       "favicon": "./assets/favicon.png"
     },
