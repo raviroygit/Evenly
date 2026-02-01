@@ -3,11 +3,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { AuthService } from '../services/AuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
-import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
-import { CacheManager } from '../utils/cacheManager';
-import { emitTokenRefreshed } from '../utils/sessionEvents';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
-import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -51,7 +47,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const appState = useRef(AppState.currentState);
   const lastValidation = useRef<number>(Date.now());
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoize authService to prevent recreation
   const authService = useMemo(() => new AuthService(), []);
@@ -137,7 +132,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 await AuthStorage.saveAuthData(
                   currentUser,
                   authData.accessToken,
-                  authData.refreshToken,
                   currentUser.organizations
                 );
                 // Warm cache after validating session
@@ -177,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [authService, warmAppCache]);
 
   // Validate session when app comes to foreground - but NEVER log out automatically
+  // Mobile tokens never expire (10 years), so we just validate user data
   const validateSessionOnForeground = useCallback(async () => {
     // Only validate if user is logged in
     if (!user) return;
@@ -185,115 +180,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const timeSinceLastValidation = now - lastValidation.current;
     const VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+    // Skip validation if validated recently
+    if (timeSinceLastValidation < VALIDATION_INTERVAL) {
+      console.log(`[AuthContext] Skipping validation - validated ${Math.floor(timeSinceLastValidation / 1000)}s ago`);
+      return;
+    }
+
     try {
-      // Always check token expiry status (lightweight check)
+      console.log('[AuthContext] Validating session on foreground (mobile tokens never expire)');
+
       const authData = await AuthStorage.getAuthData();
       if (!authData?.accessToken) {
         console.log('[AuthContext] No access token found');
         return;
       }
 
-      const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(authData.accessToken);
+      const storedPhoneNumber = authData.user?.phoneNumber;
 
-      // Skip validation if:
-      // 1. Validated recently (< 5 minutes ago)
-      // 2. AND token is healthy (> 5 minutes remaining)
-      if (timeSinceLastValidation < VALIDATION_INTERVAL && !tokenInfo.needsUrgentRefresh) {
-        console.log(`[AuthContext] Skipping validation - validated ${Math.floor(timeSinceLastValidation / 1000)}s ago, token has ${tokenInfo.minutesUntilExpiry} min left`);
-        return;
-      }
-
-      console.log('[AuthContext] Validating session on foreground');
-
-      // Check if token needs urgent refresh (< 5 minutes)
-      if (tokenInfo.needsUrgentRefresh || tokenInfo.isExpired) {
-        console.log(`[AuthContext] Token ${tokenInfo.isExpired ? 'expired' : `has ${tokenInfo.minutesUntilExpiry} min left`} - attempting refresh`);
-
-        // Set auth state to refreshing
-        setAuthState('refreshing');
-
-        // Attempt silent refresh
-        const refreshed = await SilentTokenRefresh.refresh();
-
-        if (refreshed) {
-          console.log('[AuthContext] ✅ Token refreshed on foreground');
-
-          // Invalidate cache to force fresh data load
-          console.log('[AuthContext] Invalidating cache to load fresh data');
-          await CacheManager.invalidateAllData();
-
-          // Coordinate data refresh across all hooks
-          console.log('[AuthContext] Coordinating data refresh...');
-          await DataRefreshCoordinator.refreshAll();
-
-          // Emit token refreshed event (for backwards compatibility)
-          emitTokenRefreshed();
-
-          // Set auth state back to authenticated
-          setAuthState('authenticated');
-
-          lastValidation.current = now;
-        } else {
-          console.warn('[AuthContext] ⚠️ Refresh failed - keeping user logged in with cached data');
-          // Set auth state back to authenticated (user stays logged in)
-          setAuthState('authenticated');
-          lastValidation.current = now;
+      // Validate with backend to get fresh user data
+      const currentUser = await authService.getCurrentUser();
+      if (currentUser) {
+        // Preserve phoneNumber if it's missing from the response
+        if (!currentUser.phoneNumber && storedPhoneNumber) {
+          currentUser.phoneNumber = storedPhoneNumber;
         }
-      } else {
-        // Token is healthy, just validate with backend to get fresh user data
-        console.log(`[AuthContext] Token healthy (${tokenInfo.minutesUntilExpiry} min left) - validating user data`);
 
-        const storedPhoneNumber = authData.user?.phoneNumber;
+        // Session still valid - update user data
+        setUser(currentUser);
+        lastValidation.current = now;
 
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser) {
-          // Preserve phoneNumber if it's missing from the response
-          if (!currentUser.phoneNumber && storedPhoneNumber) {
-            currentUser.phoneNumber = storedPhoneNumber;
-          }
+        // Update organizations if received
+        if (currentUser.organizations) {
+          setOrganizations(currentUser.organizations);
 
-          // Session still valid - update user data
-          setUser(currentUser);
-          lastValidation.current = now;
-
-          // Update organizations if received
-          if (currentUser.organizations) {
-            setOrganizations(currentUser.organizations);
-
-            // Update current organization if not set
-            if (!currentOrganization && currentUser.organizations.length > 0) {
-              const storedOrgId = await AuthStorage.getCurrentOrganizationId();
-              const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
-              if (storedOrg) {
-                setCurrentOrganization(storedOrg);
-                evenlyApiClient.setOrganizationId(storedOrg.id);
-              } else {
-                setCurrentOrganization(currentUser.organizations[0]);
-                evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
-              }
+          // Update current organization if not set
+          if (!currentOrganization && currentUser.organizations.length > 0) {
+            const storedOrgId = await AuthStorage.getCurrentOrganizationId();
+            const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
+            if (storedOrg) {
+              setCurrentOrganization(storedOrg);
+              evenlyApiClient.setOrganizationId(storedOrg.id);
+            } else {
+              setCurrentOrganization(currentUser.organizations[0]);
+              evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
             }
           }
-
-          await AuthStorage.saveAuthData(
-            currentUser,
-            authData.accessToken,
-            authData.refreshToken,
-            currentUser.organizations
-          );
-          console.log('[AuthContext] Session validated successfully');
-        } else {
-          // Session returned null - but DON'T log out
-          // User might be offline or backend issue - keep them logged in
-          console.warn('[AuthContext] Session validation returned null - keeping user logged in');
-          lastValidation.current = now; // Mark as validated to avoid spamming
         }
+
+        await AuthStorage.saveAuthData(
+          currentUser,
+          authData.accessToken,
+          currentUser.organizations
+        );
+        console.log('[AuthContext] Session validated successfully');
+      } else {
+        // Session returned null - but DON'T log out
+        // User might be offline or backend issue - keep them logged in
+        console.warn('[AuthContext] Session validation returned null - keeping user logged in');
+        lastValidation.current = now; // Mark as validated to avoid spamming
       }
     } catch (error) {
       console.error('[AuthContext] Session validation error - keeping user logged in:', error);
       // NEVER log out on network errors - user might be offline
       lastValidation.current = now; // Mark as validated to avoid spamming retries
     }
-  }, [user, authService, currentOrganization, warmAppCache]);
+  }, [user, authService, currentOrganization]);
 
   // Listen to app state changes (foreground/background)
   useEffect(() => {
@@ -312,47 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [validateSessionOnForeground]);
 
-  // Background token refresh timer - checks every 10 minutes and refreshes if needed
-  useEffect(() => {
-    if (!user) {
-      // Clear timer if user is not logged in
-      if (refreshTimerRef.current) {
-        clearInterval(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-      return;
-    }
-
-    console.log('[AuthContext] Starting background token refresh timer');
-
-    // Wait 5 seconds before first check to ensure auth data is settled in storage
-    // This prevents race conditions during login
-    const initialCheckTimeout = setTimeout(() => {
-      console.log('[AuthContext] Running initial token refresh check...');
-      SilentTokenRefresh.checkAndRefresh().catch(err => {
-        console.error('[AuthContext] Initial token refresh check failed:', err);
-      });
-    }, 5000);
-
-    // Then check every 2 minutes (more frequent since we only refresh at < 5 min)
-    const interval = setInterval(() => {
-      console.log('[AuthContext] Running scheduled token refresh check...');
-      SilentTokenRefresh.checkAndRefresh().catch(err => {
-        console.error('[AuthContext] Scheduled token refresh check failed:', err);
-      });
-    }, 2 * 60 * 1000); // 2 minutes
-
-    refreshTimerRef.current = interval;
-
-    return () => {
-      // Clear both timeout and interval on cleanup
-      clearTimeout(initialCheckTimeout);
-      if (refreshTimerRef.current) {
-        clearInterval(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-    };
-  }, [user]);
+  // NO background token refresh timer needed - mobile tokens never expire (10 years)
 
   // Monitor auth storage for silent logouts - check every 5 seconds
   useEffect(() => {
@@ -460,25 +371,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // IMPORTANT: Save auth data BEFORE setting user state
-        // This prevents race conditions with background timers and storage monitor
+        // This prevents race conditions with storage monitor
         await AuthStorage.saveAuthData(
           result.user,
           result.accessToken,
-          result.refreshToken,
           result.user.organizations
         );
 
         // Set auth state to authenticated
         setAuthState('authenticated');
 
-        // Now set user - this will trigger background timers, but auth data is already saved
+        // Now set user - this will trigger storage monitor
         setUser(result.user);
 
-        // Note: We don't upgrade to 90-day session immediately after login
-        // The background token refresh will handle upgrading to mobile session
-        // when the access token naturally expires. This prevents issues with
-        // refresh tokens not being immediately compatible with mobile refresh endpoint.
-        console.log('[AuthContext] ✅ Login successful - background refresh will upgrade session when needed');
+        // Mobile tokens never expire (10 years) - no refresh needed
+        console.log('[AuthContext] ✅ Login successful - mobile token never expires');
 
         warmAppCache().catch(() => {});
 
@@ -550,11 +457,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setOrganizations(currentUser.organizations);
         }
 
-        // Re-save with existing tokens (including preserved phoneNumber)
+        // Re-save with existing token (including preserved phoneNumber)
         await AuthStorage.saveAuthData(
           currentUser,
           authData?.accessToken,
-          authData?.refreshToken,
           currentUser.organizations
         );
       } else {
