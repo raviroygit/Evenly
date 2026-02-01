@@ -71,7 +71,23 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   // Show skeleton loader only on initial load (never loaded before) or when adding expense
   // Once data is loaded once, always show it (even during refreshes)
   // This prevents skeleton on navigation back when activities are cached in context
-  const showSkeleton = (!hasInitiallyLoaded && loading) || isAddingExpense;
+  // Also show skeleton when loading with no activities (handles fresh login case)
+  const showSkeleton =
+    (!hasInitiallyLoaded && loading) ||
+    isAddingExpense ||
+    (activities.length === 0 && loading);
+
+  // Debug logging to understand why skeleton might not show
+  console.log('[RecentActivity] Render state:', {
+    hasInitiallyLoaded,
+    loading,
+    activitiesCount: activities.length,
+    isAddingExpense,
+    showSkeleton,
+    condition1: !hasInitiallyLoaded && loading,
+    condition2: isAddingExpense,
+    condition3: activities.length === 0 && loading,
+  });
 
   // Limit to first 3 activities to keep the dashboard clean and focused
   const displayedActivities = activities.slice(0, 3);
