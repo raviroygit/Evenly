@@ -4,6 +4,7 @@ import { AuthService } from '../services/AuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
+import { CacheManager } from '../utils/cacheManager';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -419,20 +420,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
+      console.log('[AuthContext] Logging out - clearing all data...');
+
+      // Clear cache FIRST to prevent race conditions
+      await CacheManager.invalidateAllData();
+      console.log('[AuthContext] ✅ Cache cleared');
+
+      // Call backend logout
       await authService.logout();
+
+      // Clear local state
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
       evenlyApiClient.setOrganizationId(null);
+
+      // Clear storage
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
+
+      console.log('[AuthContext] ✅ Logout complete - all data cleared');
     } catch (error) {
+      console.error('[AuthContext] Logout error:', error);
+
+      // Even if logout fails, clear everything locally
+      await CacheManager.invalidateAllData();
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
       evenlyApiClient.setOrganizationId(null);
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
+
+      console.log('[AuthContext] ✅ Logout complete (with errors) - all data cleared');
     }
   }, [authService]);
 

@@ -91,25 +91,19 @@ export class CacheManager {
 
   /**
    * Invalidate all data cache
-   * Clears cache for all API endpoints
+   * Clears ALL cache entries - used on logout to prevent data leaks
    */
   static async invalidateAllData(): Promise<void> {
-    console.log('[CacheManager] Invalidating all data cache...');
+    console.log('[CacheManager] Clearing ALL cache data...');
 
     try {
-      await Promise.all([
-        AppCache.invalidateByPrefixes(['/groups']),
-        AppCache.invalidateByPrefixes(['/expenses']),
-        AppCache.invalidateByPrefixes(['/balances']),
-        AppCache.invalidateByPrefixes(['/payments']),
-        AppCache.invalidateByPrefixes(['/khata']),
-        AppCache.invalidateByPrefixes(['/auth/me']),
-        AppCache.invalidateByPrefixes(['/dashboard']),
-      ]);
+      // Use clearAll() to remove ALL cache entries
+      // This ensures no cached data persists between user sessions
+      await AppCache.clearAll();
 
-      console.log('[CacheManager] ✅ All cache invalidated successfully');
+      console.log('[CacheManager] ✅ All cache cleared successfully');
     } catch (error) {
-      console.error('[CacheManager] ❌ Failed to invalidate cache:', error);
+      console.error('[CacheManager] ❌ Failed to clear cache:', error);
     }
   }
 
