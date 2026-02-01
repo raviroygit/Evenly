@@ -46,18 +46,29 @@ export class AuthService {
   }
 
   /**
-   * Send OTP for login
+   * Send OTP for login (with mobile support)
    */
-  static async requestOTP(email: string): Promise<AuthResponse> {
+  static async requestOTP(email: string, request?: FastifyRequest): Promise<AuthResponse> {
     try {
+      const isMobile = this.isMobileClient(request);
+
+      // Build headers - forward mobile header to shared auth system
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Organization-Id': config.auth.organizationId,
+      };
+
+      // Forward mobile client header to shared auth system
+      if (isMobile) {
+        headers['x-client-type'] = 'mobile';
+        console.log('📱 [evenly-backend] Forwarding mobile client header for OTP request');
+      }
+
       const response = await axios.post(`${this.AUTH_SERVICE_URL}/login/otp`, {
         email,
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Organization-Id': config.auth.organizationId,
-        },
+        headers,
         timeout: 30000, // Increased timeout to 30 seconds
       });
 
@@ -75,23 +86,53 @@ export class AuthService {
   }
 
   /**
-   * Verify OTP and login
+   * Helper to detect mobile client from request
    */
-  static async verifyOTP(email: string, otp: string): Promise<AuthResponse> {
+  private static isMobileClient(request?: FastifyRequest): boolean {
+    if (!request) return false;
+    const clientType = request.headers['x-client-type'] as string;
+    return clientType === 'mobile';
+  }
+
+  /**
+   * Verify OTP and login (with mobile support)
+   * Pass the request object to forward mobile header to shared auth system
+   */
+  static async verifyOTP(email: string, otp: string, request?: FastifyRequest): Promise<AuthResponse> {
     try {
+      const isMobile = this.isMobileClient(request);
+
+      // Build headers - forward mobile header to shared auth system
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Organization-Id': config.auth.organizationId,
+      };
+
+      // Forward mobile client header to shared auth system
+      if (isMobile) {
+        headers['x-client-type'] = 'mobile';
+        console.log('📱 [evenly-backend] Forwarding mobile client header to auth system');
+      }
+
       const response = await axios.post(`${this.AUTH_SERVICE_URL}/login/verify-otp`, {
         email,
         otp,
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Organization-Id': config.auth.organizationId,
-        },
+        headers,
         timeout: 30000, // Increased timeout to 30 seconds
       });
 
       if (response.data.user && response.data.accessToken) {
+        // Log what we received from shared auth system
+        if (isMobile) {
+          console.log('✅ [evenly-backend] Received mobile tokens from auth system:', {
+            platform: response.data.platform,
+            expiresIn: response.data.expiresIn,
+            hasRefreshToken: !!response.data.refreshToken,
+          });
+        }
+
         // Extract sso_token from response headers
         const setCookieHeader = response.headers['set-cookie'];
         let ssoToken = null;
@@ -127,8 +168,8 @@ export class AuthService {
           },
           organization: response.data.organization,
           ssoToken: ssoToken || undefined, // Use the actual sso_token from cookie
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken,
+          accessToken: response.data.accessToken, // From shared auth (mobile-aware)
+          refreshToken: response.data.refreshToken, // null for mobile, present for web
         };
       }
 

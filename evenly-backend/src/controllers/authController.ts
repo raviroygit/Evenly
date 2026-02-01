@@ -121,7 +121,8 @@ export class AuthController {
     try {
       const { email } = loginSchema.parse(request.body);
 
-      const result = await AuthService.requestOTP(email);
+      // Pass request to AuthService so it can detect mobile clients and forward header
+      const result = await AuthService.requestOTP(email, request);
 
       if (!result.success) {
         return reply.status(400).send({
@@ -161,7 +162,8 @@ export class AuthController {
     try {
       const { email, otp } = verifyOTPSchema.parse(request.body);
 
-      const result = await AuthService.verifyOTP(email, otp);
+      // Pass request to AuthService so it can detect mobile clients and forward header
+      const result = await AuthService.verifyOTP(email, otp, request);
 
       if (result.success && result.user) {
         // Set the sso_token cookie

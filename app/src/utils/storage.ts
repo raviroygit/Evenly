@@ -5,14 +5,14 @@ import { Organization } from '../types';
 interface StorageData {
   user: any;
   accessToken?: string;
-  refreshToken?: string;
+  // No refreshToken - mobile tokens never expire
   organizations?: Organization[];
   timestamp: number;
 }
 
 const STORAGE_KEY = 'evenly_auth_data';
 const ORGANIZATION_KEY = 'evenly_current_organization';
-// No local expiry - tokens managed by backend with sliding window (90 days)
+// No local expiry - mobile tokens never expire (10 years)
 
 class StorageManager {
   private isWeb = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -61,19 +61,20 @@ class StorageManager {
 const storage = new StorageManager();
 
 export const AuthStorage = {
-  async saveAuthData(user: any, accessToken?: string, refreshToken?: string, organizations?: Organization[]): Promise<void> {
+  async saveAuthData(user: any, accessToken?: string, organizations?: Organization[]): Promise<void> {
     const data: StorageData = {
       user,
       accessToken,
-      refreshToken,
+      // No refreshToken - mobile tokens never expire
       organizations,
       timestamp: Date.now(),
     };
 
     await storage.setItem(STORAGE_KEY, JSON.stringify(data));
+    console.log('[AuthStorage] ✅ Auth data saved (token never expires)');
   },
 
-  async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; organizations?: Organization[]; timestamp?: number } | null> {
+  async getAuthData(): Promise<{ user: any; accessToken?: string; organizations?: Organization[]; timestamp?: number } | null> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
 
@@ -86,8 +87,8 @@ export const AuthStorage = {
       // Handle backward compatibility - if no timestamp, use current time
       const timestamp = data.timestamp || Date.now();
 
-      // NO LOCAL EXPIRY CHECK - Backend handles session expiry with sliding window
-      // This allows users to stay logged in indefinitely as long as they use the app
+      // NO LOCAL EXPIRY CHECK - Mobile tokens never expire (10 years)
+      // Users stay logged in forever until manual logout
 
       // Check if accessToken is present (required for backend authentication)
       if (!data.accessToken) {
@@ -98,7 +99,7 @@ export const AuthStorage = {
       return {
         user: data.user,
         accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
+        // No refreshToken - mobile tokens never expire
         organizations: data.organizations,
         timestamp: timestamp,
       };
@@ -126,7 +127,6 @@ export const AuthStorage = {
         console.log('[AuthStorage] DEBUG - Parsed data:', {
           hasUser: !!data.user,
           hasAccessToken: !!data.accessToken,
-          hasRefreshToken: !!data.refreshToken,
           hasOrganizations: !!data.organizations,
           organizationsCount: data.organizations?.length || 0,
           timestamp: data.timestamp,

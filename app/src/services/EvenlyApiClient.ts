@@ -3,7 +3,6 @@ import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
 import { Platform } from 'react-native';
-import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 
 /**
  * Axios instance for Evenly Backend API with automatic authentication
@@ -20,6 +19,7 @@ class EvenlyApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'ngrok-skip-browser-warning': 'true',
+        'x-client-type': 'mobile', // Identify as mobile client for never-expiring tokens
       },
     });
 
@@ -61,7 +61,8 @@ class EvenlyApiClient {
   }
 
   private setupInterceptors() {
-    // Request interceptor to automatically add authentication and proactively refresh tokens
+    // Request interceptor to automatically add authentication
+    // NOTE: Mobile tokens never expire, so no refresh logic needed
     this.client.interceptors.request.use(
       async (config) => {
         try {
@@ -78,34 +79,9 @@ class EvenlyApiClient {
           const accessToken = authData?.accessToken;
 
           if (accessToken) {
-            // Check if token needs urgent refresh (< 5 minutes remaining)
-            const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(accessToken);
-
-            if (tokenInfo.needsUrgentRefresh && !tokenInfo.isExpired) {
-              console.log(`[EvenlyApiClient] Token has ${tokenInfo.minutesUntilExpiry} min remaining, refreshing before request`);
-
-              // Attempt refresh before making request
-              const refreshed = await SilentTokenRefresh.refresh();
-
-              if (refreshed) {
-                console.log('[EvenlyApiClient] ✅ Refresh successful');
-
-                // Get new token
-                const newAuthData = await AuthStorage.getAuthData();
-                config.headers = config.headers || {};
-                config.headers['Authorization'] = `Bearer ${newAuthData?.accessToken}`;
-              } else {
-                console.warn('[EvenlyApiClient] ⚠️ Refresh failed, using existing token');
-                // Use existing token (still has a few minutes left)
-                config.headers = config.headers || {};
-                config.headers['Authorization'] = `Bearer ${accessToken}`;
-              }
-            } else {
-              // Token is healthy or already expired (will be handled by response interceptor)
-              config.headers = config.headers || {};
-              config.headers['Authorization'] = `Bearer ${accessToken}`;
-            }
-
+            // Simply attach the token - it never expires for mobile
+            config.headers = config.headers || {};
+            config.headers['Authorization'] = `Bearer ${accessToken}`;
             console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }
 
@@ -131,7 +107,8 @@ class EvenlyApiClient {
       }
     );
 
-    // Response interceptor to handle errors and token refresh
+    // Response interceptor to handle errors
+    // NOTE: Mobile tokens never expire, so 401 errors are rare (network issues, token revoked, etc.)
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
         return response;
@@ -140,95 +117,23 @@ class EvenlyApiClient {
         // Log the error for debugging
         ErrorHandler.logError(error, 'API Request');
 
-        // Handle 401 Unauthorized - backend session expired
+        // Handle 401 Unauthorized - token might be revoked or network issue
         if (error.response?.status === 401) {
-          const originalRequest = error.config;
+          console.warn('[EvenlyApiClient] ⚠️ Got 401 error - token may be revoked or network issue');
+          console.warn('[EvenlyApiClient] ⚠️ Keeping user logged in with cached data');
 
-          // Avoid infinite retry loop
-          if (originalRequest._retryCount && originalRequest._retryCount >= 1) {
-            console.warn('[EvenlyApiClient] ⚠️ Already retried once - keeping user logged in with cached data');
-            console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
+          // Since mobile tokens never expire, 401 means:
+          // 1. Token was revoked remotely (security issue)
+          // 2. Network error / backend issue
+          // 3. Invalid token (shouldn't happen)
 
-            // NEVER logout user - keep them logged in with cached data
-            // User stays logged in, can view cached data
-            return Promise.reject({
-              ...error,
-              _offlineMode: true,
-              message: 'Session expired - using cached data'
-            });
-          }
-
-          // Check if access token is actually expired before attempting refresh
-          try {
-            const authData = await AuthStorage.getAuthData();
-
-            if (authData?.accessToken) {
-              // Check if token is expired or about to expire (< 5 minutes)
-              const needsRefresh = SilentTokenRefresh.isTokenExpiredOrExpiring(authData.accessToken, 5);
-
-              if (!needsRefresh) {
-                // Token is still valid (> 5 minutes remaining)
-                // This 401 is a legitimate auth error (wrong token, revoked, permission denied)
-                console.warn('[EvenlyApiClient] ⚠️ Token still valid but got 401 - legitimate auth error');
-                console.warn('[EvenlyApiClient] ⚠️ Keeping user logged in with cached data');
-
-                return Promise.reject({
-                  ...error,
-                  _offlineMode: true,
-                  message: 'Authentication error - using cached data'
-                });
-              }
-            }
-          } catch (checkError) {
-            console.warn('[EvenlyApiClient] Error checking token expiry:', checkError);
-            // If we can't check, proceed with refresh attempt
-          }
-
-          console.log('[EvenlyApiClient] Token expired - attempting silent refresh');
-
-          try {
-            // Silently refresh using refresh token (NO user interaction)
-            const refreshed = await SilentTokenRefresh.refresh();
-
-            if (refreshed) {
-              // Get new auth data
-              const authData = await AuthStorage.getAuthData();
-              if (authData?.accessToken) {
-                // Mark as retried
-                originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
-
-                // Update Bearer token in request headers
-                originalRequest.headers['Authorization'] = `Bearer ${authData.accessToken}`;
-
-                console.log('[EvenlyApiClient] ✅ Silent refresh successful, retrying request');
-                // Retry the original request with new session
-                return this.client(originalRequest);
-              }
-            } else {
-              console.warn('[EvenlyApiClient] ⚠️ Silent refresh failed - keeping user logged in with cached data');
-              console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
-
-              // NEVER logout user - keep them logged in with cached data
-              // User stays logged in, can view cached data
-              return Promise.reject({
-                ...error,
-                _offlineMode: true,
-                message: 'Session expired - using cached data'
-              });
-            }
-          } catch (refreshError) {
-            console.warn('[EvenlyApiClient] ⚠️ Silent refresh error - keeping user logged in with cached data');
-            console.warn('[EvenlyApiClient] ⚠️ User can continue using app in offline mode');
-            ErrorHandler.logError(refreshError, 'Silent Token Refresh');
-
-            // NEVER logout user - keep them logged in with cached data
-            // User stays logged in, can view cached data
-            return Promise.reject({
-              ...error,
-              _offlineMode: true,
-              message: 'Session expired - using cached data'
-            });
-          }
+          // Keep user logged in with cached data in all cases
+          // User can view cached data and retry when network is restored
+          return Promise.reject({
+            ...error,
+            _offlineMode: true,
+            message: 'Network error - using cached data'
+          });
         }
 
         // For non-401 errors, we'll let the calling code handle the user-friendly error display
