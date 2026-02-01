@@ -21,7 +21,7 @@ import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout, currentOrganization } = useAuth();
+  const { user, logout, currentOrganization, authState } = useAuth();
   const { colors, toggleTheme } = useTheme();
   const router = useRouter();
   const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
@@ -132,6 +132,56 @@ export const ProfileScreen: React.FC = () => {
       setShowGroupsListModal(true);
     }, 300);
   };
+
+  // Show loading state while initializing auth
+  if (authState === 'initializing') {
+    return (
+      <>
+        <PullToRefreshSpinner refreshing={refreshing} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <PullToRefreshScrollView
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onScroll={handleScroll}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            contentContainerStyle={styles.contentContainer}
+          >
+            <GlassMenuCard
+              title="Profile"
+              subtitle="Initializing your account..."
+              items={[]}
+            />
+          </PullToRefreshScrollView>
+        </View>
+      </>
+    );
+  }
+
+  // Show loading state while refreshing session
+  if (authState === 'refreshing') {
+    return (
+      <>
+        <PullToRefreshSpinner refreshing={refreshing} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <PullToRefreshScrollView
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onScroll={handleScroll}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            contentContainerStyle={styles.contentContainer}
+          >
+            <GlassMenuCard
+              title="Profile"
+              subtitle="Refreshing your session..."
+              items={[]}
+            />
+          </PullToRefreshScrollView>
+        </View>
+      </>
+    );
+  }
 
   // Show loading state if user data is not available
   if (!user) {

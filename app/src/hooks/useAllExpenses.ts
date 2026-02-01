@@ -1,18 +1,28 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Expense, EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { CacheManager } from '../utils/cacheManager';
 import { useGroups } from './useGroups';
 import { emitExpenseCreated, emitExpensesRefreshNeeded, groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
+import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useAllExpenses = () => {
+  const { authState } = useAuth();
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { groups, loading: groupsLoading } = useGroups();
 
+  // Wait for auth to be ready before loading data
   useEffect(() => {
+    if (authState !== 'authenticated') {
+      console.log('[useAllExpenses] Auth not ready, skipping data load. State:', authState);
+      return;
+    }
+
+    console.log('[useAllExpenses] Auth ready, loading expenses...');
     if (groupsLoading) {
       setLoading(true);
     } else if (groups.length > 0) {
@@ -22,7 +32,21 @@ export const useAllExpenses = () => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, groupsLoading]); // Depend on groups array to reload when groups change
+  }, [authState, groups, groupsLoading, loadAllExpenses]); // Depend on groups array to reload when groups change
+
+  // Register with DataRefreshCoordinator
+  useEffect(() => {
+    console.log('[useAllExpenses] Registering with DataRefreshCoordinator');
+    const unregister = DataRefreshCoordinator.register(async () => {
+      console.log('[useAllExpenses] Coordinator triggered refresh');
+      await loadAllExpenses();
+    });
+
+    return () => {
+      console.log('[useAllExpenses] Unregistering from DataRefreshCoordinator');
+      unregister();
+    };
+  }, [loadAllExpenses]);
 
   // Listen for expense refresh events from other screens
   useEffect(() => {
@@ -61,7 +85,7 @@ export const useAllExpenses = () => {
     };
   }, [groups, groupsLoading, expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Listen for token refresh events to reload data with fresh token
+  // Listen for token refresh events (backwards compatibility)
   useEffect(() => {
     const handleTokenRefreshed = () => {
       console.log('[useAllExpenses] Token refreshed event received, reloading expenses...');
@@ -73,19 +97,19 @@ export const useAllExpenses = () => {
     return () => {
       sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
     };
-  }, []);
+  }, [loadAllExpenses]);
 
-  const loadAllExpenses = async () => {
+  // Fix closure issue by using current groups, not stale closure
+  const loadAllExpenses = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Use the latest groups from the hook
-      const currentGroups = groups;
+      // Fetch fresh groups to avoid closure issue
+      const currentGroups = await EvenlyBackendService.getGroups({ cacheTTLMs: 0 });
 
       console.log('[useAllExpenses] loadAllExpenses called', {
         groupsCount: currentGroups.length,
-        groupsLoading
       });
 
       if (currentGroups.length === 0) {
@@ -117,14 +141,20 @@ export const useAllExpenses = () => {
 
       // Force update by creating new array reference
       setExpenses(() => [...allExpenses]);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
-      console.error('[useAllExpenses] Error loading expenses:', err);
-      setError(errorMessage);
+    } catch (err: any) {
+      // If in offline mode (session expired), don't show error to user
+      if (err._offlineMode) {
+        console.warn('[useAllExpenses] ⚠️ Offline mode - using cached data');
+        // Don't set error message - user is in offline mode
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
+        console.error('[useAllExpenses] Error loading expenses:', err);
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const totalExpenses = useMemo(() => 
     expenses.reduce((sum, expense) => {

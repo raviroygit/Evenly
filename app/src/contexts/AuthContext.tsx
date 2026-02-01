@@ -7,6 +7,7 @@ import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 import { CacheManager } from '../utils/cacheManager';
 import { emitTokenRefreshed } from '../utils/sessionEvents';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
+import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -14,9 +15,13 @@ import { User as UserType, Organization as OrganizationType } from '../types';
 type User = UserType;
 type Organization = OrganizationType;
 
+// Auth state machine for clear state management
+export type AuthState = 'initializing' | 'authenticated' | 'unauthenticated' | 'refreshing';
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  authState: AuthState;
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
   login: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
@@ -41,6 +46,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false); // Start with loading false
+  const [authState, setAuthState] = useState<AuthState>('initializing');
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const appState = useRef(AppState.currentState);
@@ -70,12 +76,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
+        setAuthState('initializing');
 
         const authData = await AuthStorage.getAuthData();
 
         if (authData && authData.user && authData.accessToken) {
           // Set user immediately from storage - stay logged in!
           setUser(authData.user);
+          setAuthState('authenticated');
 
           // Load organizations from storage if available
           if (authData.organizations) {
@@ -147,6 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
         } else {
           setUser(null);
+          setAuthState('unauthenticated');
         }
       } catch (error) {
         console.error('[AuthContext] Auth initialization error:', error);
@@ -154,8 +163,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const authData = await AuthStorage.getAuthData();
         if (authData?.user) {
           setUser(authData.user);
+          setAuthState('authenticated');
         } else {
           setUser(null);
+          setAuthState('unauthenticated');
         }
       } finally {
         setIsLoading(false);
@@ -198,6 +209,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (tokenInfo.needsUrgentRefresh || tokenInfo.isExpired) {
         console.log(`[AuthContext] Token ${tokenInfo.isExpired ? 'expired' : `has ${tokenInfo.minutesUntilExpiry} min left`} - attempting refresh`);
 
+        // Set auth state to refreshing
+        setAuthState('refreshing');
+
         // Attempt silent refresh
         const refreshed = await SilentTokenRefresh.refresh();
 
@@ -208,17 +222,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('[AuthContext] Invalidating cache to load fresh data');
           await CacheManager.invalidateAllData();
 
-          // Emit token refreshed event to notify all screens to reload data
+          // Coordinate data refresh across all hooks
+          console.log('[AuthContext] Coordinating data refresh...');
+          await DataRefreshCoordinator.refreshAll();
+
+          // Emit token refreshed event (for backwards compatibility)
           emitTokenRefreshed();
 
-          // Warm cache with fresh data (non-blocking)
-          warmAppCache().catch((err) => {
-            console.error('[AuthContext] Cache warmup failed:', err);
-          });
+          // Set auth state back to authenticated
+          setAuthState('authenticated');
 
           lastValidation.current = now;
         } else {
           console.warn('[AuthContext] ⚠️ Refresh failed - keeping user logged in with cached data');
+          // Set auth state back to authenticated (user stays logged in)
+          setAuthState('authenticated');
           lastValidation.current = now;
         }
       } else {
@@ -307,10 +325,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     console.log('[AuthContext] Starting background token refresh timer');
 
-    // Check and refresh immediately on mount (5-minute threshold)
-    SilentTokenRefresh.checkAndRefresh().catch(err => {
-      console.error('[AuthContext] Initial token refresh check failed:', err);
-    });
+    // Wait 5 seconds before first check to ensure auth data is settled in storage
+    // This prevents race conditions during login
+    const initialCheckTimeout = setTimeout(() => {
+      console.log('[AuthContext] Running initial token refresh check...');
+      SilentTokenRefresh.checkAndRefresh().catch(err => {
+        console.error('[AuthContext] Initial token refresh check failed:', err);
+      });
+    }, 5000);
 
     // Then check every 2 minutes (more frequent since we only refresh at < 5 min)
     const interval = setInterval(() => {
@@ -323,6 +345,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshTimerRef.current = interval;
 
     return () => {
+      // Clear both timeout and interval on cleanup
+      clearTimeout(initialCheckTimeout);
       if (refreshTimerRef.current) {
         clearInterval(refreshTimerRef.current);
         refreshTimerRef.current = null;
@@ -412,8 +436,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // If login was successful and we have user data, use it directly
       if (result.success && result.user) {
-        setUser(result.user);
-
         // Update organizations if received from login
         console.log('[AuthContext] Login result user:', result.user);
         console.log('[AuthContext] User organizations:', result.user.organizations);
@@ -437,6 +459,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.warn('[AuthContext] ⚠️ No organizations in login result!');
         }
 
+        // IMPORTANT: Save auth data BEFORE setting user state
+        // This prevents race conditions with background timers and storage monitor
         await AuthStorage.saveAuthData(
           result.user,
           result.accessToken,
@@ -444,14 +468,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           result.user.organizations
         );
 
-        // Upgrade to 90-day session
-        console.log('[AuthContext] Upgrading to 90-day session after OTP login...');
-        const upgraded = await SilentTokenRefresh.refresh();
-        if (upgraded) {
-          console.log('[AuthContext] ✅ Successfully upgraded to 90-day session');
-        } else {
-          console.warn('[AuthContext] ⚠️ Failed to upgrade to 90-day session - will use 24-hour session');
-        }
+        // Set auth state to authenticated
+        setAuthState('authenticated');
+
+        // Now set user - this will trigger background timers, but auth data is already saved
+        setUser(result.user);
+
+        // Note: We don't upgrade to 90-day session immediately after login
+        // The background token refresh will handle upgrading to mobile session
+        // when the access token naturally expires. This prevents issues with
+        // refresh tokens not being immediately compatible with mobile refresh endpoint.
+        console.log('[AuthContext] ✅ Login successful - background refresh will upgrade session when needed');
 
         warmAppCache().catch(() => {});
 
@@ -544,6 +571,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = useMemo(() => ({
     user,
     isLoading,
+    authState,
     isAuthenticated,
     setUser,
     login,
@@ -555,7 +583,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     organizations,
     switchOrganization,
     refreshOrganizations,
-  }), [user, isLoading, isAuthenticated, setUser, login, signup, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
+  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
 
   return (
     <AuthContext.Provider value={value}>

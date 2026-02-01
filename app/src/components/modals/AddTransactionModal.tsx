@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
@@ -35,7 +36,7 @@ interface AddTransactionModalProps {
   customerId: string;
   transactionType: 'give' | 'get';
   editTransaction?: Transaction | null;
-  onUpdateTransaction?: (transactionId: string, data: FormData) => Promise<void>;
+  onUpdateTransaction?: (transactionId: string, data: FormData, onProgress?: (progress: number) => void) => Promise<void>;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -53,8 +54,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<{ amount?: string }>({});
   const [selectedType, setSelectedType] = useState<'give' | 'get'>(transactionType);
+
+  // Constants for image optimization
+  const MAX_FILE_SIZE_MB = 5; // 5MB limit
 
   // Pre-fill form when editing
   React.useEffect(() => {
@@ -80,6 +85,72 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
     setErrors({});
   }, [editTransaction, visible, transactionType]);
+
+  // Get optimal quality setting based on expected file size
+  const getOptimalQuality = (width?: number, height?: number): number => {
+    // If we don't have dimensions, use moderate quality
+    if (!width || !height) return 0.7;
+
+    // Estimate file size based on dimensions (rough approximation)
+    const pixels = width * height;
+    const estimatedSizeMB = (pixels * 3) / (1024 * 1024); // RGB, rough estimate
+
+    console.log('[Image Quality] Estimating quality for', width, 'x', height, '(~', estimatedSizeMB.toFixed(1), 'MB)');
+
+    // Adaptive quality based on estimated size
+    if (estimatedSizeMB > 8) {
+      console.log('[Image Quality] Large image - using quality 0.5');
+      return 0.5; // Aggressive compression for very large images
+    } else if (estimatedSizeMB > 4) {
+      console.log('[Image Quality] Medium-large image - using quality 0.6');
+      return 0.6; // Moderate compression
+    } else if (estimatedSizeMB > 2) {
+      console.log('[Image Quality] Medium image - using quality 0.7');
+      return 0.7; // Light compression
+    } else {
+      console.log('[Image Quality] Small image - using quality 0.8');
+      return 0.8; // Minimal compression
+    }
+  };
+
+  // Validate image size
+  const validateImageSize = async (uri: string): Promise<{ valid: boolean; sizeMB: number }> => {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+
+      console.log('[Image Validation] File info:', fileInfo);
+
+      if (!fileInfo.exists) {
+        console.warn('[Image Validation] File does not exist');
+        return { valid: false, sizeMB: 0 };
+      }
+
+      // File exists but size might be 0 or undefined for some URIs (e.g., content:// URIs on Android)
+      if (!fileInfo.size || fileInfo.size === 0) {
+        console.warn('[Image Validation] File size unavailable, allowing upload (compressed by ImagePicker)');
+        // Since we're using ImagePicker with quality: 0.7, the image is already compressed
+        // Allow upload even if we can't determine exact size
+        return { valid: true, sizeMB: 0 };
+      }
+
+      const sizeMB = fileInfo.size / (1024 * 1024);
+      const isValid = sizeMB <= MAX_FILE_SIZE_MB;
+
+      console.log('[Image Validation]', {
+        sizeMB: sizeMB.toFixed(2),
+        maxSizeMB: MAX_FILE_SIZE_MB,
+        valid: isValid
+      });
+
+      return { valid: isValid, sizeMB };
+    } catch (error) {
+      console.error('[Image Validation] Error:', error);
+      // Allow upload if validation fails (graceful fallback)
+      // Image is already compressed by ImagePicker with quality: 0.7
+      console.warn('[Image Validation] Validation failed, allowing upload (image already compressed)');
+      return { valid: true, sizeMB: 0 };
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: { amount?: string } = {};
@@ -129,17 +200,51 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!hasPermission) return;
 
     try {
+      // First, let user select image with high quality to get dimensions
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false, // Keep original image without cropping
-        quality: 1, // Best quality
+        allowsEditing: false, // Keep original aspect ratio (no cropping)
+        quality: 0.7, // Default compression (70%)
+        exif: false, // Don't include EXIF data (reduces size)
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        const selectedUri = result.assets[0].uri;
+        const width = result.assets[0].width;
+        const height = result.assets[0].height;
+
+        console.log('[Image Selection] Selected image:', width, 'x', height);
+
+        // Check file size
+        const { valid, sizeMB } = await validateImageSize(selectedUri);
+
+        if (sizeMB > 0) {
+          console.log('[Image Selection] Compressed image size:', sizeMB.toFixed(2), 'MB');
+        } else {
+          console.log('[Image Selection] Image size unknown (already compressed by ImagePicker)');
+        }
+
+        if (!valid) {
+          Alert.alert(
+            'Image Too Large',
+            `The selected image (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please select a smaller image.`,
+            [
+              { text: 'Try Again', onPress: pickImageFromGallery },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+
+        setImageUri(selectedUri);
+        if (sizeMB > 0) {
+          console.log('[Image Selection] Image ready for upload:', sizeMB.toFixed(2), 'MB');
+        } else {
+          console.log('[Image Selection] Image ready for upload (compressed by ImagePicker)');
+        }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      console.error('[Image Selection] Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -150,15 +255,48 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false, // Keep original image without cropping
-        quality: 1, // Best quality
+        allowsEditing: false, // Keep original aspect ratio (no cropping)
+        quality: 0.7, // Compress to 70% quality
+        exif: false, // Don't include EXIF data (reduces size)
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        const photoUri = result.assets[0].uri;
+        const width = result.assets[0].width;
+        const height = result.assets[0].height;
+
+        console.log('[Camera] Captured photo:', width, 'x', height);
+
+        // Check file size
+        const { valid, sizeMB } = await validateImageSize(photoUri);
+
+        if (sizeMB > 0) {
+          console.log('[Camera] Compressed photo size:', sizeMB.toFixed(2), 'MB');
+        } else {
+          console.log('[Camera] Photo size unknown (already compressed by ImagePicker)');
+        }
+
+        if (!valid) {
+          Alert.alert(
+            'Image Too Large',
+            `The photo (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please try taking the photo again.`,
+            [
+              { text: 'Try Again', onPress: takePhoto },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+
+        setImageUri(photoUri);
+        if (sizeMB > 0) {
+          console.log('[Camera] Photo ready for upload:', sizeMB.toFixed(2), 'MB');
+        } else {
+          console.log('[Camera] Photo ready for upload (compressed by ImagePicker)');
+        }
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
+      console.error('[Camera] Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
@@ -196,6 +334,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     try {
       setLoading(true);
+      setUploadProgress(0);
 
       // Create FormData for transaction (with optional image)
       const formData = new FormData();
@@ -210,22 +349,23 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           formData.append('description', description.trim());
         }
 
-        console.log('Updating transaction with FormData:', {
-          transactionId: editTransaction.id,
-          type: selectedType,
-          amount: parseFloat(amount).toFixed(2),
-          currency: 'INR',
-          description: description.trim() || undefined,
-          hasImage: !!imageUri,
-        });
-
         // Add image if selected or changed
         if (imageUri && imageUri !== editTransaction.imageUrl) {
           // New image selected or existing image changed
           setUploadingImage(true);
+
+          // Get file info for logging
+          const fileInfo = await FileSystem.getInfoAsync(imageUri);
           const filename = imageUri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          console.log('[Transaction Update] Uploading image:', {
+            transactionId: editTransaction.id,
+            filename,
+            type,
+            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown'
+          });
 
           formData.append('image', {
             uri: imageUri,
@@ -234,8 +374,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           } as any);
         }
 
-        // Update transaction
-        await onUpdateTransaction(editTransaction.id, formData);
+        // Update transaction with progress callback
+        await onUpdateTransaction(editTransaction.id, formData, (progress) => {
+          setUploadProgress(progress);
+        });
+
+        console.log('[Transaction Update] Success');
       } else {
         // Create new transaction
         formData.append('customerId', customerId);
@@ -247,21 +391,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           formData.append('description', description.trim());
         }
 
-        console.log('Creating transaction with FormData:', {
-          customerId,
-          type: transactionType,
-          amount: parseFloat(amount).toFixed(2),
-          currency: 'INR',
-          description: description.trim() || undefined,
-          hasImage: !!imageUri,
-        });
-
         // Add image if selected
         if (imageUri) {
           setUploadingImage(true);
+
+          // Get file info for logging
+          const fileInfo = await FileSystem.getInfoAsync(imageUri);
           const filename = imageUri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          console.log('[Transaction Create] Uploading image:', {
+            filename,
+            type,
+            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown'
+          });
 
           formData.append('image', {
             uri: imageUri,
@@ -270,8 +414,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           } as any);
         }
 
-        // Create transaction (with image if provided)
-        await EvenlyBackendService.createKhataTransaction(formData);
+        // Create transaction with progress callback
+        await EvenlyBackendService.createKhataTransaction(formData, (progress) => {
+          setUploadProgress(progress);
+        });
+
+        console.log('[Transaction Create] Success');
       }
 
       // Reset form
@@ -280,20 +428,53 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setImageUri(null);
       setSelectedType(transactionType);
       setErrors({});
+      setUploadProgress(0);
 
       // Refresh data first, then close modal
       await onSuccess();
       onClose();
     } catch (error: any) {
-      console.error(editTransaction ? 'Error updating transaction:' : 'Error creating transaction:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || `Failed to ${editTransaction ? 'update' : 'create'} transaction. Please try again.`,
-        [{ text: 'OK' }]
-      );
+      console.error('[Transaction Error]', {
+        type: editTransaction ? 'update' : 'create',
+        hasImage: !!imageUri,
+        error: error.message,
+        code: error.code,
+        status: error.response?.status,
+        responseData: error.response?.data
+      });
+
+      // Determine error type and show specific message
+      let errorTitle = 'Error';
+      let errorMessage = `Failed to ${editTransaction ? 'update' : 'create'} transaction. Please try again.`;
+      let showRetry = true;
+
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorTitle = 'Upload Timeout';
+        errorMessage = 'The upload took too long. This usually happens with large images or slow connections.\n\nTips:\n• Make sure you have a stable internet connection\n• Try connecting to WiFi\n• The image was already compressed, so network speed may be the issue';
+      } else if (error.response?.status === 413) {
+        errorTitle = 'File Too Large';
+        errorMessage = 'The image file is too large for the server to process.\n\nPlease select a different image or take a new photo.';
+      } else if (error.response?.status === 400) {
+        errorTitle = 'Invalid Data';
+        errorMessage = error.response?.data?.message || 'The transaction data is invalid. Please check your inputs.';
+        showRetry = false;
+      } else if (error.message?.includes('Network Error') || error.code === 'ERR_NETWORK') {
+        errorTitle = 'Network Error';
+        errorMessage = 'Cannot connect to the server. Please check your internet connection and try again.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      const buttons: any[] = [{ text: 'Cancel', style: 'cancel' }];
+      if (showRetry) {
+        buttons.push({ text: 'Retry', onPress: handleSubmit });
+      }
+
+      Alert.alert(errorTitle, errorMessage, buttons);
     } finally {
       setLoading(false);
       setUploadingImage(false);
+      setUploadProgress(0);
     }
   };
 
@@ -519,11 +700,24 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     </TouchableOpacity>
                   )}
                   {uploadingImage && (
-                    <View style={styles.uploadingContainer}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                      <Text style={[styles.uploadingText, { color: colors.mutedForeground }]}>
-                        Uploading image...
-                      </Text>
+                    <View style={styles.uploadProgressContainer}>
+                      <View style={styles.uploadProgressHeader}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
+                          Uploading image... {uploadProgress}%
+                        </Text>
+                      </View>
+                      <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
+                        <View
+                          style={[
+                            styles.progressBarFill,
+                            {
+                              width: `${uploadProgress}%`,
+                              backgroundColor: colors.primary
+                            }
+                          ]}
+                        />
+                      </View>
                     </View>
                   )}
                 </View>
@@ -683,9 +877,10 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 200,
+    minHeight: 200,
+    maxHeight: 400,
     borderRadius: 12,
-    resizeMode: 'cover',
+    resizeMode: 'contain', // Show full image without cropping
   },
   removeImageButton: {
     position: 'absolute',
@@ -695,15 +890,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
   },
-  uploadingContainer: {
+  uploadProgressContainer: {
+    marginTop: 12,
+    gap: 8,
+  },
+  uploadProgressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
     gap: 8,
   },
-  uploadingText: {
-    fontSize: 12,
+  uploadProgressText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  progressBarBackground: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   submitButtonContainer: {
     paddingHorizontal: 20,

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useDashboard } from '../../hooks/useDashboard';
 import { useGroups } from '../../hooks/useGroups';
+import { useUserBalances } from '../../hooks/useBalances';
 import { useAllExpenses } from '../../hooks/useAllExpenses';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { groupEvents, GROUP_EVENTS, emitGroupCreated, emitExpenseCreated } from '../../utils/groupEvents';
@@ -26,10 +26,31 @@ import { useRouter } from 'expo-router';
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { colors, theme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
-  const { stats, loading: dashboardLoading, refresh: refreshDashboard } = useDashboard();
+  const { user, isAuthenticated, authState } = useAuth();
+
+  // Use only useGroups and useUserBalances directly - no useDashboard to avoid duplicate calls
   const { groups, createGroup, refreshGroups, loading: groupsLoading } = useGroups();
+  const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
   const { refreshExpenses } = useAllExpenses();
+
+  // Calculate stats locally instead of using useDashboard
+  const stats = useMemo(() => ({
+    totalGroups: groups.length,
+    totalExpenses: 0,
+    totalOwed: netBalance?.totalOwed || 0,
+    totalOwing: netBalance?.totalOwing || 0,
+    netBalance: netBalance?.netBalance || 0,
+    pendingPayments: 0,
+    completedPayments: 0,
+    recentActivityCount: groups.filter(group => {
+      const groupDate = new Date(group.updatedAt);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return groupDate >= sevenDaysAgo;
+    }).length,
+  }), [groups, netBalance]);
+
+  const dashboardLoading = groupsLoading || balancesLoading;
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -72,91 +93,73 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     const handleGroupsRefreshNeeded = async () => {
       console.log('[HomeScreen] Groups refresh needed event received, refreshing...');
+      setKhataLoading(true);
+
       try {
-        // Set khata loading
-        setKhataLoading(true);
+        // Load all data in parallel for speed
+        await Promise.all([
+          refreshGroups ? refreshGroups() : Promise.resolve(),
+          refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+          refreshExpenses ? refreshExpenses() : Promise.resolve(),
+          (async () => {
+            try {
+              const [summary, customersData] = await Promise.all([
+                EvenlyBackendService.getKhataFinancialSummary(),
+                EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+              ]);
+              setKhataSummary(summary);
+              setCustomerCount(customersData.length);
+              setCustomers(customersData);
+            } catch (error) {
+              console.error('Error refreshing khata summary:', error);
+            }
+          })(),
+        ]);
 
-        // Refresh groups first
-        if (refreshGroups) {
-          await refreshGroups();
-        }
-        // Wait for state to propagate
-        await new Promise(resolve => setTimeout(resolve, 200));
-        // Refresh expenses
-        if (refreshExpenses) {
-          await refreshExpenses();
-        }
-        // Wait for state to propagate
-        await new Promise(resolve => setTimeout(resolve, 200));
-        // Refresh dashboard
-        await refreshDashboard();
-
-        // Refresh khata summary
-        try {
-          const [summary, customersData] = await Promise.all([
-            EvenlyBackendService.getKhataFinancialSummary(),
-            EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
-          ]);
-          setKhataSummary(summary);
-          setCustomerCount(customersData.length);
-          setCustomers(customersData);
-        } catch (error) {
-          console.error('Error refreshing khata summary:', error);
-        } finally {
-          setKhataLoading(false);
-        }
-
-        // Wait for all state updates
-        await new Promise(resolve => setTimeout(resolve, 300));
         // Refresh activities
         if (activitiesRefreshRef.current) {
           activitiesRefreshRef.current();
         }
       } catch (error) {
         console.error('[HomeScreen] Error refreshing on event:', error);
+      } finally {
+        setKhataLoading(false);
       }
     };
 
     // Listen for expense events to refresh when expenses are created/updated from other screens
     const handleExpensesRefreshNeeded = async () => {
       console.log('[HomeScreen] Expenses refresh needed event received, refreshing...');
+      setKhataLoading(true);
+
       try {
-        // Set khata loading
-        setKhataLoading(true);
+        // Load all data in parallel for speed
+        await Promise.all([
+          refreshExpenses ? refreshExpenses() : Promise.resolve(),
+          refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+          (async () => {
+            try {
+              const [summary, customersData] = await Promise.all([
+                EvenlyBackendService.getKhataFinancialSummary(),
+                EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+              ]);
+              setKhataSummary(summary);
+              setCustomerCount(customersData.length);
+              setCustomers(customersData);
+            } catch (error) {
+              console.error('Error refreshing khata summary:', error);
+            }
+          })(),
+        ]);
 
-        // Refresh expenses first - this will trigger useAllExpenses to reload
-        if (refreshExpenses) {
-          await refreshExpenses();
-        }
-        // Wait longer for expenses to fully load and state to propagate
-        await new Promise(resolve => setTimeout(resolve, 800));
-        // Refresh dashboard
-        await refreshDashboard();
-
-        // Refresh khata summary
-        try {
-          const [summary, customersData] = await Promise.all([
-            EvenlyBackendService.getKhataFinancialSummary(),
-            EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
-          ]);
-          setKhataSummary(summary);
-          setCustomerCount(customersData.length);
-          setCustomers(customersData);
-        } catch (error) {
-          console.error('Error refreshing khata summary:', error);
-        } finally {
-          setKhataLoading(false);
-        }
-
-        // Wait for all state updates
-        await new Promise(resolve => setTimeout(resolve, 500));
-        // Refresh activities to show the new expense activity - now async
+        // Refresh activities
         if (activitiesRefreshRef.current) {
-          console.log('[HomeScreen] Calling activities refresh after expense event');
-          await activitiesRefreshRef.current();
+          activitiesRefreshRef.current();
         }
       } catch (error) {
         console.error('[HomeScreen] Error refreshing on expense event:', error);
+      } finally {
+        setKhataLoading(false);
       }
     };
 
@@ -167,60 +170,41 @@ export const HomeScreen: React.FC = () => {
       groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
       groupEvents.off(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
     };
-  }, [refreshGroups, refreshExpenses, refreshDashboard]);
+  }, [refreshGroups, refreshExpenses, refreshUserBalances]);
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setKhataLoading(true);
+
     try {
-      // Set khata loading to show skeleton
-      setKhataLoading(true);
+      // Load all data in parallel for maximum speed
+      await Promise.all([
+        refreshGroups ? refreshGroups() : Promise.resolve(),
+        refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+        refreshExpenses ? refreshExpenses() : Promise.resolve(),
+        (async () => {
+          try {
+            const [summary, customersData] = await Promise.all([
+              EvenlyBackendService.getKhataFinancialSummary(),
+              EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+            ]);
+            setKhataSummary(summary);
+            setCustomerCount(customersData.length);
+            setCustomers(customersData);
+          } catch (error) {
+            console.error('Error refreshing khata summary:', error);
+          }
+        })(),
+      ]);
 
-      // Refresh groups first - this will force fresh data from server
-      if (refreshGroups) {
-        await refreshGroups();
-      }
-
-      // Wait for groups state to propagate (increased wait time)
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Refresh expenses after groups are updated
-      if (refreshExpenses) {
-        await refreshExpenses();
-      }
-
-      // Wait for expenses state to propagate (increased wait time)
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Refresh dashboard after groups and expenses are updated
-      await refreshDashboard();
-
-      // Refresh khata summary
-      try {
-        const [summary, customersData] = await Promise.all([
-          EvenlyBackendService.getKhataFinancialSummary(),
-          EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
-        ]);
-        setKhataSummary(summary);
-        setCustomerCount(customersData.length);
-        setCustomers(customersData);
-      } catch (error) {
-        console.error('Error refreshing khata summary:', error);
-      } finally {
-        setKhataLoading(false);
-      }
-
-      // Wait for all state updates to complete (increased wait time)
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Force refresh activities - this will regenerate from fresh data
-      // The refresh function now directly uses current groups/expenses
+      // Refresh activities after all data is loaded
       if (activitiesRefreshRef.current) {
-        console.log('[HomeScreen] Calling activities refresh after data refresh');
         activitiesRefreshRef.current();
       }
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
+      setKhataLoading(false);
       setRefreshing(false);
     }
   };
@@ -238,44 +222,31 @@ export const HomeScreen: React.FC = () => {
       emitGroupCreated(newGroup);
       setShowCreateGroupModal(false);
 
-      // Set khata loading
       setKhataLoading(true);
 
-      // Force refresh groups first - this will invalidate cache and reload from server
-      if (refreshGroups) {
-        await refreshGroups();
-      }
+      // Load all data in parallel for speed
+      await Promise.all([
+        refreshGroups ? refreshGroups() : Promise.resolve(),
+        refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+        refreshExpenses ? refreshExpenses() : Promise.resolve(),
+        (async () => {
+          try {
+            const [summary, customersData] = await Promise.all([
+              EvenlyBackendService.getKhataFinancialSummary(),
+              EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+            ]);
+            setKhataSummary(summary);
+            setCustomerCount(customersData.length);
+            setCustomers(customersData);
+          } catch (error) {
+            console.error('Error refreshing khata summary:', error);
+          } finally {
+            setKhataLoading(false);
+          }
+        })(),
+      ]);
 
-      // Wait a bit for state to propagate
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Refresh expenses
-      if (refreshExpenses) {
-        await refreshExpenses();
-      }
-
-      // Refresh dashboard after groups are refreshed
-      await refreshDashboard();
-
-      // Refresh khata summary
-      try {
-        const [summary, customersData] = await Promise.all([
-          EvenlyBackendService.getKhataFinancialSummary(),
-          EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
-        ]);
-        setKhataSummary(summary);
-        setCustomerCount(customersData.length);
-        setCustomers(customersData);
-      } catch (error) {
-        console.error('Error refreshing khata summary:', error);
-      } finally {
-        setKhataLoading(false);
-      }
-
-      // Wait a bit more for all state updates
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Refresh activities to show the new group activity
+      // Refresh activities
       if (activitiesRefreshRef.current) {
         activitiesRefreshRef.current();
       }
@@ -318,39 +289,32 @@ export const HomeScreen: React.FC = () => {
       emitExpenseCreated(newExpense);
       setShowAddExpenseModal(false);
 
-      // Set khata loading
       setKhataLoading(true);
 
-      // Refresh all data to show the new expense - wait for all to complete
+      // Load all data in parallel for speed
       await Promise.all([
         refreshGroups ? refreshGroups() : Promise.resolve(),
+        refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
         refreshExpenses ? refreshExpenses() : Promise.resolve(),
+        (async () => {
+          try {
+            const [summary, customersData] = await Promise.all([
+              EvenlyBackendService.getKhataFinancialSummary(),
+              EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+            ]);
+            setKhataSummary(summary);
+            setCustomerCount(customersData.length);
+            setCustomers(customersData);
+          } catch (error) {
+            console.error('Error refreshing khata summary:', error);
+          } finally {
+            setKhataLoading(false);
+          }
+        })(),
       ]);
 
-      // Refresh dashboard after expenses are refreshed
-      await refreshDashboard();
-
-      // Refresh khata summary
-      try {
-        const [summary, customersData] = await Promise.all([
-          EvenlyBackendService.getKhataFinancialSummary(),
-          EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
-        ]);
-        setKhataSummary(summary);
-        setCustomerCount(customersData.length);
-        setCustomers(customersData);
-      } catch (error) {
-        console.error('Error refreshing khata summary:', error);
-      } finally {
-        setKhataLoading(false);
-      }
-
-      // Wait for all state updates
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Refresh activities to show the new expense activity
+      // Refresh activities
       if (activitiesRefreshRef.current) {
-        console.log('[HomeScreen] Calling activities refresh after expense creation');
         activitiesRefreshRef.current();
       }
     } catch (error) {
@@ -446,15 +410,17 @@ export const HomeScreen: React.FC = () => {
   if (!isAuthenticated || !user) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <GlassListCard
-          title="Authentication Required"
-          subtitle="Please log in to access the app"
-          contentGap={0}
-        >
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            You need to be logged in to access this feature.
-          </Text>
-        </GlassListCard>
+        <View style={styles.scrollContent}>
+          <GlassListCard
+            title="Authentication Required"
+            subtitle="Please log in to access the app"
+            contentGap={0}
+          >
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              You need to be logged in to access this feature.
+            </Text>
+          </GlassListCard>
+        </View>
       </View>
     );
   }
@@ -509,7 +475,7 @@ export const HomeScreen: React.FC = () => {
         {/* Khata Summary Card */}
         {khataLoading ? (
           <SkeletonKhataSummary />
-        ) : (
+        ) : khataSummary ? (
           <View style={styles.khataSummaryContainer}>
             <TouchableOpacity
               style={[
@@ -551,12 +517,12 @@ export const HomeScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
         {/* Recent Activity */}
         <RecentActivity
           onViewAll={() => {
-            // Navigate to activity screen
+            router.push('/activities' as any);
           }}
           refreshing={refreshing}
           onRefresh={onRefresh}

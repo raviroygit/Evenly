@@ -1,48 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Group } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { CacheManager } from '../utils/cacheManager';
 import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
+import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useGroups = () => {
+  const { authState } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Test connection first
-    EvenlyBackendService.testConnection().then(isConnected => {
-      if (isConnected) {
-        loadGroups();
-      } else {
-        setError('Cannot connect to backend server');
-        setLoading(false);
-      }
-    });
-
-    // Listen for group events to refresh when groups are created/updated/deleted from other screens
-    const handleGroupsRefreshNeeded = () => {
-      console.log('[useGroups] Groups refresh needed event received, refreshing...');
-      loadGroups();
-    };
-
-    // Listen for token refresh events to reload data with fresh token
-    const handleTokenRefreshed = () => {
-      console.log('[useGroups] Token refreshed event received, reloading groups...');
-      loadGroups();
-    };
-
-    groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
-    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
-
-    return () => {
-      groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
-      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
-    };
-  }, []);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -59,13 +30,71 @@ export const useGroups = () => {
 
       // Force update by replacing the entire array - this ensures React detects the change
       setGroups(() => [...groupsData]);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load groups';
-      setError(errorMessage);
+    } catch (err: any) {
+      // If in offline mode (session expired), don't show error to user
+      // They're still logged in with cached data
+      if (err._offlineMode) {
+        console.warn('[useGroups] ⚠️ Offline mode - using cached data');
+        // Don't set error message - user is in offline mode
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load groups';
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Wait for auth to be ready before loading data
+  useEffect(() => {
+    // Only load data when authenticated
+    if (authState !== 'authenticated') {
+      console.log('[useGroups] Auth not ready, skipping data load. State:', authState);
+      return;
+    }
+
+    console.log('[useGroups] Auth ready, loading groups immediately...');
+    // Load groups immediately - no connection test needed (adds delay)
+    // The API call itself will fail if connection is down
+    loadGroups();
+  }, [authState, loadGroups]);
+
+  // Register with DataRefreshCoordinator
+  useEffect(() => {
+    console.log('[useGroups] Registering with DataRefreshCoordinator');
+    const unregister = DataRefreshCoordinator.register(async () => {
+      console.log('[useGroups] Coordinator triggered refresh');
+      await loadGroups();
+    });
+
+    return () => {
+      console.log('[useGroups] Unregistering from DataRefreshCoordinator');
+      unregister();
+    };
+  }, [loadGroups]);
+
+  // Listen for group events to refresh when groups are created/updated/deleted from other screens
+  useEffect(() => {
+    const handleGroupsRefreshNeeded = () => {
+      console.log('[useGroups] Groups refresh needed event received, refreshing...');
+      loadGroups();
+    };
+
+    // Listen for token refresh events (backwards compatibility)
+    const handleTokenRefreshed = () => {
+      console.log('[useGroups] Token refreshed event received, reloading groups...');
+      loadGroups();
+    };
+
+    groupEvents.on(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+    sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+
+    return () => {
+      groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleGroupsRefreshNeeded);
+      sessionEvents.off(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
+    };
+  }, [loadGroups]);
+
 
   const totalGroups = useMemo(() => groups.length, [groups]);
 

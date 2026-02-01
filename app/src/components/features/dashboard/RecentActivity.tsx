@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useActivitiesContext } from '../../../contexts/ActivitiesContext';
 import { SkeletonActivityList } from '../../ui/SkeletonLoader';
 import { GlassListCard } from '../../ui/GlassListCard';
-// import { InfiniteScrollList } from '../../ui/InfiniteScrollList';
 import { GroupInfoModal } from '../../modals/GroupInfoModal';
-import { useActivitiesInfinite } from '../../../hooks/useActivitiesInfinite';
 
 interface ActivityItem {
   id: string;
@@ -29,7 +28,7 @@ interface RecentActivityProps {
   isAddingExpense?: boolean; // Show skeleton loader when adding expense
 }
 
-export const RecentActivity: React.FC<RecentActivityProps> = ({ 
+export const RecentActivity: React.FC<RecentActivityProps> = ({
   onViewAll,
   refreshing = false,
   onRefresh,
@@ -40,12 +39,10 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
     activities,
     totalCount,
     loading,
-    loadingMore,
-    hasMore,
-    loadMore,
+    hasInitiallyLoaded,
     refresh: refreshActivities,
-  } = useActivitiesInfinite();
-  
+  } = useActivitiesContext();
+
   // Expose refresh function to parent component
   useEffect(() => {
     if (onRefreshRef) {
@@ -57,7 +54,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
       }
     };
   }, [refreshActivities, onRefreshRef]);
-  
+
   // Log when activities change to debug
   useEffect(() => {
     console.log('[RecentActivity] Activities changed:', {
@@ -66,19 +63,24 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
       activities: activities.map(a => ({ id: a.id, title: a.title }))
     });
   }, [activities, totalCount]);
-  
+
   const { colors, theme } = useTheme();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
 
-  // Show skeleton loader when loading or when adding expense
-  const showSkeleton = loading || isAddingExpense;
+  // Show skeleton loader only on initial load (never loaded before) or when adding expense
+  // Once data is loaded once, always show it (even during refreshes)
+  // This prevents skeleton on navigation back when activities are cached in context
+  const showSkeleton = (!hasInitiallyLoaded && loading) || isAddingExpense;
+
+  // Limit to first 3 activities to keep the dashboard clean and focused
+  const displayedActivities = activities.slice(0, 3);
 
   if (showSkeleton) {
     return (
       <GlassListCard
         title="Recent Activity"
-        subtitle="Loading activities..."
+        subtitle={isAddingExpense ? "Adding expense..." : "Loading activities..."}
         contentGap={8}
       >
         <SkeletonActivityList count={3} />
@@ -299,57 +301,31 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             </Text>
           </View>
         ) : (
-          <FlatList
-            data={activities}
-            extraData={`${activities.length}-${activities.map(a => a.id).join(',')}`} // Force re-render when activities change
-            renderItem={({ item: activity }) => (
+          <View style={styles.activitiesContainer}>
+            {displayedActivities.map((activity) => (
               <ActivityItemComponent key={activity.id} activity={activity} />
+            ))}
+            {totalCount > 3 && (
+              <TouchableOpacity
+                style={[
+                  styles.viewAllButton,
+                  {
+                    backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                    borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                  },
+                ]}
+                onPress={onViewAll}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.viewAllText, { color: colors.primary }]}>
+                  View All {totalCount} Activities
+                </Text>
+              </TouchableOpacity>
             )}
-            keyExtractor={(activity) => activity.id}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={false}
-            style={styles.activitiesList}
-            contentContainerStyle={styles.activitiesContainer}
-            refreshing={refreshing}
-            onRefresh={async () => {
-              // Call parent's onRefresh if provided, which will refresh all data
-              // Otherwise use local refresh
-              if (onRefresh) {
-                await onRefresh();
-              } else {
-                // If no parent refresh, just refresh activities
-                refreshActivities();
-              }
-            }}
-            onEndReached={() => {
-              if (hasMore && !loadingMore) {
-                loadMore();
-              }
-            }}
-            onEndReachedThreshold={0.1}
-            ListFooterComponent={() => {
-              if (loadingMore) {
-                return (
-                  <View style={styles.loadingMore}>
-                    <Text style={[styles.loadingMoreText, { color: colors.mutedForeground }]}>
-                      Loading more activities...
-                    </Text>
-                  </View>
-                );
-              }
-              return null;
-            }}
-            removeClippedSubviews={false}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            initialNumToRender={5}
-            bounces={false}
-            // Removed getItemLayout to allow dynamic heights and better updates
-          />
+          </View>
         )}
       </GlassListCard>
-      
+
       {/* Group Info Modal */}
       <GroupInfoModal
         visible={isGroupModalVisible}
@@ -470,21 +446,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   activitiesContainer: {
-    gap: 3, // Reduced from 6
-    paddingBottom: 80, // Reduced from 100
+    gap: 3,
   },
   glassCard: {
     // Remove flex to allow natural height
   },
-  activitiesList: {
-    maxHeight: 400, // Increased height to allow more scrolling
-    flexGrow: 0, // Prevent FlatList from expanding beyond maxHeight
-  },
-  loadingMore: {
-    paddingVertical: 16,
+  viewAllButton: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingMoreText: {
+  viewAllText: {
     fontSize: 14,
+    fontWeight: '600',
   },
 });

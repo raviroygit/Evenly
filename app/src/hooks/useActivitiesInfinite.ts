@@ -186,11 +186,9 @@ export const useActivitiesInfinite = () => {
       console.log('[useActivitiesInfinite] Expense refresh event received, forcing activities regeneration');
       // Reset prev refs to force regeneration
       prevExpensesRef.current = '';
-      // Force regeneration by clearing activities and regenerating
-      setActivities([]);
-      setTimeout(() => {
-        generateActivities();
-      }, 100); // Small delay to ensure expenses state has updated
+      // Don't clear activities - just regenerate to preserve data during refresh
+      // This prevents skeleton loader from showing when navigating back
+      generateActivities();
     };
 
     groupEvents.on(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
@@ -257,12 +255,8 @@ export const useActivitiesInfinite = () => {
           expensesCount: expenses.length,
           khataCount: khataTransactions.length
         });
-        // Force regeneration by resetting activities first
-        setActivities([]);
-        // Use setTimeout to ensure state is cleared before regenerating
-        setTimeout(() => {
-          generateActivities();
-        }, 0);
+        // Regenerate activities immediately
+        generateActivities();
       }
     }
   }, [groups, expenses, khataTransactions, groupsLoading, expensesLoading, khataLoading, generateActivities]);
@@ -389,56 +383,32 @@ export const useActivitiesInfinite = () => {
       groupsLoading,
       expensesLoading
     });
-    
-    // Wait for expenses to actually have data, not just for loading to be false
-    // Poll until expenses are loaded or timeout
-    let attempts = 0;
-    const maxAttempts = 50; // Wait up to 5 seconds (50 * 100ms)
-    
-    // First wait for loading to finish
-    while (expensesLoading && attempts < maxAttempts) {
-      console.log('[useActivitiesInfinite] Waiting for expenses loading to finish...', attempts);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    
-    // Then wait for expenses to actually have data (they might finish loading but be empty initially)
-    while (expensesRef.current.length === 0 && attempts < maxAttempts) {
-      console.log('[useActivitiesInfinite] Waiting for expenses data...', attempts, 'current count:', expensesRef.current.length);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-    
-    // Give additional time for state to propagate and refs to update
-    await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Fetch fresh khata transactions
-    let currentKhata = khataRef.current;
-    try {
-      const freshKhata = await EvenlyBackendService.getKhataRecentTransactions({ limit: 10, cacheTTLMs: 0 });
-      setKhataTransactions(freshKhata);
-      currentKhata = freshKhata;
-    } catch (error) {
-      console.error('[useActivitiesInfinite] Error fetching fresh khata:', error);
-    }
-
-    // Get latest data from refs (they should be updated by now)
+    // Get latest data from refs immediately - no waiting
     let currentGroups = groupsRef.current;
     let currentExpenses = expensesRef.current;
+
+    // Fetch fresh khata transactions in parallel with regenerating activities
+    let currentKhata = khataRef.current;
+    const khataPromise = EvenlyBackendService.getKhataRecentTransactions({ limit: 10, cacheTTLMs: 0 })
+      .then(freshKhata => {
+        setKhataTransactions(freshKhata);
+        currentKhata = freshKhata;
+        return freshKhata;
+      })
+      .catch(error => {
+        console.error('[useActivitiesInfinite] Error fetching fresh khata:', error);
+        return currentKhata;
+      });
+
+    // Wait for khata to load
+    currentKhata = await khataPromise;
 
     console.log('[useActivitiesInfinite] Refresh proceeding with data', {
       groupsCount: currentGroups.length,
       expensesCount: currentExpenses.length,
       khataCount: currentKhata.length,
-      groups: currentGroups.map(g => ({ id: g.id, name: g.name })),
-      expenses: currentExpenses.map(e => ({ id: e.id, title: e.title || e.description })),
-      khata: currentKhata.map(t => ({ id: t.id, customerName: t.customerName }))
     });
-
-    // If expenses are still empty after all that waiting, log a warning but proceed
-    if (currentExpenses.length === 0) {
-      console.warn('[useActivitiesInfinite] Expenses still empty after waiting, proceeding anyway');
-    }
 
     // Force refresh by resetting state first
     setActivities([]);

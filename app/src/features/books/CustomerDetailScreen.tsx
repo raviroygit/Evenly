@@ -216,13 +216,22 @@ export const CustomerDetailScreen: React.FC = () => {
     }
   };
 
-  const handleUpdateTransaction = async (transactionId: string, data: FormData) => {
+  const handleUpdateTransaction = async (transactionId: string, data: FormData, onProgress?: (progress: number) => void) => {
+    console.log('[CustomerDetailScreen] ========== UPDATE TRANSACTION START ==========');
+    console.log('[CustomerDetailScreen] Transaction ID:', transactionId);
+    console.log('[CustomerDetailScreen] Data is FormData:', data instanceof FormData);
+    console.log('[CustomerDetailScreen] Progress callback provided:', !!onProgress);
+
     try {
-      await EvenlyBackendService.updateKhataTransaction(transactionId, data);
+      console.log('[CustomerDetailScreen] Calling updateKhataTransaction...');
+      const result = await EvenlyBackendService.updateKhataTransaction(transactionId, data, onProgress);
+      console.log('[CustomerDetailScreen] ✅ Update successful:', result);
+
       setEditingTransaction(null);
 
       // Refresh data with cache bypass
       if (params.customerId) {
+        console.log('[CustomerDetailScreen] Refreshing customer data...');
         setLoading(true);
         const [customerData, transactionsData] = await Promise.all([
           EvenlyBackendService.getKhataCustomerById(params.customerId, { cacheTTLMs: 0 }),
@@ -253,9 +262,16 @@ export const CustomerDetailScreen: React.FC = () => {
 
         setTransactions(formattedTransactions);
         setLoading(false);
+        console.log('[CustomerDetailScreen] Data refresh complete');
       }
-    } catch (error) {
-      console.error('[CustomerDetailScreen] Error updating transaction:', error);
+    } catch (error: any) {
+      console.error('[CustomerDetailScreen] ========== UPDATE TRANSACTION FAILED ==========');
+      console.error('[CustomerDetailScreen] Error type:', error.constructor.name);
+      console.error('[CustomerDetailScreen] Error message:', error.message);
+      console.error('[CustomerDetailScreen] Error code:', error.code);
+      console.error('[CustomerDetailScreen] Error response:', error.response?.data);
+      console.error('[CustomerDetailScreen] Error status:', error.response?.status);
+      console.error('[CustomerDetailScreen] Full error:', error);
       Alert.alert('Error', 'Failed to update transaction. Please try again.');
     }
   };

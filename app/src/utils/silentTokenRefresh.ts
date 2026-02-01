@@ -13,8 +13,15 @@ import { AuthStorage } from './storage';
  * Users NEVER see error messages
  */
 
+// Request queue for concurrent refresh attempts
+type PendingRequest = {
+  resolve: (token: string | null) => void;
+  reject: (error: Error) => void;
+};
+
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
+let pendingRequests: PendingRequest[] = [];
 
 export class SilentTokenRefresh {
   /**
@@ -107,15 +114,29 @@ export class SilentTokenRefresh {
   /**
    * Silently refresh session using refresh token
    * No user interaction required
+   *
+   * Returns the new access token if successful, null otherwise
+   * Queues concurrent requests to prevent duplicate refreshes
    */
   static async refresh(): Promise<boolean> {
-    // If already refreshing, wait for that to complete
-    if (isRefreshing && refreshPromise) {
-      return refreshPromise;
+    // If already refreshing, queue this request
+    if (isRefreshing) {
+      console.log('[SilentRefresh] Refresh already in progress, queueing request...');
+
+      return new Promise((resolve, reject) => {
+        pendingRequests.push({
+          resolve: (token) => resolve(!!token),
+          reject,
+        });
+      });
     }
 
     isRefreshing = true;
+    const startTime = Date.now();
+
     refreshPromise = new Promise(async (resolve) => {
+      let newAccessToken: string | null = null;
+
       try {
         console.log('[SilentRefresh] Starting silent token refresh...');
 
@@ -123,49 +144,58 @@ export class SilentTokenRefresh {
 
         if (!authData?.refreshToken) {
           console.log('[SilentRefresh] No refresh token available');
-          isRefreshing = false;
-          refreshPromise = null;
-          resolve(false);
-          return;
+          throw new Error('No refresh token available');
         }
 
-        // Call nxgenaidev_auth refresh token endpoint directly
-        const response = await axios.post(
-          `${ENV.EVENLY_BACKEND_URL}/auth/refresh-token`,
-          { refreshToken: authData.refreshToken },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-            timeout: 10000,
-          }
-        );
+        // Call MOBILE-SPECIFIC refresh endpoint for 90-day sessions with token rotation
+        const response = await Promise.race([
+          axios.post(
+            `${ENV.EVENLY_BACKEND_URL}/auth/mobile/refresh`,
+            { refreshToken: authData.refreshToken },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true',
+              },
+            }
+          ),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Token refresh timeout')), 10000)
+          ),
+        ]) as any;
 
         if (response.data.accessToken && response.data.refreshToken) {
-          console.log('[SilentRefresh] ✅ Session refreshed successfully');
+          const duration = Date.now() - startTime;
+          console.log(`[SilentRefresh] ✅ Mobile session refreshed successfully in ${duration}ms`);
+          console.log(`[SilentRefresh] ✅ Session extended to 90 days`);
+          console.log(`[SilentRefresh] ✅ New refresh token received and will be saved`);
 
-          // Save new tokens (keep existing user data)
+          newAccessToken = response.data.accessToken;
+
+          // CRITICAL: Save BOTH new tokens (access + refresh) to enable token rotation
+          // The refresh token is rotated on each refresh - old one becomes invalid
           await AuthStorage.saveAuthData(
-            authData.user,
+            response.data.user || authData.user, // Use updated user if provided
             response.data.accessToken,
-            response.data.refreshToken
+            response.data.refreshToken // NEW refresh token (rotated)
           );
 
           // Save refresh timestamp for cache invalidation tracking
           await this.saveRefreshTimestamp();
 
-          isRefreshing = false;
-          refreshPromise = null;
+          // Resolve all pending requests with the new token
+          console.log(`[SilentRefresh] Resolving ${pendingRequests.length} queued requests`);
+          pendingRequests.forEach(req => req.resolve(newAccessToken));
+          pendingRequests = [];
+
           resolve(true);
         } else {
           console.log('[SilentRefresh] ❌ Refresh failed - invalid response');
-          isRefreshing = false;
-          refreshPromise = null;
-          resolve(false);
+          throw new Error('Invalid refresh response');
         }
       } catch (error: any) {
-        console.error('[SilentRefresh] ❌ Refresh failed:', error.message);
+        const duration = Date.now() - startTime;
+        console.error(`[SilentRefresh] ❌ Refresh failed after ${duration}ms:`, error.message);
 
         // NEVER clear auth data - keep user logged in with cached data
         // Even if refresh token is invalid/expired, user should stay logged in
@@ -175,9 +205,15 @@ export class SilentTokenRefresh {
           // Do NOT clear auth data - user stays logged in
         }
 
+        // Reject all pending requests
+        console.log(`[SilentRefresh] Rejecting ${pendingRequests.length} queued requests`);
+        pendingRequests.forEach(req => req.reject(error));
+        pendingRequests = [];
+
+        resolve(false);
+      } finally {
         isRefreshing = false;
         refreshPromise = null;
-        resolve(false);
       }
     });
 
