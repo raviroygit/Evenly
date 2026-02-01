@@ -3,6 +3,7 @@ import { useGroups } from '../hooks/useGroups';
 import { useAllExpenses } from '../hooks/useAllExpenses';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
+import { useAuth } from './AuthContext';
 
 interface ActivityItem {
   id: string;
@@ -25,11 +26,13 @@ interface ActivitiesContextType {
   loading: boolean;
   hasInitiallyLoaded: boolean;
   refresh: () => Promise<void>;
+  reset: () => void;
 }
 
 const ActivitiesContext = createContext<ActivitiesContextType | undefined>(undefined);
 
 export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const { groups, loading: groupsLoading } = useGroups();
   const { expenses, loading: expensesLoading } = useAllExpenses();
 
@@ -51,8 +54,27 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     khataRef.current = khataTransactions;
   }, [groups, expenses, khataTransactions]);
 
-  // Fetch khata transactions once
+  // Auto-reset when user logs out
   useEffect(() => {
+    if (!user) {
+      console.log('[ActivitiesContext] User logged out - resetting activities');
+      setActivities([]);
+      setTotalCount(0);
+      setLoading(true);
+      setHasInitiallyLoaded(false);
+      setKhataTransactions([]);
+      setKhataLoading(true);
+      console.log('[ActivitiesContext] ✅ Activities auto-reset on logout');
+    }
+  }, [user]);
+
+  // Fetch khata transactions once (only when user is logged in)
+  useEffect(() => {
+    if (!user) {
+      setKhataLoading(false);
+      return;
+    }
+
     const fetchKhata = async () => {
       try {
         setKhataLoading(true);
@@ -65,7 +87,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     };
     fetchKhata();
-  }, []);
+  }, [user]);
 
   const generateActivities = useCallback(() => {
     try {
@@ -146,12 +168,16 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [groups, expenses, khataTransactions]);
 
-  // Generate activities when data changes
+  // Generate activities when data changes (only when user is logged in)
   useEffect(() => {
+    if (!user) {
+      return;
+    }
+
     if (!groupsLoading && !expensesLoading && !khataLoading) {
       generateActivities();
     }
-  }, [groups, expenses, khataTransactions, groupsLoading, expensesLoading, khataLoading, generateActivities]);
+  }, [user, groups, expenses, khataTransactions, groupsLoading, expensesLoading, khataLoading, generateActivities]);
 
   // Listen for events to regenerate
   useEffect(() => {
@@ -176,6 +202,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [generateActivities]);
 
   const refresh = useCallback(async () => {
+    if (!user) {
+      console.log('[ActivitiesContext] Cannot refresh - user not logged in');
+      return;
+    }
+
     console.log('[ActivitiesContext] Manual refresh triggered');
     try {
       const freshKhata = await EvenlyBackendService.getKhataRecentTransactions({ limit: 10, cacheTTLMs: 0 });
@@ -184,7 +215,21 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
       console.error('[ActivitiesContext] Error refreshing:', error);
     }
-  }, [generateActivities]);
+  }, [user, generateActivities]);
+
+  /**
+   * Reset all activities state - used on logout
+   */
+  const reset = useCallback(() => {
+    console.log('[ActivitiesContext] Resetting all activities...');
+    setActivities([]);
+    setTotalCount(0);
+    setLoading(true);
+    setHasInitiallyLoaded(false);
+    setKhataTransactions([]);
+    setKhataLoading(true);
+    console.log('[ActivitiesContext] ✅ Activities reset');
+  }, []);
 
   const value = {
     activities,
@@ -192,6 +237,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loading,
     hasInitiallyLoaded,
     refresh,
+    reset,
   };
 
   return <ActivitiesContext.Provider value={value}>{children}</ActivitiesContext.Provider>;
