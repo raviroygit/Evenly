@@ -164,7 +164,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.7,
         exif: false,
@@ -601,70 +601,60 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             </Text>
           </View>
 
-          {!imageUri ? (
-            <View style={styles.imagePickerButtons}>
-              <TouchableOpacity
-                style={[styles.imagePickerButton, {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border
-                }]}
-                onPress={pickImageFromGallery}
-                disabled={uploadingImage}
-              >
-                <Ionicons name="images-outline" size={24} color={colors.foreground} />
-                <Text style={[styles.imagePickerButtonText, { color: colors.foreground }]}>
-                  Choose from Gallery
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.imagePickerButton, {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border
-                }]}
-                onPress={takePhoto}
-                disabled={uploadingImage}
-              >
-                <Ionicons name="camera-outline" size={24} color={colors.foreground} />
-                <Text style={[styles.imagePickerButtonText, { color: colors.foreground }]}>
-                  Take Photo
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.imagePreviewContainer}>
+          {imageUri ? (
+            <View style={styles.imagePreviewContainer>
               <Image
                 source={{ uri: imageUri }}
                 style={styles.imagePreview}
-                resizeMode="cover"
+                resizeMode="contain"
               />
               <TouchableOpacity
-                style={[styles.removeImageButton, { backgroundColor: colors.destructive }]}
+                style={styles.removeImageButton}
                 onPress={removeImage}
                 disabled={uploadingImage}
               >
-                <Ionicons name="close" size={20} color="#FFFFFF" />
+                <Ionicons name="close-circle" size={24} color="#FF3B30" />
               </TouchableOpacity>
 
               {uploadingImage && (
                 <View style={styles.uploadProgressContainer}>
-                  <View style={[styles.progressBarBackground, { backgroundColor: colors.muted }]}>
+                  <View style={styles.uploadProgressHeader}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
+                      Uploading image... {uploadProgress}%
+                    </Text>
+                  </View>
+                  <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
                     <View
                       style={[
                         styles.progressBarFill,
                         {
-                          backgroundColor: colors.primary,
-                          width: `${uploadProgress}%`
+                          width: `${uploadProgress}%`,
+                          backgroundColor: colors.primary
                         }
                       ]}
                     />
                   </View>
-                  <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
-                    Uploading... {uploadProgress}%
-                  </Text>
                 </View>
               )}
             </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.imageSinglePickerButton,
+                {
+                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                  borderColor: colors.mutedForeground,
+                },
+              ]}
+              onPress={showImagePickerOptions}
+              disabled={uploadingImage}
+            >
+              <Ionicons name="camera-outline" size={24} color={colors.foreground} />
+              <Text style={[styles.imageSinglePickerText, { color: colors.foreground }]}>
+                Select Image
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -834,75 +824,66 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   maxSizeHint: {
-    fontSize: 12,
-    color: '#EF4444',
+    fontSize: 11,
     fontWeight: '500',
+    color: '#FF3B30',
   },
-  imagePickerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  imagePickerButton: {
-    flex: 1,
+  imageSinglePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: 8,
   },
-  imagePickerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  imageSinglePickerText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   imagePreviewContainer: {
     position: 'relative',
-    borderRadius: 12,
-    overflow: 'hidden',
+    width: '100%',
+    alignItems: 'center',
   },
   imagePreview: {
     width: '100%',
-    height: 200,
+    minHeight: 200,
+    maxHeight: 400,
     borderRadius: 12,
+    resizeMode: 'contain',
   },
   removeImageButton: {
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    padding: 4,
   },
   uploadProgressContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 12,
+    marginTop: 12,
+    gap: 8,
+  },
+  uploadProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  uploadProgressText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   progressBarBackground: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 4,
-  },
-  uploadProgressText: {
-    fontSize: 12,
-    textAlign: 'center',
-    fontWeight: '600',
+    borderRadius: 3,
   },
 });

@@ -173,7 +173,89 @@ export class ExpenseController {
     const { user } = request as AuthenticatedRequest;
     const organizationId = (request as any).organizationId;
     const { expenseId } = request.params as { expenseId: string };
-    const updateData = updateExpenseSchema.parse(request.body);
+
+    // Handle multipart form data (for receipt image upload)
+    let receiptUrl: string | undefined;
+    const data: any = {};
+
+    // Check if request has multipart data
+    const isMultipart = request.isMultipart();
+
+    if (isMultipart) {
+      // Parse multipart form data
+      try {
+        const parts = request.parts();
+
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            // Handle image upload
+            try {
+              const buffer = await part.toBuffer();
+              const mimetype = part.mimetype;
+              console.log('Processing receipt image for update:', {
+                fieldname: part.fieldname,
+                filename: part.filename,
+                mimetype: mimetype,
+                bufferSize: buffer.length,
+              });
+              const result = await uploadSingleImage(buffer, 'expenses', mimetype);
+              receiptUrl = result.url;
+            } catch (uploadError) {
+              console.error('Error uploading receipt image:', uploadError);
+              return reply.status(400).send({
+                success: false,
+                message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
+              });
+            }
+          } else {
+            // Handle form fields
+            try {
+              const fieldname = part.fieldname;
+              const value = typeof part.value === 'string'
+                ? part.value
+                : await part.value;
+
+              // Map form fields to expense data
+              if (fieldname === 'title') data.title = value;
+              else if (fieldname === 'totalAmount') data.totalAmount = value;
+              else if (fieldname === 'amount') data.amount = value;
+              else if (fieldname === 'paidBy') data.paidBy = value;
+              else if (fieldname === 'description') data.description = value;
+              else if (fieldname === 'category') data.category = value;
+              else if (fieldname === 'date') data.date = value;
+              else if (fieldname === 'splitType') data.splitType = value;
+              else if (fieldname === 'splits') {
+                // Parse JSON string for splits array
+                try {
+                  data.splits = JSON.parse(value as string);
+                } catch (e) {
+                  console.error('Error parsing splits:', e);
+                }
+              }
+            } catch (fieldError) {
+              console.error('Error reading form field:', fieldError);
+            }
+          }
+        }
+
+        // Add receipt URL if uploaded
+        if (receiptUrl) {
+          data.receipt = receiptUrl;
+        }
+      } catch (multipartError) {
+        console.error('Error parsing multipart data:', multipartError);
+        return reply.status(400).send({
+          success: false,
+          message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
+        });
+      }
+    } else {
+      // Handle regular JSON body
+      Object.assign(data, request.body);
+    }
+
+    // Validate the expense data (allow partial updates)
+    const updateData = updateExpenseSchema.partial().parse(data);
 
     const expense = await ExpenseService.updateExpense(expenseId, updateData, user.id, organizationId);
 

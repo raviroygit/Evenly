@@ -81,7 +81,7 @@ export async function expenseRoutes(fastify: FastifyInstance) {
 
   fastify.put('/:expenseId', {
     schema: {
-      description: 'Update expense',
+      description: 'Update expense (supports both JSON and multipart/form-data for image uploads)',
       tags: ['Expenses'],
       params: {
         type: 'object',
@@ -90,32 +90,8 @@ export async function expenseRoutes(fastify: FastifyInstance) {
           expenseId: { type: 'string', format: 'uuid' },
         },
       },
-      body: {
-        type: 'object',
-        properties: {
-          amount: { type: 'number', minimum: 0.01 },
-          description: { type: 'string', minLength: 1, maxLength: 200 },
-          category: { type: 'string', maxLength: 50 },
-          date: { type: 'string', format: 'date-time' },
-          splitType: { 
-            type: 'string', 
-            enum: ['equal', 'percentage', 'shares', 'exact']
-          },
-          splits: {
-            type: 'array',
-            items: {
-              type: 'object',
-              required: ['userId'],
-              properties: {
-                userId: { type: 'string', format: 'uuid' },
-                amount: { type: 'string', pattern: '^\\d+(\\.\\d{1,2})?$' },
-                percentage: { type: 'number', minimum: 0, maximum: 100 },
-                shares: { type: 'number', minimum: 0 },
-              },
-            },
-          },
-        },
-      },
+      // Note: Schema validation is disabled for body to support both JSON and multipart/form-data
+      // The controller handles validation manually
     },
   }, ExpenseController.updateExpense);
 

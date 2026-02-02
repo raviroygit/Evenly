@@ -214,7 +214,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     try {
       // First, let user select image with high quality to get dimensions
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false, // Keep original aspect ratio (no cropping)
         quality: 0.7, // Default compression (70%)
         exif: false, // Don't include EXIF data (reduces size)
