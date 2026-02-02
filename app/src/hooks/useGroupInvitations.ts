@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GroupInvitationService } from '../services/GroupInvitationService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface GroupInvitation {
   id: string;
@@ -35,6 +36,7 @@ interface GroupInvitation {
 }
 
 export const useGroupInvitations = () => {
+  const { authState } = useAuth();
   const [invitations, setInvitations] = useState<GroupInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +102,26 @@ export const useGroupInvitations = () => {
     }
   };
 
+  // Wait for auth to be ready before loading data
   useEffect(() => {
+    // Clear data when user logs out
+    if (authState === 'unauthenticated' || authState === 'initializing') {
+      console.log('[useGroupInvitations] User logged out or initializing - clearing invitations');
+      setInvitations([]);
+      setLoading(true);
+      setError(null);
+      return;
+    }
+
+    // Only load data when authenticated
+    if (authState !== 'authenticated') {
+      console.log('[useGroupInvitations] Auth not ready, skipping data load. State:', authState);
+      return;
+    }
+
+    console.log('[useGroupInvitations] Auth ready, loading invitations...');
     loadPendingInvitations();
-  }, []);
+  }, [authState]);
 
   return {
     invitations,

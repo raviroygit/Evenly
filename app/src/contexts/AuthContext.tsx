@@ -53,19 +53,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const authService = useMemo(() => new AuthService(), []);
   const isAuthenticated = !!user;
 
-  const warmAppCache = useCallback(async () => {
-    const TTL = 3 * 60 * 1000; // 3 minutes
-    try {
-      await Promise.all([
-        EvenlyBackendService.getGroups({ cacheTTLMs: TTL }),
-        EvenlyBackendService.getAllExpenses({ page: 1, limit: 20, sortOrder: 'desc', cacheTTLMs: TTL }),
-        EvenlyBackendService.getUserBalances({ cacheTTLMs: TTL }),
-        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: TTL }),
-      ]);
-    } catch {
-      // ignore warmup errors
-    }
-  }, []);
+  // Removed warmAppCache - let each screen fetch its own data fresh
+  // This prevents stale cache from being shown on app reopen
 
   // Initialize user from storage on app start - STAY LOGGED IN
   useEffect(() => {
@@ -135,8 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   authData.accessToken,
                   currentUser.organizations
                 );
-                // Warm cache after validating session
-                warmAppCache().catch(() => {});
+                // Let screens fetch their own data fresh
               } else {
                 // Session invalid on backend - but DON'T log out yet
                 // User might be offline - keep them logged in with local data
@@ -169,7 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  }, [authService, warmAppCache]);
+  }, [authService]);
 
   // Validate session when app comes to foreground - but NEVER log out automatically
   // Mobile tokens never expire (10 years), so we just validate user data
@@ -311,14 +299,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         evenlyApiClient.setOrganizationId(orgId);
         console.log('[AuthContext] Successfully switched to:', response.organization.name);
 
-        // Refresh app data after switching organizations
-        await warmAppCache();
+        // Screens will automatically reload when organization changes
       }
     } catch (error) {
       console.error('[AuthContext] Failed to switch organization:', error);
       throw error;
     }
-  }, [authService, warmAppCache]);
+  }, [authService]);
 
   // Refresh the list of organizations by fetching current user
   const refreshOrganizations = useCallback(async () => {
@@ -388,7 +375,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Mobile tokens never expire (10 years) - no refresh needed
         console.log('[AuthContext] ✅ Login successful - mobile token never expires');
 
-        warmAppCache().catch(() => {});
+        // Screens will load fresh data when they mount
 
         return { success: true, message: 'Login successful!' };
       } else {
@@ -397,7 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       return { success: false, message: error.message || 'Login failed' };
     }
-  }, [authService, warmAppCache]);
+  }, [authService]);
 
   const signup = useCallback(async (email: string) => {
     try {
