@@ -172,7 +172,21 @@ export async function khataRoutes(fastify: FastifyInstance) {
     },
   }, KhataController.deleteTransaction);
 
-  // Image Upload
+  // Image Operations
+  fastify.delete('/delete-image', {
+    schema: {
+      description: 'Delete transaction image from Cloudinary',
+      tags: ['Khata'],
+      body: {
+        type: 'object',
+        required: ['imageUrl'],
+        properties: {
+          imageUrl: { type: 'string', minLength: 1 },
+        },
+      },
+    },
+  }, KhataController.deleteTransactionImage);
+
   fastify.post('/upload', {
     schema: {
       description: 'Upload image to Cloudinary',

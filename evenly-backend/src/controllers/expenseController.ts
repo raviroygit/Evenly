@@ -10,7 +10,7 @@ import {
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
-import { uploadSingleImage } from '../utils/cloudinary';
+import { uploadSingleImage, deleteImage } from '../utils/cloudinary';
 
 export class ExpenseController {
   /**
@@ -237,5 +237,63 @@ export class ExpenseController {
       },
       message: 'User expenses retrieved successfully',
     });
+  });
+
+  /**
+   * Delete expense image from Cloudinary
+   */
+  static deleteExpenseImage = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const { imageUrl } = request.body as { imageUrl: string };
+
+    if (!imageUrl) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Image URL is required',
+      });
+    }
+
+    try {
+      // Extract public_id from Cloudinary URL
+      // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{format}
+      const urlParts = imageUrl.split('/');
+      const uploadIndex = urlParts.findIndex(part => part === 'upload');
+
+      if (uploadIndex === -1 || uploadIndex >= urlParts.length - 1) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid Cloudinary URL format',
+        });
+      }
+
+      // Get everything after 'upload/v{version}/' or 'upload/'
+      const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join('/');
+      // Remove file extension
+      const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
+
+      console.log('Deleting image from Cloudinary:', {
+        imageUrl,
+        publicId,
+      });
+
+      const deleted = await deleteImage(publicId);
+
+      if (deleted) {
+        reply.send({
+          success: true,
+          message: 'Image deleted successfully',
+        });
+      } else {
+        reply.status(500).send({
+          success: false,
+          message: 'Failed to delete image from Cloudinary',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting expense image:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to delete image',
+      });
+    }
   });
 }

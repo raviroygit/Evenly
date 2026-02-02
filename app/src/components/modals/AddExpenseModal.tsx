@@ -20,11 +20,15 @@ interface AddExpenseModalProps {
     date: string;
     receipt?: string; // Optional receipt image
   } | FormData) => Promise<void>;
-  onUpdateExpense?: (expenseId: string, expenseData: {
-    title: string;
-    totalAmount: string;
-    date: string;
-  }) => Promise<void>;
+  onUpdateExpense?: (
+    expenseId: string,
+    expenseData: {
+      title: string;
+      totalAmount: string;
+      date: string;
+    } | FormData,
+    oldImageUrl?: string
+  ) => Promise<void>;
   currentUserId: string;
   editExpense?: EnhancedExpense | null;
   preselectedGroupId?: string; // Optional: preselect and disable group selection
@@ -46,6 +50,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [totalAmount, setTotalAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [oldImageUrl, setOldImageUrl] = useState<string | null>(null); // Track original image from edit
+  const [imageRemoved, setImageRemoved] = useState(false); // Track if user removed the image
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -78,6 +84,16 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       } catch {
         setDate(new Date().toISOString().split('T')[0]);
       }
+      // Set image URI and track old image URL for deletion
+      const receiptUrl = (editExpense as any).receipt || (editExpense as any).receiptUrl;
+      if (receiptUrl) {
+        setImageUri(receiptUrl);
+        setOldImageUrl(receiptUrl);
+      } else {
+        setImageUri(null);
+        setOldImageUrl(null);
+      }
+      setImageRemoved(false);
     } else {
       // Reset form when creating
       setTitle('');
@@ -85,6 +101,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setTotalAmount('');
       setDate(new Date().toISOString().split('T')[0]);
       setImageUri(null);
+      setOldImageUrl(null);
+      setImageRemoved(false);
     }
   }, [editExpense, preselectedGroupId, visible]);
 
@@ -231,7 +249,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     );
   };
 
-  const removeImage = () => {
+  const removeImage = async () => {
+    // If in edit mode and removing an existing image, mark it for deletion
+    if (isEditMode && imageUri === oldImageUrl && oldImageUrl) {
+      setImageRemoved(true);
+    }
     setImageUri(null);
   };
 
@@ -255,11 +277,51 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setIsLoading(true);
       
       if (isEditMode && onUpdateExpense && editExpense) {
-        await onUpdateExpense(editExpense.id, {
-          title: title.trim(),
-          totalAmount: totalAmount.trim(),
-          date,
-        });
+        // Check if we need to handle image changes
+        const hasNewImage = imageUri && imageUri !== oldImageUrl;
+        const shouldDeleteOldImage = (imageRemoved || hasNewImage) && oldImageUrl;
+
+        if (hasNewImage) {
+          // User added a new image - use FormData
+          setUploadingImage(true);
+          const formData = new FormData();
+
+          formData.append('title', title.trim());
+          formData.append('totalAmount', totalAmount.trim());
+          formData.append('date', date);
+
+          // Add new image
+          const filename = imageUri.split('/').pop() || 'receipt.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          formData.append('image', {
+            uri: imageUri,
+            name: filename,
+            type,
+          } as any);
+
+          // Pass old image URL for deletion
+          await onUpdateExpense(editExpense.id, formData, oldImageUrl || undefined);
+        } else if (imageRemoved) {
+          // User removed the image - send regular data but mark for deletion
+          await onUpdateExpense(
+            editExpense.id,
+            {
+              title: title.trim(),
+              totalAmount: totalAmount.trim(),
+              date,
+            },
+            oldImageUrl || undefined
+          );
+        } else {
+          // No image changes - regular update
+          await onUpdateExpense(editExpense.id, {
+            title: title.trim(),
+            totalAmount: totalAmount.trim(),
+            date,
+          });
+        }
         // Reset form and close modal after successful update
         handleClose();
       } else {
@@ -303,6 +365,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         setTotalAmount('');
         setDate(new Date().toISOString().split('T')[0]);
         setImageUri(null);
+        setOldImageUrl(null);
+        setImageRemoved(false);
         // Close modal after successful add (parent may have already closed it, but this ensures it closes)
         // Also handles cases where parent doesn't close it (other screens)
         if (visible) {
@@ -329,6 +393,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     setTotalAmount('');
     setDate(new Date().toISOString().split('T')[0]);
     setImageUri(null);
+    setOldImageUrl(null);
+    setImageRemoved(false);
     setShowGroupDropdown(false);
     onClose();
   };

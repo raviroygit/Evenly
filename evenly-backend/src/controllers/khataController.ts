@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { KhataService } from '../services/khataService';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
-import { uploadSingleImage } from '../utils/cloudinary';
+import { uploadSingleImage, deleteImage } from '../utils/cloudinary';
 
 export class KhataController {
   /**
@@ -427,6 +427,64 @@ export class KhataController {
       return reply.status(400).send({
         success: false,
         message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
+      });
+    }
+  });
+
+  /**
+   * Delete transaction image from Cloudinary
+   */
+  static deleteTransactionImage = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    const { imageUrl } = request.body as { imageUrl: string };
+
+    if (!imageUrl) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Image URL is required',
+      });
+    }
+
+    try {
+      // Extract public_id from Cloudinary URL
+      // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{format}
+      const urlParts = imageUrl.split('/');
+      const uploadIndex = urlParts.findIndex(part => part === 'upload');
+
+      if (uploadIndex === -1 || uploadIndex >= urlParts.length - 1) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid Cloudinary URL format',
+        });
+      }
+
+      // Get everything after 'upload/v{version}/' or 'upload/'
+      const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join('/');
+      // Remove file extension
+      const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
+
+      console.log('Deleting transaction image from Cloudinary:', {
+        imageUrl,
+        publicId,
+      });
+
+      const deleted = await deleteImage(publicId);
+
+      if (deleted) {
+        reply.send({
+          success: true,
+          message: 'Image deleted successfully',
+        });
+      } else {
+        reply.status(500).send({
+          success: false,
+          message: 'Failed to delete image from Cloudinary',
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting transaction image:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Failed to delete image',
       });
     }
   });

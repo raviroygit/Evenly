@@ -404,7 +404,7 @@ export class EvenlyBackendService {
     };
   }
 
-  static async createExpense(expenseData: {
+  static async createExpense(expenseData: FormData | {
     groupId: string;
     title: string;
     description?: string;
@@ -421,9 +421,13 @@ export class EvenlyBackendService {
       shares?: number;
     }[];
   }): Promise<Expense> {
+    // Check if it's FormData (with image) or plain object
+    const isFormData = expenseData instanceof FormData;
+
     const response = await this.makeRequest<ExpenseResponse>('/expenses', {
       method: 'POST',
-      body: JSON.stringify(expenseData),
+      body: isFormData ? expenseData : JSON.stringify(expenseData),
+      headers: isFormData ? {} : undefined, // Let axios set Content-Type for FormData
       invalidatePrefixes: ['/expenses', '/balances']
     });
     return this.mapExpenseResponse(response.data);
@@ -436,7 +440,7 @@ export class EvenlyBackendService {
     return this.mapExpenseResponse(response.data);
   }
 
-  static async updateExpense(expenseId: string, expenseData: {
+  static async updateExpense(expenseId: string, expenseData: FormData | {
     title?: string;
     description?: string;
     totalAmount?: string;
@@ -450,9 +454,13 @@ export class EvenlyBackendService {
       shares?: number;
     }[];
   }): Promise<Expense> {
+    // Check if it's FormData (with image) or plain object
+    const isFormData = expenseData instanceof FormData;
+
     const response = await this.makeRequest<ExpenseResponse>(`/expenses/${expenseId}`, {
       method: 'PUT',
-      body: JSON.stringify(expenseData),
+      body: isFormData ? expenseData : JSON.stringify(expenseData),
+      headers: isFormData ? {} : undefined, // Let axios set Content-Type for FormData
       invalidatePrefixes: ['/expenses', '/balances']
     });
     return this.mapExpenseResponse(response.data);
@@ -462,6 +470,33 @@ export class EvenlyBackendService {
     await this.makeRequest(`/expenses/${expenseId}`, {
       method: 'DELETE',
       invalidatePrefixes: ['/expenses', '/balances']
+    });
+  }
+
+  static async deleteExpenseImage(imageUrl: string): Promise<void> {
+    // Extract public_id from Cloudinary URL
+    // Format: https://res.cloudinary.com/[cloud]/image/upload/[version]/[public_id].ext
+    const publicIdMatch = imageUrl.match(/\/expenses\/[^.]+/);
+    if (!publicIdMatch) {
+      throw new Error('Invalid image URL format');
+    }
+
+    await this.makeRequest('/expenses/delete-image', {
+      method: 'DELETE',
+      body: JSON.stringify({ imageUrl }),
+    });
+  }
+
+  static async deleteTransactionImage(imageUrl: string): Promise<void> {
+    // Extract public_id from Cloudinary URL
+    const publicIdMatch = imageUrl.match(/\/khata\/[^.]+/);
+    if (!publicIdMatch) {
+      throw new Error('Invalid image URL format');
+    }
+
+    await this.makeRequest('/khata/delete-image', {
+      method: 'DELETE',
+      body: JSON.stringify({ imageUrl }),
     });
   }
 

@@ -104,28 +104,33 @@ export const GroupDetailsScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const handleAddExpense = async (expenseData: {
+  const handleAddExpense = async (expenseData: FormData | {
     groupId: string;
     title: string;
     totalAmount: string;
     date: string;
   }) => {
     try {
-      // Convert date to ISO datetime format (backend requires date-time format)
-      const dateWithTime = expenseData.date.includes('T')
-        ? expenseData.date
-        : `${expenseData.date}T00:00:00.000Z`;
+      // Check if it's FormData (with image) or plain object
+      if (expenseData instanceof FormData) {
+        // FormData with image - pass directly to backend
+        await EvenlyBackendService.createExpense(expenseData);
+      } else {
+        // Plain object without image - add required fields
+        const dateWithTime = expenseData.date.includes('T')
+          ? expenseData.date
+          : `${expenseData.date}T00:00:00.000Z`;
 
-      // Add required fields
-      const fullExpenseData = {
-        ...expenseData,
-        date: dateWithTime,
-        splitType: 'equal' as const,
-        category: 'Other',
-      };
+        const fullExpenseData = {
+          ...expenseData,
+          date: dateWithTime,
+          splitType: 'equal' as const,
+          category: 'Other',
+        };
 
-      // Create expense first
-      await EvenlyBackendService.createExpense(fullExpenseData);
+        // Create expense
+        await EvenlyBackendService.createExpense(fullExpenseData);
+      }
 
       // Set loading state BEFORE closing modal so skeleton is ready
       setIsAddingExpense(true);
@@ -155,13 +160,28 @@ export const GroupDetailsScreen: React.FC = () => {
     }
   };
 
-  const handleUpdateExpense = async (expenseId: string, expenseData: {
-    title: string;
-    totalAmount: string;
-    date: string;
-  }) => {
+  const handleUpdateExpense = async (
+    expenseId: string,
+    expenseData: FormData | {
+      title: string;
+      totalAmount: string;
+      date: string;
+    },
+    oldImageUrl?: string
+  ) => {
     try {
       setIsUpdatingExpense(true);
+
+      // If old image exists and we're uploading new FormData with image, delete old one
+      if (oldImageUrl && expenseData instanceof FormData && expenseData.has('receipt')) {
+        try {
+          await EvenlyBackendService.deleteExpenseImage(oldImageUrl);
+        } catch (error) {
+          console.warn('Failed to delete old expense image:', error);
+          // Continue with update even if deletion fails
+        }
+      }
+
       await EvenlyBackendService.updateExpense(expenseId, expenseData);
       setEditingExpense(null);
       // Reload expenses to show updated data

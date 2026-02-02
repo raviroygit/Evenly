@@ -133,6 +133,20 @@ export async function expenseRoutes(fastify: FastifyInstance) {
     },
   }, ExpenseController.deleteExpense);
 
+  fastify.delete('/delete-image', {
+    schema: {
+      description: 'Delete expense image from Cloudinary',
+      tags: ['Expenses'],
+      body: {
+        type: 'object',
+        required: ['imageUrl'],
+        properties: {
+          imageUrl: { type: 'string', minLength: 1 },
+        },
+      },
+    },
+  }, ExpenseController.deleteExpenseImage);
+
   fastify.get('/categories/list', {
     schema: {
       description: 'Get expense categories',

@@ -219,13 +219,31 @@ export const CustomerDetailScreen: React.FC = () => {
     }
   };
 
-  const handleUpdateTransaction = async (transactionId: string, data: FormData, onProgress?: (progress: number) => void) => {
+  const handleUpdateTransaction = async (
+    transactionId: string,
+    data: FormData,
+    onProgress?: (progress: number) => void,
+    oldImageUrl?: string
+  ) => {
     console.log('[CustomerDetailScreen] ========== UPDATE TRANSACTION START ==========');
     console.log('[CustomerDetailScreen] Transaction ID:', transactionId);
     console.log('[CustomerDetailScreen] Data is FormData:', data instanceof FormData);
     console.log('[CustomerDetailScreen] Progress callback provided:', !!onProgress);
+    console.log('[CustomerDetailScreen] Old image URL for deletion:', oldImageUrl);
 
     try {
+      // Delete old image if provided
+      if (oldImageUrl) {
+        console.log('[CustomerDetailScreen] Deleting old transaction image from Cloudinary...');
+        try {
+          await EvenlyBackendService.deleteTransactionImage(oldImageUrl);
+          console.log('[CustomerDetailScreen] ✅ Old image deleted successfully');
+        } catch (deleteError) {
+          console.error('[CustomerDetailScreen] ⚠️ Failed to delete old image, continuing with update:', deleteError);
+          // Continue with update even if deletion fails
+        }
+      }
+
       console.log('[CustomerDetailScreen] Calling updateKhataTransaction...');
       const result = await EvenlyBackendService.updateKhataTransaction(transactionId, data, onProgress);
       console.log('[CustomerDetailScreen] ✅ Update successful:', result);

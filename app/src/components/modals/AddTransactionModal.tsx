@@ -36,7 +36,12 @@ interface AddTransactionModalProps {
   customerId: string;
   transactionType: 'give' | 'get';
   editTransaction?: Transaction | null;
-  onUpdateTransaction?: (transactionId: string, data: FormData, onProgress?: (progress: number) => void) => Promise<void>;
+  onUpdateTransaction?: (
+    transactionId: string,
+    data: FormData,
+    onProgress?: (progress: number) => void,
+    oldImageUrl?: string
+  ) => Promise<void>;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -52,6 +57,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [oldImageUrl, setOldImageUrl] = useState<string | null>(null); // Track original image from edit
+  const [imageRemoved, setImageRemoved] = useState(false); // Track if user removed the image
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -69,7 +76,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const cleanAmount = transactionAmount.replace(/,/g, '');
       setAmount(cleanAmount);
       setDescription(''); // We don't have description in the transaction object
-      setImageUri(editTransaction.imageUrl || null);
+      const imageUrl = editTransaction.imageUrl || null;
+      setImageUri(imageUrl);
+      setOldImageUrl(imageUrl); // Track original image for deletion
+      setImageRemoved(false);
 
       // Determine the type from which field has value
       if (editTransaction.amountGiven) {
@@ -81,6 +91,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setAmount('');
       setDescription('');
       setImageUri(null);
+      setOldImageUrl(null);
+      setImageRemoved(false);
       setSelectedType(transactionType);
     }
     setErrors({});
@@ -324,6 +336,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const removeImage = () => {
+    // If removing an existing image, mark it for deletion
+    if (editTransaction && imageUri === oldImageUrl && oldImageUrl) {
+      setImageRemoved(true);
+    }
     setImageUri(null);
   };
 
@@ -349,9 +365,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           formData.append('description', description.trim());
         }
 
-        // Add image if selected or changed
-        if (imageUri && imageUri !== editTransaction.imageUrl) {
-          // New image selected or existing image changed
+        // Check if we need to handle image changes
+        const hasNewImage = imageUri && imageUri !== oldImageUrl;
+        const shouldDeleteOldImage = (imageRemoved || hasNewImage) && oldImageUrl;
+
+        // Add image if new image selected
+        if (hasNewImage) {
           setUploadingImage(true);
 
           // Get file info for logging
@@ -360,11 +379,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-          console.log('[Transaction Update] Uploading image:', {
+          console.log('[Transaction Update] Uploading new image:', {
             transactionId: editTransaction.id,
             filename,
             type,
-            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown'
+            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown',
+            deletingOldImage: shouldDeleteOldImage
           });
 
           formData.append('image', {
@@ -374,10 +394,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           } as any);
         }
 
-        // Update transaction with progress callback
-        await onUpdateTransaction(editTransaction.id, formData, (progress) => {
-          setUploadProgress(progress);
-        });
+        // Update transaction with progress callback and old image URL for deletion
+        await onUpdateTransaction(
+          editTransaction.id,
+          formData,
+          (progress) => {
+            setUploadProgress(progress);
+          },
+          shouldDeleteOldImage ? oldImageUrl : undefined
+        );
 
         console.log('[Transaction Update] Success');
       } else {
@@ -426,6 +451,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setAmount('');
       setDescription('');
       setImageUri(null);
+      setOldImageUrl(null);
+      setImageRemoved(false);
       setSelectedType(transactionType);
       setErrors({});
       setUploadProgress(0);
@@ -483,6 +510,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setAmount('');
       setDescription('');
       setImageUri(null);
+      setOldImageUrl(null);
+      setImageRemoved(false);
       setSelectedType(transactionType);
       setErrors({});
       onClose();
