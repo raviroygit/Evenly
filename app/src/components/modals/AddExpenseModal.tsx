@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions } from 'react-native';
+import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ReusableModal } from '../ui/ReusableModal';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
@@ -16,7 +18,8 @@ interface AddExpenseModalProps {
     title: string;
     totalAmount: string;
     date: string;
-  }) => Promise<void>;
+    receipt?: string; // Optional receipt image
+  } | FormData) => Promise<void>;
   onUpdateExpense?: (expenseId: string, expenseData: {
     title: string;
     totalAmount: string;
@@ -37,16 +40,22 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   preselectedGroupId,
 }) => {
   const { groups, refreshGroups } = useGroups();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const [title, setTitle] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const isEditMode = !!editExpense;
+
+  // Constants for image optimization
+  const MAX_FILE_SIZE_MB = 10; // 10MB limit (matches backend limit)
 
   // Refresh groups when modal opens
   useEffect(() => {
@@ -75,8 +84,156 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setSelectedGroupId(preselectedGroupId || '');
       setTotalAmount('');
       setDate(new Date().toISOString().split('T')[0]);
+      setImageUri(null);
     }
-  }, [editExpense, preselectedGroupId]);
+  }, [editExpense, preselectedGroupId, visible]);
+
+  // Image validation
+  const validateImageSize = async (uri: string): Promise<{ valid: boolean; sizeMB: number }> => {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+
+      if (!fileInfo.exists) {
+        return { valid: false, sizeMB: 0 };
+      }
+
+      if (!fileInfo.size || fileInfo.size === 0) {
+        return { valid: true, sizeMB: 0 };
+      }
+
+      const sizeMB = fileInfo.size / (1024 * 1024);
+      const isValid = sizeMB <= MAX_FILE_SIZE_MB;
+
+      return { valid: isValid, sizeMB };
+    } catch (error) {
+      return { valid: true, sizeMB: 0 };
+    }
+  };
+
+  const requestImagePermissions = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Sorry, we need camera roll permissions to select images!',
+          [{ text: 'OK' }]
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const requestCameraPermissions = async () => {
+    if (Platform.OS !== 'web') {
+      const { status} = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Sorry, we need camera permissions to take photos!',
+          [{ text: 'OK' }]
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const pickImageFromGallery = async () => {
+    const hasPermission = await requestImagePermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.7,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const selectedUri = result.assets[0].uri;
+        const { valid, sizeMB } = await validateImageSize(selectedUri);
+
+        if (!valid) {
+          Alert.alert(
+            'Image Too Large',
+            `The selected image (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please select a smaller image.`,
+            [
+              { text: 'Try Again', onPress: pickImageFromGallery },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+
+        setImageUri(selectedUri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const photoUri = result.assets[0].uri;
+        const { valid, sizeMB } = await validateImageSize(photoUri);
+
+        if (!valid) {
+          Alert.alert(
+            'Image Too Large',
+            `The photo (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please try taking the photo again.`,
+            [
+              { text: 'Try Again', onPress: takePhoto },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+
+        setImageUri(photoUri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const showImagePickerOptions = () => {
+    Alert.alert(
+      'Select Receipt Image',
+      'Choose an option',
+      [
+        {
+          text: 'Camera',
+          onPress: takePhoto,
+        },
+        {
+          text: 'Gallery',
+          onPress: pickImageFromGallery,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const removeImage = () => {
+    setImageUri(null);
+  };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -107,18 +264,45 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         handleClose();
       } else {
         // For add mode, call onAddExpense and wait for it to complete
-        // The parent component will close the modal after success
-        await onAddExpense({
-          groupId: selectedGroupId,
-          title: title.trim(),
-          totalAmount: totalAmount.trim(),
-          date,
-        });
+        // Check if we have an image - if yes, use FormData
+        if (imageUri) {
+          setUploadingImage(true);
+          const formData = new FormData();
+
+          formData.append('groupId', selectedGroupId);
+          formData.append('title', title.trim());
+          formData.append('totalAmount', totalAmount.trim());
+          formData.append('date', date);
+          formData.append('splitType', 'equal'); // Default split type
+
+          // Add image
+          const filename = imageUri.split('/').pop() || 'receipt.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+          formData.append('image', {
+            uri: imageUri,
+            name: filename,
+            type,
+          } as any);
+
+          await onAddExpense(formData);
+        } else {
+          // No image - use regular object
+          await onAddExpense({
+            groupId: selectedGroupId,
+            title: title.trim(),
+            totalAmount: totalAmount.trim(),
+            date,
+          });
+        }
+
         // Reset form fields after successful add
         setTitle('');
         setSelectedGroupId(preselectedGroupId || '');
         setTotalAmount('');
         setDate(new Date().toISOString().split('T')[0]);
+        setImageUri(null);
         // Close modal after successful add (parent may have already closed it, but this ensures it closes)
         // Also handles cases where parent doesn't close it (other screens)
         if (visible) {
@@ -136,7 +320,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
   const handleClose = () => {
     // Don't allow closing while loading
-    if (isLoading) {
+    if (isLoading || uploadingImage) {
       return;
     }
     // Reset form when closing
@@ -144,6 +328,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     setSelectedGroupId(preselectedGroupId || '');
     setTotalAmount('');
     setDate(new Date().toISOString().split('T')[0]);
+    setImageUri(null);
     setShowGroupDropdown(false);
     onClose();
   };
@@ -339,6 +524,84 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           </View>
         )}
 
+        {/* Image Upload Section */}
+        <View style={styles.input}>
+          <View style={styles.labelWithHint}>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Receipt Image (Optional)
+            </Text>
+            <Text style={styles.maxSizeHint}>
+              Max image size: {MAX_FILE_SIZE_MB}MB
+            </Text>
+          </View>
+
+          {!imageUri ? (
+            <View style={styles.imagePickerButtons}>
+              <TouchableOpacity
+                style={[styles.imagePickerButton, {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border
+                }]}
+                onPress={pickImageFromGallery}
+                disabled={uploadingImage}
+              >
+                <Ionicons name="images-outline" size={24} color={colors.foreground} />
+                <Text style={[styles.imagePickerButtonText, { color: colors.foreground }]}>
+                  Choose from Gallery
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.imagePickerButton, {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border
+                }]}
+                onPress={takePhotoWithCamera}
+                disabled={uploadingImage}
+              >
+                <Ionicons name="camera-outline" size={24} color={colors.foreground} />
+                <Text style={[styles.imagePickerButtonText, { color: colors.foreground }]}>
+                  Take Photo
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.imagePreviewContainer}>
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.imagePreview}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                style={[styles.removeImageButton, { backgroundColor: colors.destructive }]}
+                onPress={removeImage}
+                disabled={uploadingImage}
+              >
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              {uploadingImage && (
+                <View style={styles.uploadProgressContainer}>
+                  <View style={[styles.progressBarBackground, { backgroundColor: colors.muted }]}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        {
+                          backgroundColor: colors.primary,
+                          width: `${uploadProgress}%`
+                        }
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
+                    Uploading... {uploadProgress}%
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Buttons moved inside scrollable content */}
         <ModalButtonContainer
           buttons={[
@@ -346,14 +609,14 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               title: "Cancel",
               onPress: handleClose,
               variant: "destructive",
-              disabled: isLoading, // Disable cancel button while loading
+              disabled: isLoading || uploadingImage, // Disable cancel button while loading or uploading image
             },
             {
               title: isEditMode ? "Update Expense" : "Add Expense",
               onPress: handleSubmit,
               variant: "primary",
-              loading: isLoading,
-              disabled: isLoading, // Disable button while loading (loading prop handles spinner)
+              loading: isLoading || uploadingImage,
+              disabled: isLoading || uploadingImage, // Disable button while loading or uploading image
             },
           ]}
           style={styles.buttonRow}
@@ -496,6 +759,84 @@ const styles = StyleSheet.create({
   },
   datePickerButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  labelWithHint: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  maxSizeHint: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '500',
+  },
+  imagePickerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  imagePickerButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  imagePickerButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  uploadProgressContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 12,
+  },
+  progressBarBackground: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  uploadProgressText: {
+    fontSize: 12,
+    textAlign: 'center',
     fontWeight: '600',
   },
 });
