@@ -14,7 +14,6 @@ import { CreateGroupModal } from '../../components/modals/CreateGroupModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DashboardSummaryCard } from '../../components/features/dashboard/DashboardSummaryCard';
 import { RecentActivity } from '../../components/features/dashboard/RecentActivity';
-import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { CustomersListModal } from '../../components/modals/CustomersListModal';
 import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { SkeletonKhataSummary } from '../../components/ui/SkeletonLoader';
@@ -563,32 +562,6 @@ export const HomeScreen: React.FC = () => {
         groups={groups}
         onGroupPress={handleGroupPress}
         loading={groupsLoading}
-      />
-
-      {/* Floating Action Button - Outside container for proper positioning */}
-      <FloatingActionButton
-        actions={[
-          {
-            id: 'create-group',
-            title: 'Create Group',
-            icon: '👥',
-            onPress: () => setShowCreateGroupModal(true),
-          },
-          {
-            id: 'add-expense',
-            title: 'Add Expense',
-            icon: '💰',
-            onPress: () => {
-              if (stats.totalGroups === 0) {
-                // Silent - just don't open the modal
-                return;
-              } else {
-                setShowAddExpenseModal(true);
-              }
-            },
-          },
-        ]}
-        position="bottom-right"
       />
     </>
   );
