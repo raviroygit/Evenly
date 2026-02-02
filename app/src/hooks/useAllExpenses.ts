@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Expense, EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { CacheManager } from '../utils/cacheManager';
@@ -8,21 +8,53 @@ import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 import { useAuth } from '../contexts/AuthContext';
 
+// Global state for expenses shared across all hook instances
+let globalExpensesIsFirstFetch = true;
+let globalExpensesLastFetchTime = 0;
+let globalExpensesIsLoading = false;
+let globalExpensesCache: EnhancedExpense[] = [];
+const EXPENSES_CACHE_DURATION = 60000; // 1 minute
+
 export const useAllExpenses = () => {
   const { authState } = useAuth();
-  const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [expenses, setExpenses] = useState<EnhancedExpense[]>(globalExpensesCache);
+  const [loading, setLoading] = useState(!globalExpensesCache.length);
   const [error, setError] = useState<string | null>(null);
   const { groups, loading: groupsLoading } = useGroups();
 
   // Wait for auth to be ready before loading data
   useEffect(() => {
+    // Clear data when user logs out
+    if (authState === 'unauthenticated') {
+      console.log('[useAllExpenses] User logged out - clearing expenses');
+      setExpenses([]);
+      setLoading(true);
+      setError(null);
+      // Reset global state so next app reopen will bypass cache
+      globalExpensesIsFirstFetch = true;
+      globalExpensesCache = [];
+      globalExpensesIsLoading = false;
+      return;
+    }
+
+    // Skip during initialization phase - wait for authenticated state
+    if (authState === 'initializing') {
+      console.log('[useAllExpenses] Auth initializing - waiting...');
+      return;
+    }
+
+    // Only load data when authenticated
     if (authState !== 'authenticated') {
       console.log('[useAllExpenses] Auth not ready, skipping data load. State:', authState);
       return;
     }
 
-    console.log('[useAllExpenses] Auth ready, loading expenses...');
+    console.log('[useAllExpenses] Auth ready, loading expenses...', {
+      hasCache: globalExpensesCache.length > 0,
+      isFirstFetch: globalExpensesIsFirstFetch,
+      groupsCount: groups.length,
+      groupsLoading
+    });
     if (groupsLoading) {
       setLoading(true);
     } else if (groups.length > 0) {
@@ -39,7 +71,7 @@ export const useAllExpenses = () => {
     console.log('[useAllExpenses] Registering with DataRefreshCoordinator');
     const unregister = DataRefreshCoordinator.register(async () => {
       console.log('[useAllExpenses] Coordinator triggered refresh');
-      await loadAllExpenses();
+      await loadAllExpenses({ silent: true }); // Silent - automatic background coordination
     });
 
     return () => {
@@ -66,7 +98,8 @@ export const useAllExpenses = () => {
       }
       // Always refresh, even if groups array is empty (groups might be loading)
       // The loadAllExpenses function will handle empty groups gracefully
-      await loadAllExpenses();
+      // Show loader for manual user actions (create/update/delete)
+      await loadAllExpenses({ silent: false });
       console.log('[useAllExpenses] Expenses refresh completed', {
         expensesCount: expenses.length
       });
@@ -86,10 +119,11 @@ export const useAllExpenses = () => {
   }, [groups, groupsLoading, expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for token refresh events (backwards compatibility)
+  // Token refresh is automatic, so keep it silent
   useEffect(() => {
     const handleTokenRefreshed = () => {
       console.log('[useAllExpenses] Token refreshed event received, reloading expenses...');
-      loadAllExpenses();
+      loadAllExpenses({ silent: true }); // Silent - automatic background event
     };
 
     sessionEvents.on(SESSION_EVENTS.TOKEN_REFRESHED, handleTokenRefreshed);
@@ -100,16 +134,50 @@ export const useAllExpenses = () => {
   }, [loadAllExpenses]);
 
   // Fix closure issue by using current groups, not stale closure
-  const loadAllExpenses = useCallback(async () => {
+  const loadAllExpenses = useCallback(async (options: { silent?: boolean } = {}) => {
     try {
-      setLoading(true);
+      const { silent = false } = options;
+
+      // If another instance is already loading, wait and use cached data
+      if (globalExpensesIsLoading && !globalExpensesIsFirstFetch) {
+        console.log('[useAllExpenses] Another instance is loading - waiting for cache...');
+
+        // Wait for the other instance to finish loading (max 5 seconds)
+        let attempts = 0;
+        while (globalExpensesIsLoading && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        // Use the cached data that was just loaded
+        if (globalExpensesCache.length > 0) {
+          console.log('[useAllExpenses] Using freshly loaded cache');
+          setExpenses(globalExpensesCache);
+        } else {
+          console.log('[useAllExpenses] Cache still empty after wait - force loading');
+          // Cache is still empty, don't skip - continue to load below
+        }
+        setLoading(false);
+
+        // Only return if we have cache data, otherwise continue to load
+        if (globalExpensesCache.length > 0) {
+          return;
+        }
+      }
+
+      // Only show loader for non-silent refreshes AND if this is the first instance loading
+      if (!silent && !globalExpensesIsLoading) {
+        setLoading(true);
+      }
       setError(null);
+      globalExpensesIsLoading = true;
 
       // Fetch fresh groups to avoid closure issue
       const currentGroups = await EvenlyBackendService.getGroups({ cacheTTLMs: 0 });
 
       console.log('[useAllExpenses] loadAllExpenses called', {
         groupsCount: currentGroups.length,
+        silent,
       });
 
       if (currentGroups.length === 0) {
@@ -119,12 +187,29 @@ export const useAllExpenses = () => {
         return;
       }
 
-      // Use token's remaining lifetime as cache TTL
-      const cacheTTL = await CacheManager.getCacheTTL();
+      // Always bypass cache on first fetch to ensure fresh data on app reopen
+      // After first fetch, use cache for better performance
+      let cacheTTL: number;
+      if (globalExpensesIsFirstFetch) {
+        cacheTTL = 0; // Bypass cache - force fresh fetch
+        console.log('[useAllExpenses] 🔄 First fetch - bypassing cache for fresh data');
+        globalExpensesIsFirstFetch = false;
+        globalExpensesLastFetchTime = Date.now();
+      } else {
+        // Check if cache has expired (1 minute)
+        const timeSinceLastFetch = Date.now() - globalExpensesLastFetchTime;
+        if (timeSinceLastFetch > EXPENSES_CACHE_DURATION) {
+          cacheTTL = 0; // Cache expired - fetch fresh data silently
+          console.log('[useAllExpenses] 🔄 Cache expired - silent refresh');
+          globalExpensesLastFetchTime = Date.now();
+        } else {
+          // Use cache for subsequent fetches within 1 minute
+          cacheTTL = EXPENSES_CACHE_DURATION - timeSinceLastFetch;
+          console.log('[useAllExpenses] Loading all expenses with cache TTL:', cacheTTL);
+        }
+      }
 
-      console.log('[useAllExpenses] Loading all expenses with cache TTL:', cacheTTL);
-
-      // Fetch expenses from all groups with token-based cache TTL
+      // Fetch expenses from all groups with cache TTL (0 = bypass, >0 = use cache)
       const allExpensesPromises = currentGroups.map(group =>
         EvenlyBackendService.getGroupExpenses(group.id, { cacheTTLMs: cacheTTL })
       );
@@ -134,10 +219,13 @@ export const useAllExpenses = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
 
-      console.log('[useAllExpenses] Expenses loaded', {
+      console.log('[useAllExpenses] ✅ Expenses loaded', {
         totalExpenses: allExpenses.length,
         expenses: allExpenses.map(e => ({ id: e.id, title: e.title || e.description }))
       });
+
+      // Update global cache
+      globalExpensesCache = allExpenses;
 
       // Force update by creating new array reference
       setExpenses(() => [...allExpenses]);
@@ -152,6 +240,7 @@ export const useAllExpenses = () => {
         setError(errorMessage);
       }
     } finally {
+      globalExpensesIsLoading = false;
       setLoading(false);
     }
   }, []);
@@ -220,6 +309,24 @@ export const useAllExpenses = () => {
     }
   };
 
+  // Auto-refresh when cache expires (silent refresh during app use)
+  useEffect(() => {
+    if (authState !== 'authenticated') return;
+
+    const checkCacheExpiry = () => {
+      const timeSinceLastFetch = Date.now() - globalExpensesLastFetchTime;
+      if (timeSinceLastFetch > EXPENSES_CACHE_DURATION && !globalExpensesIsFirstFetch) {
+        console.log('[useAllExpenses] Cache expired - triggering silent refresh');
+        loadAllExpenses({ silent: true }); // Silent - automatic cache expiry refresh
+      }
+    };
+
+    // Check every 30 seconds if cache has expired
+    const interval = setInterval(checkCacheExpiry, 30000);
+
+    return () => clearInterval(interval);
+  }, [authState, loadAllExpenses]);
+
   return {
     expenses,
     loading,
@@ -228,6 +335,6 @@ export const useAllExpenses = () => {
     expensesByCategory,
     recentExpenses,
     addExpense,
-    refreshExpenses: loadAllExpenses,
+    refreshExpenses: () => loadAllExpenses({ silent: false }), // Explicit user refresh
   };
 };

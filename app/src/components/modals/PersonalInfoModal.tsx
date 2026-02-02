@@ -11,11 +11,12 @@ import { AuthStorage } from '../../utils/storage';
 interface PersonalInfoModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void; // Optional callback after successful update
 }
 
-export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, onClose }) => {
+export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, onClose, onSuccess }) => {
   const { colors } = useTheme();
-  const { user, setUser } = useAuth();
+  const { user, setUser, refreshUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
@@ -114,18 +115,55 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       if (result.success) {
         // Update local state with the response data
         const updated = result.data?.user;
+        let updatedUser;
+
         if (updated) {
           // Preserve all existing user fields and update with new data
-          setUser({
+          updatedUser = {
             ...user,
             id: updated.id || user?.id,
             email: updated.email || user?.email,
             name: updated.name || user?.name,
             phoneNumber: updated.phoneNumber || user?.phoneNumber
-          });
+          };
+          setUser(updatedUser);
         } else if (user) {
           // Fallback: update with the payload if no user data in response
-          setUser({ ...user, ...payload });
+          updatedUser = { ...user, ...payload };
+          setUser(updatedUser);
+        }
+
+        // IMPORTANT: Save updated user to AsyncStorage so changes persist on app reopen
+        if (updatedUser) {
+          try {
+            // Get current auth data to preserve access token and organizations
+            const authData = await AuthStorage.getAuthData();
+            if (authData) {
+              await AuthStorage.saveAuthData(
+                updatedUser,
+                authData.accessToken,
+                authData.organizations
+              );
+              console.log('[PersonalInfoModal] ✅ Updated user saved to storage');
+            }
+          } catch (storageError) {
+            console.error('[PersonalInfoModal] ❌ Failed to save to storage:', storageError);
+            // Continue anyway - user is updated in memory
+          }
+
+          // Force refresh user data from backend to ensure consistency
+          try {
+            await refreshUser();
+            console.log('[PersonalInfoModal] ✅ User data refreshed from backend');
+          } catch (refreshError) {
+            console.error('[PersonalInfoModal] ⚠️ Failed to refresh user from backend:', refreshError);
+            // Continue anyway - local data is already updated
+          }
+        }
+
+        // Call success callback to refresh parent component
+        if (onSuccess) {
+          onSuccess();
         }
 
         // Show success alert with callback to close modal

@@ -21,7 +21,7 @@ import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout, currentOrganization, authState } = useAuth();
+  const { user, logout, currentOrganization, authState, refreshUser } = useAuth();
   const { colors, toggleTheme } = useTheme();
   const router = useRouter();
   const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
@@ -34,22 +34,30 @@ export const ProfileScreen: React.FC = () => {
   const [showGroupsListModal, setShowGroupsListModal] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0); // Force re-render trigger
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refresh both groups and balances
-      if (refreshGroups) {
-        await refreshGroups();
-      }
-      if (refreshUserBalances) {
-        await refreshUserBalances();
-      }
+      // Refresh user profile data, groups, and balances
+      await Promise.all([
+        refreshUser ? refreshUser() : Promise.resolve(),
+        refreshGroups ? refreshGroups() : Promise.resolve(),
+        refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+      ]);
+      // Force re-render after refresh
+      setProfileUpdateTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const handlePersonalInfoSuccess = () => {
+    // Force re-render when personal info is updated
+    console.log('[ProfileScreen] Personal info updated - forcing re-render');
+    setProfileUpdateTrigger(prev => prev + 1);
   };
 
   // Create pull-to-refresh handlers using utility function
@@ -59,11 +67,12 @@ export const ProfileScreen: React.FC = () => {
   });
 
   // Calculate user initials from real user data
+  // Include profileUpdateTrigger in dependency to force recalculation
   const userInitials = useMemo(() => {
     if (!user?.name) return 'U';
     const names = user.name.split(' ');
     return names.map(name => name.charAt(0)).join('').toUpperCase();
-  }, [user?.name]);
+  }, [user?.name, profileUpdateTrigger]);
 
 
   const handleLogout = async () => {
@@ -380,6 +389,7 @@ export const ProfileScreen: React.FC = () => {
       <PersonalInfoModal
         visible={showPersonalInfoModal}
         onClose={() => setShowPersonalInfoModal(false)}
+        onSuccess={handlePersonalInfoSuccess}
       />
 
       {/* Groups List Modal */}
