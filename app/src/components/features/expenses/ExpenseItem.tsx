@@ -195,8 +195,9 @@ const styles = StyleSheet.create({
   },
   mainRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' for better alignment
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 50,
   },
   leftSection: {
     flex: 1,
@@ -205,9 +206,10 @@ const styles = StyleSheet.create({
   },
   rightSection: {
     alignItems: 'flex-end',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     flexDirection: 'column',
     gap: 2,
+    minWidth: 90,
   },
   title: {
     fontSize: 16,
@@ -229,6 +231,8 @@ const styles = StyleSheet.create({
   groupBadgeContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
+    gap: 6,
+    flexWrap: 'wrap',
   },
   groupBadge: {
     paddingHorizontal: 8,

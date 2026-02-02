@@ -488,8 +488,7 @@ export const CustomerDetailScreen: React.FC = () => {
                 borderRadius={{ small: 12, medium: 14, large: 16 }}
               >
                 <View style={styles.transactionRow}>
-                <View style={styles.imageContainer}>
-                  {/* Only show image thumbnail if imageUrl exists */}
+                  {/* Image thumbnail - only show if exists */}
                   {transaction.imageUrl && (
                     <View style={styles.attachmentThumbnail}>
                       <Image
@@ -499,41 +498,46 @@ export const CustomerDetailScreen: React.FC = () => {
                       />
                     </View>
                   )}
-                  <View style={styles.badgesRow}>
-                    <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
-                      <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
-                        {transaction.date}
-                      </Text>
-                      <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
-                        {transaction.time}
-                      </Text>
-                    </View>
-                    <View style={[styles.balanceBadge, {
-                      backgroundColor: theme === 'dark'
-                        ? 'rgba(255, 59, 48, 0.15)'
-                        : 'rgba(255, 59, 48, 0.1)',
-                      borderColor: 'rgba(255, 59, 48, 0.4)',
-                      borderWidth: 1,
-                    }]}>
-                      <Text style={[styles.balanceBadgeText, { color: '#FF3B30' }]}>
-                        ₹{transaction.balance}
-                      </Text>
+
+                  {/* Content area with badges */}
+                  <View style={styles.transactionContent}>
+                    <View style={styles.badgesRow}>
+                      <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
+                        <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
+                          {transaction.date}
+                        </Text>
+                        <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
+                          {transaction.time}
+                        </Text>
+                      </View>
+                      <View style={[styles.balanceBadge, {
+                        backgroundColor: theme === 'dark'
+                          ? 'rgba(255, 59, 48, 0.15)'
+                          : 'rgba(255, 59, 48, 0.1)',
+                        borderColor: 'rgba(255, 59, 48, 0.4)',
+                        borderWidth: 1,
+                      }]}>
+                        <Text style={[styles.balanceBadgeText, { color: '#FF3B30' }]}>
+                          ₹{transaction.balance}
+                        </Text>
+                      </View>
                     </View>
                   </View>
+
+                  {/* Amount on the right */}
+                  <View style={styles.transactionRight}>
+                    {transaction.amountGiven ? (
+                      <Text style={[styles.transactionAmount, { color: '#FF3B30' }]}>
+                        ₹{transaction.amountGiven}
+                      </Text>
+                    ) : null}
+                    {transaction.amountGot ? (
+                      <Text style={[styles.transactionAmount, { color: '#10B981' }]}>
+                        ₹{transaction.amountGot}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
-                <View style={styles.transactionRight}>
-                  {transaction.amountGiven ? (
-                    <Text style={[styles.transactionAmount, { color: '#FF3B30' }]}>
-                      ₹{transaction.amountGiven}
-                    </Text>
-                  ) : null}
-                  {transaction.amountGot ? (
-                    <Text style={[styles.transactionAmount, { color: '#10B981' }]}>
-                      ₹{transaction.amountGot}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
             </ResponsiveLiquidGlassCard>
             </TouchableOpacity>
             </SwipeActionRow>
@@ -702,12 +706,8 @@ const styles = StyleSheet.create({
   transactionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 12,
-  },
-  imageContainer: {
-    alignItems: 'flex-start',
-    gap: 8,
+    minHeight: 50,
   },
   attachmentThumbnail: {
     width: 50,
@@ -717,10 +717,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  transactionContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   badgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'wrap',
   },
   dateTimeBadge: {
     flexDirection: 'row',
@@ -745,9 +750,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   transactionRight: {
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
-    flex: 1,
+    minWidth: 80,
   },
   transactionAmount: {
     fontSize: 16,
