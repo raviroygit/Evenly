@@ -230,9 +230,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   groupBadgeContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    flexWrap: 'wrap',
   },
   groupBadge: {
     paddingHorizontal: 8,
