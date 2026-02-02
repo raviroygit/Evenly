@@ -556,7 +556,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   backgroundColor: colors.background,
                   borderColor: colors.border
                 }]}
-                onPress={takePhotoWithCamera}
+                onPress={takePhoto}
                 disabled={uploadingImage}
               >
                 <Ionicons name="camera-outline" size={24} color={colors.foreground} />
