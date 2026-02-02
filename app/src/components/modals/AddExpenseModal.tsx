@@ -288,7 +288,9 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
           formData.append('title', title.trim());
           formData.append('totalAmount', totalAmount.trim());
-          formData.append('date', date);
+          // Convert YYYY-MM-DD to ISO 8601 datetime format
+          const isoDate = new Date(date).toISOString();
+          formData.append('date', isoDate);
 
           // Add new image
           const filename = imageUri.split('/').pop() || 'receipt.jpg';
@@ -305,21 +307,23 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           await onUpdateExpense(editExpense.id, formData, oldImageUrl || undefined);
         } else if (imageRemoved) {
           // User removed the image - send regular data but mark for deletion
+          const isoDate = new Date(date).toISOString();
           await onUpdateExpense(
             editExpense.id,
             {
               title: title.trim(),
               totalAmount: totalAmount.trim(),
-              date,
+              date: isoDate,
             },
             oldImageUrl || undefined
           );
         } else {
           // No image changes - regular update
+          const isoDate = new Date(date).toISOString();
           await onUpdateExpense(editExpense.id, {
             title: title.trim(),
             totalAmount: totalAmount.trim(),
-            date,
+            date: isoDate,
           });
         }
         // Reset form and close modal after successful update
@@ -334,7 +338,9 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           formData.append('groupId', selectedGroupId);
           formData.append('title', title.trim());
           formData.append('totalAmount', totalAmount.trim());
-          formData.append('date', date);
+          // Convert YYYY-MM-DD to ISO 8601 datetime format
+          const isoDate = new Date(date).toISOString();
+          formData.append('date', isoDate);
           formData.append('splitType', 'equal'); // Default split type
 
           // Add image
@@ -351,11 +357,12 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           await onAddExpense(formData);
         } else {
           // No image - use regular object
+          const isoDate = new Date(date).toISOString();
           await onAddExpense({
             groupId: selectedGroupId,
             title: title.trim(),
             totalAmount: totalAmount.trim(),
-            date,
+            date: isoDate,
           });
         }
 
