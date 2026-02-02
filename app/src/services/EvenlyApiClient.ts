@@ -66,6 +66,11 @@ class EvenlyApiClient {
     this.client.interceptors.request.use(
       async (config) => {
         try {
+          // Debug: Log data type
+          console.log(`[${Platform.OS}] 🔍 Request data type:`, typeof config.data);
+          console.log(`[${Platform.OS}] 🔍 Is FormData:`, config.data instanceof FormData);
+          console.log(`[${Platform.OS}] 🔍 Data constructor:`, config.data?.constructor?.name);
+
           // For FormData, don't set Content-Type - let axios handle it automatically
           if (config.data instanceof FormData) {
             // Remove Content-Type header if it exists, axios will set it with boundary
@@ -118,6 +123,21 @@ class EvenlyApiClient {
       async (error) => {
         // Log the error for debugging
         ErrorHandler.logError(error, 'API Request');
+
+        // Enhanced error logging for FormData uploads
+        if (error.config?.data instanceof FormData || error.code === 'ERR_NETWORK') {
+          console.error('[EvenlyApiClient] ❌ Upload/Network Error Details:', {
+            code: error.code,
+            message: error.message,
+            url: error.config?.url,
+            method: error.config?.method,
+            timeout: error.config?.timeout,
+            hasResponse: !!error.response,
+            responseStatus: error.response?.status,
+            responseData: error.response?.data,
+            isFormData: error.config?.data instanceof FormData,
+          });
+        }
 
         // Handle 401 Unauthorized - token might be revoked or network issue
         if (error.response?.status === 401) {
