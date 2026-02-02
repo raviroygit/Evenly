@@ -602,7 +602,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           </View>
 
           {imageUri ? (
-            <View style={styles.imagePreviewContainer>
+            <View style={styles.imagePreviewContainer}>
               <Image
                 source={{ uri: imageUri }}
                 style={styles.imagePreview}
