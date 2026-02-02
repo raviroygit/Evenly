@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useActivitiesContext } from '../../contexts/ActivitiesContext';
@@ -92,15 +92,21 @@ export const ActivitiesScreen: React.FC = () => {
       style={[
         styles.activityItem,
         {
-          backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-          borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          ...(Platform.OS === 'ios' && {
+            shadowColor: theme === 'dark' ? colors.foreground : '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme === 'dark' ? 0.12 : 0.05,
+            shadowRadius: 4,
+          }),
         },
       ]}
       onPress={() => handleActivityPress(activity)}
       activeOpacity={activity.type === 'group' ? 0.7 : 1}
       disabled={activity.type !== 'group'}
     >
-      <View style={styles.activityIcon}>
+      <View style={[styles.activityIcon, { backgroundColor: colors.muted }]}>
         <Text style={styles.iconText}>{getActivityIcon(activity.type)}</Text>
       </View>
 
@@ -210,11 +216,11 @@ export const ActivitiesScreen: React.FC = () => {
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity
-        style={[styles.backButton, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F0F0F0' }]}
+        style={[styles.backButton, { backgroundColor: colors.muted }]}
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
-        <Text style={styles.backIcon}>←</Text>
+        <Text style={[styles.backIcon, { color: colors.foreground }]}>←</Text>
       </TouchableOpacity>
       <View style={styles.headerContent}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>All Activities</Text>
@@ -333,10 +339,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 2,
   },
   activityIcon: {
