@@ -172,8 +172,8 @@ export const GroupDetailsScreen: React.FC = () => {
     try {
       setIsUpdatingExpense(true);
 
-      // If old image exists and we're uploading new FormData with image, delete old one
-      if (oldImageUrl && expenseData instanceof FormData && expenseData.has('receipt')) {
+      // Delete old image from Cloudinary when replacing or removing image
+      if (oldImageUrl) {
         try {
           await EvenlyBackendService.deleteExpenseImage(oldImageUrl);
         } catch (error) {

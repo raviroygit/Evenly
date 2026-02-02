@@ -392,6 +392,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             name: filename,
             type,
           } as any);
+        } else if (imageRemoved) {
+          // User removed the image - tell backend to clear imageUrl in DB (Cloudinary delete via oldImageUrl in parent)
+          formData.append('removeImage', 'true');
         }
 
         // Update transaction with progress callback and old image URL for deletion

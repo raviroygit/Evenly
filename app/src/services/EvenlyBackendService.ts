@@ -446,7 +446,7 @@ export class EvenlyBackendService {
     totalAmount?: string;
     category?: string;
     date?: string;
-    receipt?: string;
+    receipt?: string | null;
     splits?: {
       userId: string;
       amount: string;
@@ -640,7 +640,7 @@ export class EvenlyBackendService {
       receipt: expense.receipt,
       createdAt: new Date(expense.createdAt),
       updatedAt: new Date(expense.updatedAt),
-      splits: expense.splits.map(split => ({
+      splits: (expense.splits ?? []).map(split => ({
         id: split.id,
         expenseId: split.expenseId,
         userId: split.userId,

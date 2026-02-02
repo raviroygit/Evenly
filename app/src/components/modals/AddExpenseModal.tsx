@@ -306,7 +306,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           // Pass old image URL for deletion
           await onUpdateExpense(editExpense.id, formData, oldImageUrl || undefined);
         } else if (imageRemoved) {
-          // User removed the image - send regular data but mark for deletion
+          // User removed the image - clear receipt in DB and delete from Cloudinary (oldImageUrl triggers delete in parent)
           const isoDate = new Date(date).toISOString();
           await onUpdateExpense(
             editExpense.id,
@@ -314,6 +314,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               title: title.trim(),
               totalAmount: totalAmount.trim(),
               date: isoDate,
+              receipt: null, // Clear receipt in DB; parent deletes from Cloudinary via oldImageUrl
             },
             oldImageUrl || undefined
           );
@@ -383,9 +384,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     } catch (error) {
       // Error is already handled by parent component or Alert.alert
       // Don't close modal on error so user can retry
-      // Don't reset form on error so user can see what they entered
+      // Don't reset form on error so user can retry
     } finally {
       setIsLoading(false);
+      setUploadingImage(false);
     }
   };
 

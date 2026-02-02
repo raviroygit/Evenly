@@ -319,6 +319,7 @@ export class KhataController {
               else if (fieldname === 'currency') data.currency = value;
               else if (fieldname === 'description') data.description = value;
               else if (fieldname === 'transactionDate') data.transactionDate = value;
+              else if (fieldname === 'removeImage' && value === 'true') data.imageUrl = null;
             } catch (fieldError) {
               console.error('Error reading form field:', fieldError);
             }

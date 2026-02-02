@@ -537,7 +537,7 @@ export class ExpenseService {
       totalAmount?: string;
       category?: string;
       date?: string;
-      receipt?: string;
+      receipt?: string | null;
     },
     userId: string,
     organizationId?: string

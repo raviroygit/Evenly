@@ -65,7 +65,7 @@ export const updateExpenseSchema = z.object({
   totalAmount: positiveDecimalSchema.optional(),
   category: z.string().min(1, 'Category is required').max(50, 'Category too long').optional(),
   date: z.string().datetime('Invalid date format').optional(),
-  receipt: z.string().url('Invalid receipt URL').optional(),
+  receipt: z.union([z.string().url('Invalid receipt URL'), z.null()]).optional(),
 });
 
 // Payment validation schemas
