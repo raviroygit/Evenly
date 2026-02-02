@@ -4,6 +4,15 @@ apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
+// App root (parent of android/) - resolve from this module so path is correct from any CWD
+def appRoot = projectDir.parentFile.parentFile
+def releaseKeystoreFile = new File(appRoot, "evenlysplit-release-key.keystore")
+def keystorePropsFile = new File(appRoot, "keystore.properties")
+def useReleaseSigning = releaseKeystoreFile.exists() && keystorePropsFile.exists()
+
+// Play Console expected certificate fingerprint (for verification)
+def PLAY_EXPECTED_SHA1 = "03:33:93:CF:1C:B6:22:D7:64:7F:67:1D:0C:03:D4:32:4A:2B:04:6C"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -92,17 +101,11 @@ android {
         applicationId 'com.nxtgenaidev.evenly'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
+        versionCode 7
         versionName "1.0.8"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
-    // App root (parent of android/) - survives prebuild/clean; keystore + credentials live here
-    def appRoot = file("${projectRoot}/..")
-    def releaseKeystoreFile = file("${appRoot}/evenlysplit-release-key.keystore")
-    def keystorePropsFile = file("${appRoot}/keystore.properties")
-    def useReleaseSigning = releaseKeystoreFile.exists() && keystorePropsFile.exists()
-
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -126,7 +129,9 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig useReleaseSigning ? signingConfigs.release : signingConfigs.debug
+            // Caution! In production, you need to generate your own keystore file.
+            // see https://reactnative.dev/docs/signed-apk-android.
+            signingConfig signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -194,3 +199,47 @@ dependencies {
         implementation jscFlavor
     }
 }
+// Verify release signing and print keystore SHA1 (run: cd android && ./gradlew checkReleaseSigning)
+tasks.register("checkReleaseSigning") {
+    doLast {
+        println "=== Release signing check ==="
+        println "App root: " + appRoot.absolutePath
+        println "Keystore exists: " + releaseKeystoreFile.exists() + " (" + releaseKeystoreFile.absolutePath + ")"
+        println "keystore.properties exists: " + keystorePropsFile.exists() + " (" + keystorePropsFile.absolutePath + ")"
+        println "Release signing will be used: " + useReleaseSigning
+        println ""
+        println "Play Console EXPECTS this certificate SHA1:"
+        println "  " + PLAY_EXPECTED_SHA1
+        if (useReleaseSigning) {
+            def props = new Properties()
+            props.load(new FileInputStream(keystorePropsFile))
+            def storePass = props["storePassword"] ?: ""
+            def keyAlias = props["keyAlias"] ?: ""
+            println ""
+            println "Your release keystore SHA1:"
+            def outStream = new ByteArrayOutputStream()
+            def errStream = new ByteArrayOutputStream()
+            exec {
+                commandLine "keytool", "-list", "-v", "-keystore", releaseKeystoreFile.absolutePath,
+                    "-storepass", storePass,
+                    "-alias", keyAlias
+                standardOutput = outStream
+                errorOutput = errStream
+                ignoreExitValue = true
+            }
+            def out = outStream.toString()
+            def sha1Lines = out.readLines().findAll { it.trim().startsWith("SHA1:") }
+            if (sha1Lines) {
+                sha1Lines.each { println "  " + it.trim() }
+            } else {
+                println "  (run manually: keytool -list -v -keystore \"" + releaseKeystoreFile.absolutePath + "\" -storepass <password> -alias " + keyAlias + ")"
+            }
+            println ""
+            println "If the SHA1 above does not match Play's expected SHA1, you are using the wrong keystore file."
+        } else {
+            println ""
+            println "WARNING: Release keystore/properties missing. Add them to the app root to build for Play Store."
+        }
+    }
+}
+
