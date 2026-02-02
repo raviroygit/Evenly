@@ -489,19 +489,16 @@ export const CustomerDetailScreen: React.FC = () => {
               >
                 <View style={styles.transactionRow}>
                 <View style={styles.imageContainer}>
-                  <View style={styles.attachmentThumbnail}>
-                    {transaction.imageUrl ? (
+                  {/* Only show image thumbnail if imageUrl exists */}
+                  {transaction.imageUrl && (
+                    <View style={styles.attachmentThumbnail}>
                       <Image
                         source={{ uri: transaction.imageUrl }}
                         style={styles.attachmentImage}
                         resizeMode="cover"
                       />
-                    ) : (
-                      <View style={[styles.imagePlaceholder, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
-                        <Ionicons name="image-outline" size={24} color={colors.mutedForeground} />
-                      </View>
-                    )}
-                  </View>
+                    </View>
+                  )}
                   <View style={styles.badgesRow}>
                     <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
                       <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
@@ -717,13 +714,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },

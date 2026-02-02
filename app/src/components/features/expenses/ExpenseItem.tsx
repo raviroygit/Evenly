@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, Image } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
@@ -101,6 +101,17 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       <View style={styles.content}>
         {/* Main Content Row */}
         <View style={styles.mainRow}>
+          {/* Receipt Image Thumbnail - Only show if receipt exists */}
+          {item.receipt && (
+            <View style={styles.imageThumbnailContainer}>
+              <Image
+                source={{ uri: item.receipt }}
+                style={styles.imageThumbnail}
+                resizeMode="cover"
+              />
+            </View>
+          )}
+
           {/* Left Section */}
           <View style={styles.leftSection}>
             <Text style={[styles.title, { color: colors.foreground }]}>
@@ -227,5 +238,17 @@ const styles = StyleSheet.create({
   groupBadgeText: {
     fontSize: 10,
     fontWeight: '600',
+  },
+  imageThumbnailContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  imageThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
   },
 });
