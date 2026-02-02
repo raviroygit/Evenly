@@ -59,7 +59,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [selectedType, setSelectedType] = useState<'give' | 'get'>(transactionType);
 
   // Constants for image optimization
-  const MAX_FILE_SIZE_MB = 5; // 5MB limit
+  const MAX_FILE_SIZE_MB = 10; // 10MB limit (matches backend limit)
 
   // Pre-fill form when editing
   React.useEffect(() => {
@@ -667,9 +667,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
                 {/* Image Selection */}
                 <View style={styles.inputContainer}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>
-                    Image (Optional)
-                  </Text>
+                  <View style={styles.labelWithHint}>
+                    <Text style={[styles.label, { color: colors.foreground }]}>
+                      Image (Optional)
+                    </Text>
+                    <Text style={styles.maxSizeHint}>
+                      Max image size: {MAX_FILE_SIZE_MB}MB
+                    </Text>
+                  </View>
                   {imageUri ? (
                     <View style={styles.imagePreviewContainer}>
                       <Image source={{ uri: imageUri }} style={styles.imagePreview} />
@@ -820,6 +825,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  labelWithHint: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  maxSizeHint: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#FF3B30',
   },
   required: {
     color: '#FF3B30',
