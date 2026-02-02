@@ -1,46 +1,28 @@
 import { FastifyInstance } from 'fastify';
 import { ExpenseController } from '../controllers/expenseController';
 import { authenticateToken } from '../middlewares/auth';
+import fastifyMultipart from '@fastify/multipart';
 
 export async function expenseRoutes(fastify: FastifyInstance) {
+  // Register multipart for file uploads (expense receipts)
+  // Increased fileSize limit to 10MB for image uploads
+  await fastify.register(fastifyMultipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+      files: 1, // Only allow 1 file per request
+    },
+  });
+
   // Apply authentication to all expense routes
   fastify.addHook('preHandler', authenticateToken);
 
   // Expense CRUD operations
   fastify.post('/', {
     schema: {
-      description: 'Create a new expense',
+      description: 'Create a new expense (supports both JSON and multipart/form-data for image uploads)',
       tags: ['Expenses'],
-      body: {
-        type: 'object',
-        required: ['groupId', 'title', 'totalAmount', 'splitType'],
-        properties: {
-          groupId: { type: 'string', format: 'uuid' },
-          title: { type: 'string', minLength: 1, maxLength: 200 },
-          totalAmount: { type: 'string', pattern: '^\\d+(\\.\\d{1,2})?$' },
-          paidBy: { type: 'string', format: 'uuid' }, // Optional - will be set to current user
-          description: { type: 'string', maxLength: 200 }, // Optional - no minLength requirement
-          category: { type: 'string', maxLength: 50 },
-          date: { type: 'string', format: 'date-time' },
-          splitType: { 
-            type: 'string', 
-            enum: ['equal', 'percentage', 'shares', 'exact']
-          },
-          splits: {
-            type: 'array',
-            items: {
-              type: 'object',
-              required: ['userId'],
-              properties: {
-                userId: { type: 'string', format: 'uuid' },
-                amount: { type: 'string', pattern: '^\\d+(\\.\\d{1,2})?$' },
-                percentage: { type: 'number', minimum: 0, maximum: 100 },
-                shares: { type: 'number', minimum: 0 },
-              },
-            },
-          },
-        },
-      },
+      // Note: Schema validation is disabled for body to support both JSON and multipart/form-data
+      // The controller handles validation manually
     },
   }, ExpenseController.createExpense);
 

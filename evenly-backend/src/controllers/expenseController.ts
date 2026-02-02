@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseService } from '../services/expenseService';
-import { 
-  createExpenseSchema, 
+import {
+  createExpenseSchema,
   updateExpenseSchema,
   paginationSchema,
   type CreateExpenseInput,
@@ -10,6 +10,7 @@ import {
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
+import { uploadSingleImage } from '../utils/uploadHelper';
 
 export class ExpenseController {
   /**
@@ -17,7 +18,89 @@ export class ExpenseController {
    */
   static createExpense = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
-    const expenseData = createExpenseSchema.parse(request.body);
+
+    // Handle multipart form data (for receipt image upload)
+    let receiptUrl: string | undefined;
+    const data: any = {};
+
+    // Check if request has multipart data
+    const isMultipart = request.isMultipart();
+
+    if (isMultipart) {
+      // Parse multipart form data
+      try {
+        const parts = request.parts();
+
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            // Handle image upload
+            try {
+              const buffer = await part.toBuffer();
+              const mimetype = part.mimetype;
+              console.log('Processing receipt image:', {
+                fieldname: part.fieldname,
+                filename: part.filename,
+                mimetype: mimetype,
+                bufferSize: buffer.length,
+              });
+              const result = await uploadSingleImage(buffer, 'expenses', mimetype);
+              receiptUrl = result.url;
+            } catch (uploadError) {
+              console.error('Error uploading receipt image:', uploadError);
+              return reply.status(400).send({
+                success: false,
+                message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
+              });
+            }
+          } else {
+            // Handle form fields
+            try {
+              const fieldname = part.fieldname;
+              const value = typeof part.value === 'string'
+                ? part.value
+                : await part.value;
+
+              // Map form fields to expense data
+              if (fieldname === 'groupId') data.groupId = value;
+              else if (fieldname === 'title') data.title = value;
+              else if (fieldname === 'totalAmount') data.totalAmount = value;
+              else if (fieldname === 'paidBy') data.paidBy = value;
+              else if (fieldname === 'description') data.description = value;
+              else if (fieldname === 'category') data.category = value;
+              else if (fieldname === 'date') data.date = value;
+              else if (fieldname === 'splitType') data.splitType = value;
+              else if (fieldname === 'splits') {
+                // Parse JSON string for splits array
+                try {
+                  data.splits = JSON.parse(value);
+                } catch (e) {
+                  console.error('Error parsing splits:', e);
+                }
+              }
+            } catch (fieldError) {
+              console.error('Error reading form field:', fieldError);
+            }
+          }
+        }
+
+        // Add receipt URL if uploaded
+        if (receiptUrl) {
+          data.receipt = receiptUrl;
+        }
+      } catch (multipartError) {
+        console.error('Error parsing multipart data:', multipartError);
+        return reply.status(400).send({
+          success: false,
+          message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
+        });
+      }
+    } else {
+      // Handle regular JSON body
+      Object.assign(data, request.body);
+    }
+
+    // Validate the expense data
+    const expenseData = createExpenseSchema.parse(data);
 
     const expense = await ExpenseService.createExpense(expenseData, user.id);
 
