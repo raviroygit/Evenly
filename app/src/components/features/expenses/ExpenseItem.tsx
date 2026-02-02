@@ -112,40 +112,40 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
             </View>
           )}
 
-          {/* Left Section */}
-          <View style={styles.leftSection}>
+          {/* Content Section */}
+          <View style={styles.contentSection}>
             <Text style={[styles.title, { color: colors.foreground }]}>
               {item.title}
             </Text>
             <Text style={[styles.paidBy, { color: colors.mutedForeground }]}>
               {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} ₹{item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount).toFixed(2) : '0.00'}
             </Text>
-            {/* Badges Row: Group + Date-Time */}
+            {/* Badges Column: Group + Date-Time stacked vertically */}
             <View style={styles.groupBadgeContainer}>
               {groupName && (
-                <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}> 
-                  <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}> 
+                <View style={[styles.groupBadge, { backgroundColor: '#2196F3' + '20' }]}>
+                  <Text style={[styles.groupBadgeText, { color: '#2196F3' }]}>
                     {groupName}
                   </Text>
                 </View>
               )}
               {!!item.date && (
-                <View style={[styles.groupBadge, { backgroundColor: '#6B7280' + '20' }]}> 
-                  <Text style={[styles.groupBadgeText, { color: '#6B7280' }]}> 
+                <View style={[styles.groupBadge, { backgroundColor: '#6B7280' + '20' }]}>
+                  <Text style={[styles.groupBadgeText, { color: '#6B7280' }]}>
                     {formatHumanDateTime(item.date as any)}
                   </Text>
                 </View>
               )}
             </View>
           </View>
-          
-          {/* Right Section */}
+
+          {/* Right Section - Amount */}
           <View style={styles.rightSection}>
             {item.netBalance ? (
               <>
                 <Text style={[styles.statusText, { color: item.netBalance.color }]}>
-                  {item.netBalance.text.includes('you lent') ? 'You Lent' : 
-                   item.netBalance.text.includes('you borrowed') ? 'You Borrowed' : 
+                  {item.netBalance.text.includes('you lent') ? 'You Lent' :
+                   item.netBalance.text.includes('you borrowed') ? 'You Borrowed' :
                    item.netBalance.text}
                 </Text>
                 <Text style={[styles.amountText, { color: item.netBalance.color }]}>
@@ -199,10 +199,11 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 50,
   },
-  leftSection: {
+  contentSection: {
     flex: 1,
     flexDirection: 'column',
     gap: 4,
+    justifyContent: 'center',
   },
   rightSection: {
     alignItems: 'flex-end',
@@ -229,10 +230,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   groupBadgeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: 6,
-    flexWrap: 'wrap',
   },
   groupBadge: {
     paddingHorizontal: 8,
