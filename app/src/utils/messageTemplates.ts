@@ -21,11 +21,12 @@ export const generateKhataBalanceMessage = (data: CustomerBalanceData): string =
     return `Hi ${name},\n\nYour account with ${businessName} is settled.\n\nThank you for your business!${appLink}`;
   }
 
-  if (type === 'get') {
+  // type 'give' = You gave to customer → customer owes you → tell them "outstanding to pay"
+  if (type === 'give') {
     return `Hi ${name},\n\nReminder: You have an outstanding balance of ₹${amount} to pay.\n\nAccount: ${businessName}\n\nPlease settle at your earliest convenience.${appLink}`;
   }
 
-  // type === 'give'
+  // type 'get' = You got from customer → you owe customer → tell them "in your favor"
   return `Hi ${name},\n\nYour account shows a balance of ₹${amount} in your favor.\n\nAccount: ${businessName}\n\nThank you!${appLink}`;
 };
 

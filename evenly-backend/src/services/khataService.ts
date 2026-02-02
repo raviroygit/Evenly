@@ -69,15 +69,15 @@ export class KhataService {
           let type: 'give' | 'get' | 'settled' = 'settled';
 
           if (lastTransaction.length > 0) {
-            balance = lastTransaction[0].balance;
-            // Determine type based on balance
+            const last = lastTransaction[0];
+            balance = last.balance;
             const balanceNum = parseFloat(balance);
-            if (balanceNum > 0) {
-              type = 'get'; // User will get money
-            } else if (balanceNum < 0) {
-              type = 'give'; // User will give money
-            } else {
+            // When all dues are 0 (give and get balance out), show settled
+            if (Math.abs(balanceNum) < 0.01) {
               type = 'settled';
+            } else {
+              // Use last transaction's type so label matches: "You Gave" → type give → UI "You'll Get", "You Got" → type get → UI "You'll Give"
+              type = last.type as 'give' | 'get';
             }
           }
 
@@ -180,14 +180,15 @@ export class KhataService {
       let type: 'give' | 'get' | 'settled' = 'settled';
 
       if (lastTransaction.length > 0) {
-        balance = lastTransaction[0].balance;
+        const last = lastTransaction[0];
+        balance = last.balance;
         const balanceNum = parseFloat(balance);
-        if (balanceNum > 0) {
-          type = 'get';
-        } else if (balanceNum < 0) {
-          type = 'give';
-        } else {
+        // When all dues are 0 (give and get balance out), show settled
+        if (Math.abs(balanceNum) < 0.01) {
           type = 'settled';
+        } else {
+          // Use last transaction's type so label matches: "You Gave" → type give → UI "You'll Get"
+          type = last.type as 'give' | 'get';
         }
       }
 
@@ -398,17 +399,17 @@ export class KhataService {
         currentBalance = lastTransaction[0].balance;
       }
 
-      // Calculate new balance
+      // Calculate new balance (from logged-in user's perspective: positive = customer owes user, negative = user owes customer)
       const amount = parseFloat(transactionData.amount);
       const balanceNum = parseFloat(currentBalance);
       let newBalance: number;
 
       if (transactionData.type === 'give') {
-        // User gave money, balance decreases (becomes more negative or less positive)
-        newBalance = balanceNum - amount;
-      } else {
-        // User got money, balance increases (becomes more positive or less negative)
+        // User gave money to customer → customer owes user more → balance increases (positive)
         newBalance = balanceNum + amount;
+      } else {
+        // User got money from customer → customer owes user less (or user owes customer) → balance decreases (negative)
+        newBalance = balanceNum - amount;
       }
 
       const newTransaction: NewKhataTransaction = {
@@ -585,14 +586,14 @@ export class KhataService {
 
       let currentBalance = 0;
 
-      // Recalculate balance for each transaction
+        // Recalculate balance for each transaction (positive = customer owes user, negative = user owes customer)
       for (const transaction of transactions) {
         const amount = parseFloat(transaction.amount);
 
         if (transaction.type === 'give') {
-          currentBalance -= amount;
+          currentBalance += amount; // User gave → customer owes more
         } else {
-          currentBalance += amount;
+          currentBalance -= amount; // User got → customer owes less
         }
 
         // Update the transaction with new balance

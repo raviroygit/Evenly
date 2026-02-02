@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -9,6 +9,9 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -42,6 +45,22 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Pre-fill form when editing
   React.useEffect(() => {
@@ -159,138 +178,152 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             onPress={handleClose}
           />
           <View style={styles.modalWrapper}>
-            <View
-              style={[
-                styles.modalContainer,
-                {
-                  backgroundColor: colors.background,
-                },
-              ]}
+            <KeyboardAvoidingView
+              style={styles.modalWrapper}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={[styles.title, { color: colors.foreground }]}>
-                  {editCustomer ? 'Edit Customer' : 'Add Customer'}
-                </Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={handleClose}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  disabled={loading}
-                >
-                  <Ionicons name="close" size={24} color={colors.foreground} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.form}>
-                {/* Name Field */}
-                <View style={styles.inputContainer}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>
-                    Name <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                        color: colors.foreground,
-                        borderColor: errors.name ? '#FF3B30' : 'transparent',
-                        borderWidth: errors.name ? 1 : 0,
-                      },
-                    ]}
-                    placeholder="Enter customer name"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={name}
-                    onChangeText={(text) => {
-                      setName(text);
-                      if (errors.name) {
-                        setErrors({ ...errors, name: undefined });
-                      }
-                    }}
-                    editable={!loading}
-                  />
-                  {errors.name && (
-                    <Text style={styles.errorText}>{errors.name}</Text>
-                  )}
-                </View>
-
-                {/* Email Field */}
-                <View style={styles.inputContainer}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>
-                    Email <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                        color: colors.foreground,
-                        borderColor: errors.email ? '#FF3B30' : 'transparent',
-                        borderWidth: errors.email ? 1 : 0,
-                      },
-                    ]}
-                    placeholder="Enter email address"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      if (errors.email) {
-                        setErrors({ ...errors, email: undefined });
-                      }
-                    }}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    editable={!loading}
-                  />
-                  {errors.email && (
-                    <Text style={styles.errorText}>{errors.email}</Text>
-                  )}
-                </View>
-
-                {/* Phone Field */}
-                <View style={styles.inputContainer}>
-                  <Text style={[styles.label, { color: colors.foreground }]}>
-                    Phone
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                        color: colors.foreground,
-                      },
-                    ]}
-                    placeholder="Enter phone number (optional)"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={phone}
-                    onChangeText={setPhone}
-                    keyboardType="phone-pad"
-                    editable={!loading}
-                  />
-                </View>
-              </View>
-
-              {/* Submit Button */}
-              <TouchableOpacity
+              <View
                 style={[
-                  styles.submitButton,
+                  styles.modalContainer,
                   {
-                    backgroundColor: loading ? colors.mutedForeground : colors.primary,
+                    backgroundColor: colors.background,
                   },
+                  keyboardVisible && styles.modalContainerKeyboardOpen,
                 ]}
-                onPress={handleSubmit}
-                disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.submitButtonText}>
-                    {editCustomer ? 'Update Customer' : 'Add Customer'}
+                {/* Header */}
+                <View style={styles.header}>
+                  <Text style={[styles.title, { color: colors.foreground }]}>
+                    {editCustomer ? 'Edit Customer' : 'Add Customer'}
                   </Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={handleClose}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    disabled={loading}
+                  >
+                    <Ionicons name="close" size={24} color={colors.foreground} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  style={[styles.scrollView, keyboardVisible && styles.scrollViewKeyboardOpen]}
+                  contentContainerStyle={styles.scrollContent}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Form */}
+                  <View style={styles.form}>
+                    {/* Name Field */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: colors.foreground }]}>
+                        Name <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                            color: colors.foreground,
+                            borderColor: errors.name ? '#FF3B30' : 'transparent',
+                            borderWidth: errors.name ? 1 : 0,
+                          },
+                        ]}
+                        placeholder="Enter customer name"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={name}
+                        onChangeText={(text) => {
+                          setName(text);
+                          if (errors.name) {
+                            setErrors({ ...errors, name: undefined });
+                          }
+                        }}
+                        editable={!loading}
+                      />
+                      {errors.name && (
+                        <Text style={styles.errorText}>{errors.name}</Text>
+                      )}
+                    </View>
+
+                    {/* Email Field */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: colors.foreground }]}>
+                        Email <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                            color: colors.foreground,
+                            borderColor: errors.email ? '#FF3B30' : 'transparent',
+                            borderWidth: errors.email ? 1 : 0,
+                          },
+                        ]}
+                        placeholder="Enter email address"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={email}
+                        onChangeText={(text) => {
+                          setEmail(text);
+                          if (errors.email) {
+                            setErrors({ ...errors, email: undefined });
+                          }
+                        }}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        editable={!loading}
+                      />
+                      {errors.email && (
+                        <Text style={styles.errorText}>{errors.email}</Text>
+                      )}
+                    </View>
+
+                    {/* Phone Field */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: colors.foreground }]}>
+                        Phone
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                            color: colors.foreground,
+                          },
+                        ]}
+                        placeholder="Enter phone number (optional)"
+                        placeholderTextColor={colors.mutedForeground}
+                        value={phone}
+                        onChangeText={setPhone}
+                        keyboardType="phone-pad"
+                        editable={!loading}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Submit Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.submitButton,
+                      {
+                        backgroundColor: loading ? colors.mutedForeground : colors.primary,
+                      },
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.submitButtonText}>
+                        {editCustomer ? 'Update Customer' : 'Add Customer'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
           </View>
         </View>
       </View>
@@ -322,8 +355,23 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: Platform.OS === 'ios' ? 20 : 10,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  modalContainerKeyboardOpen: {
+    flex: 1,
+    maxHeight: '90%',
+  },
+  scrollView: {
+    flexGrow: 0,
+  },
+  scrollViewKeyboardOpen: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
   header: {
     flexDirection: 'row',
@@ -342,8 +390,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   form: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingBottom: 8,
   },
   inputContainer: {
     marginBottom: 20,
@@ -368,8 +415,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitButton: {
-    marginHorizontal: 20,
-    marginTop: 32,
+    marginTop: 24,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
