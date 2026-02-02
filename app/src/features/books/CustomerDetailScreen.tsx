@@ -722,10 +722,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: 8,
-    flexWrap: 'wrap',
   },
   dateTimeBadge: {
     flexDirection: 'row',
