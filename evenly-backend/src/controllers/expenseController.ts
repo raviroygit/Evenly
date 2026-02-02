@@ -10,7 +10,7 @@ import {
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
-import { uploadSingleImage } from '../utils/uploadHelper';
+import { uploadSingleImage } from '../utils/cloudinary';
 
 export class ExpenseController {
   /**
@@ -72,7 +72,7 @@ export class ExpenseController {
               else if (fieldname === 'splits') {
                 // Parse JSON string for splits array
                 try {
-                  data.splits = JSON.parse(value);
+                  data.splits = JSON.parse(value as string);
                 } catch (e) {
                   console.error('Error parsing splits:', e);
                 }
