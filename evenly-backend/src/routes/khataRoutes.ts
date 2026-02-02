@@ -5,7 +5,13 @@ import fastifyMultipart from '@fastify/multipart';
 
 export async function khataRoutes(fastify: FastifyInstance) {
   // Register multipart for file uploads
-  await fastify.register(fastifyMultipart);
+  // Increased fileSize limit to 10MB for image uploads
+  await fastify.register(fastifyMultipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit (was 1MB default)
+      files: 1, // Only allow 1 file per request
+    },
+  });
 
   // Apply authentication to all khata routes
   fastify.addHook('preHandler', authenticateToken);
