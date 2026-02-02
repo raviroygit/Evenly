@@ -81,8 +81,6 @@ export class ExpenseService {
           userId: member.userId,
           amount: splitAmount.toFixed(2),
         }));
-
-        console.log('Auto-generated splits for all group members:', splits);
       }
 
       // Validate splits
@@ -133,14 +131,9 @@ export class ExpenseService {
 
       // Send email notifications to other group members
       try {
-        console.log('Starting to send expense notifications...');
-        console.log('Expense splits:', expenseWithSplits.splits.map(s => ({ userId: s.userId, userEmail: s.user.email, amount: s.amount })));
-        console.log('Created by user ID:', createdBy);
         await this.sendExpenseNotifications(expenseWithSplits, createdBy);
-        console.log('Expense notifications sent successfully');
       } catch (emailError) {
         // Log email error but don't fail the expense creation
-        console.error('Error sending expense notifications:', emailError);
       }
 
       return expenseWithSplits;
@@ -148,7 +141,6 @@ export class ExpenseService {
       if (error instanceof ForbiddenError || error instanceof ValidationError) {
         throw error;
       }
-      console.error('Error creating expense:', error);
       throw new DatabaseError('Failed to create expense');
     }
   }
@@ -210,7 +202,6 @@ export class ExpenseService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching expense:', error);
       throw new DatabaseError('Failed to fetch expense');
     }
   }
@@ -225,34 +216,6 @@ export class ExpenseService {
   ): EnhancedExpense {
     // Simple comparison - if the current user ID matches the expense paidBy ID
     const isPaidByCurrentUser = expense.paidBy === currentUserId;
-    
-    console.log('User comparison details:', {
-      expensePaidBy: expense.paidBy,
-      currentUserId: currentUserId,
-      expensePaidByEmail: expense.paidByUser?.email,
-      currentUserEmail: currentUserEmail,
-      directIdMatch: expense.paidBy === currentUserId,
-      finalResult: isPaidByCurrentUser
-    });
-    
-    console.log('Enhanced Expense Debug:', {
-      expenseId: expense.id,
-      expenseTitle: expense.title,
-      paidBy: expense.paidBy,
-      paidByType: typeof expense.paidBy,
-      paidByLength: expense.paidBy?.length,
-      currentUserId: currentUserId,
-      currentUserIdType: typeof currentUserId,
-      currentUserIdLength: currentUserId?.length,
-      currentUserEmail: currentUserEmail,
-      paidByUserEmail: expense.paidByUser?.email,
-      isPaidByCurrentUser: isPaidByCurrentUser,
-      paidByUserName: expense.paidByUser?.name,
-      strictEqual: expense.paidBy === currentUserId,
-      looseEqual: expense.paidBy == currentUserId,
-      emailMatch: currentUserEmail && expense.paidByUser?.email === currentUserEmail
-    });
-    
     // Calculate paidByDisplay
     const paidByDisplay = isPaidByCurrentUser 
       ? 'You paid' 
@@ -275,24 +238,7 @@ export class ExpenseService {
     // Calculate currentUserShare
     const currentUserSplit = expense.splits.find(split => split.userId === currentUserId);
     let currentUserShare: CurrentUserShare;
-    
-    console.log('Current User Split Debug:', {
-      currentUserId: currentUserId,
-      currentUserIdType: typeof currentUserId,
-      currentUserIdLength: currentUserId.length,
-      totalSplits: expense.splits.length,
-      splits: expense.splits.map(s => ({ 
-        userId: s.userId, 
-        userIdType: typeof s.userId,
-        userIdLength: s.userId.length,
-        amount: s.amount, 
-        userName: s.user?.name 
-      })),
-      foundSplit: currentUserSplit ? { userId: currentUserSplit.userId, amount: currentUserSplit.amount } : null
-    });
-    
     if (!currentUserSplit) {
-      console.log('No split found for current user - setting to even');
       currentUserShare = {
         amount: 0,
         status: 'even',
@@ -326,16 +272,6 @@ export class ExpenseService {
             'even',
       color: currentUserShare.color
     };
-
-    console.log('Final Enhanced Expense Calculation:', {
-      expenseId: expense.id,
-      currentUserId: currentUserId,
-      isPaidByCurrentUser: isPaidByCurrentUser,
-      paidByDisplay: paidByDisplay,
-      currentUserShare: currentUserShare,
-      netBalance: netBalance
-    });
-
     return {
       ...expense,
       totalAmount: parseFloat(expense.totalAmount),
@@ -371,7 +307,6 @@ export class ExpenseService {
     expenses: EnhancedExpense[];
     total: number;
   }> {
-    console.log('getGroupExpenses called with:', { groupId, userId, options });
     try {
       // Validate organizationId if provided
       if (options.organizationId) {
@@ -387,17 +322,13 @@ export class ExpenseService {
       }
 
       // Check if user is a member of the group
-      console.log('Checking group membership:', { groupId, userId });
       const isMember = await GroupService.isUserGroupMember(groupId, userId);
-      console.log('Group membership result:', isMember);
       if (!isMember) {
         throw new ForbiddenError('You are not a member of this group');
       }
 
       // Get current user info for better comparison
       const currentUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      console.log('Current user info:', currentUser[0] ? { id: currentUser[0].id, email: currentUser[0].email, name: currentUser[0].name } : 'No user found');
-
       const { page = 1, limit = 20, sortBy = 'date', sortOrder = 'desc' } = options;
       const offset = (page - 1) * limit;
 
@@ -478,7 +409,6 @@ export class ExpenseService {
         try {
           return this.calculateEnhancedExpenseData(expense, userId, currentUser[0]?.email);
         } catch (error) {
-          console.error('Error enhancing expense:', error, 'for expense:', expense.id);
           // Return a fallback enhanced expense
           return {
             ...expense,
@@ -515,13 +445,6 @@ export class ExpenseService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching group expenses:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        groupId,
-        userId
-      });
       throw new DatabaseError('Failed to fetch group expenses');
     }
   }
@@ -592,7 +515,6 @@ export class ExpenseService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
-      console.error('Error updating expense:', error);
       throw new DatabaseError('Failed to update expense');
     }
   }
@@ -633,7 +555,6 @@ export class ExpenseService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
-      console.error('Error deleting expense:', error);
       throw new DatabaseError('Failed to delete expense');
     }
   }
@@ -781,7 +702,6 @@ export class ExpenseService {
         }
       }
     } catch (error) {
-      console.error('Error updating user balances:', error);
       throw new DatabaseError('Failed to update user balances');
     }
   }
@@ -811,13 +731,6 @@ export class ExpenseService {
     createdBy: string
   ): Promise<void> {
     try {
-      console.log('sendExpenseNotifications called with:', {
-        expenseId: expense.id,
-        expenseTitle: expense.title,
-        totalSplits: expense.splits.length,
-        createdBy
-      });
-
       // Get group information
       const [group] = await db
         .select()
@@ -826,12 +739,8 @@ export class ExpenseService {
         .limit(1);
 
       if (!group) {
-        console.error('Group not found for expense notification');
         return;
       }
-
-      console.log('Group found:', group.name);
-
       // Get user who added the expense
       const [addedByUser] = await db
         .select()
@@ -840,26 +749,17 @@ export class ExpenseService {
         .limit(1);
 
       if (!addedByUser) {
-        console.error('User who added expense not found');
         return;
       }
-
-      console.log('Added by user found:', addedByUser.name);
-
       // Filter splits to exclude the person who added the expense
       const splitsToNotify = expense.splits.filter(split => split.userId !== createdBy);
-      console.log('Splits to notify:', splitsToNotify.length, 'out of', expense.splits.length);
-      console.log('Splits details:', splitsToNotify.map(s => ({ userId: s.userId, email: s.user.email, amount: s.amount })));
-
       if (splitsToNotify.length === 0) {
-        console.log('No users to notify (only the creator has splits)');
         return;
       }
 
       // Send emails to all split users except the one who added the expense
       const emailPromises = splitsToNotify.map(async (split) => {
         try {
-          console.log(`Sending email to ${split.user.email} for amount ${split.amount}`);
           await sendExpenseNotificationEmail(
             split.user.email,
             {
@@ -883,16 +783,12 @@ export class ExpenseService {
               amount: split.amount.toString(),
             }
           );
-          console.log(`✅ Expense notification sent to ${split.user.email}`);
         } catch (error) {
-          console.error(`❌ Failed to send expense notification to ${split.user.email}:`, error);
         }
       });
 
       await Promise.all(emailPromises);
-      console.log('All email notifications processed');
     } catch (error) {
-      console.error('Error in sendExpenseNotifications:', error);
       throw error;
     }
   }

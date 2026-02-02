@@ -127,13 +127,11 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
     .maxDuration(250) // Only recognize quick taps, not long presses
     .onEnd(() => {
       if (isOpen) {
-        console.log('Tap gesture triggered - closing swipe actions');
         translateX.value = withSpring(0);
         runOnJS(setIsOpen)(false);
         runOnJS(setActiveSwipeId)(null);
       } else if (onPress) {
         // When closed, trigger onPress if provided
-        console.log('Tap gesture triggered - calling onPress');
         runOnJS(onPress)();
       }
     });
@@ -156,27 +154,18 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
   });
 
   const handleActionPress = (action: SwipeAction) => {
-    console.log('=== SwipeActionRow: Action pressed ===');
-    console.log('Action:', action.title, action.id);
-    console.log('SwipeId:', swipeId);
-    console.log('IsOpen:', isOpen);
     
     // Execute the action first
-    console.log('Executing action:', action.title);
     try {
       action.onPress();
-      console.log('Action executed successfully');
     } catch (error) {
-      console.error('Error executing action:', error);
     }
     
     // Call the callback if provided
     if (onActionExecuted) {
-      console.log('Calling onActionExecuted callback');
       onActionExecuted();
     }
     
-    console.log('=== SwipeActionRow: Action handling complete ===');
   };
 
   return (
@@ -195,7 +184,6 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
               },
             ]}
             onPress={() => {
-              console.log('Pressable onPress triggered for:', action.title);
               handleActionPress(action);
             }}
           >
@@ -214,7 +202,6 @@ export const SwipeActionRow: React.FC<SwipeActionRowProps> = ({
             <TouchableOpacity 
               style={{ flex: 1 }} 
               onPress={() => {
-                console.log('TouchableOpacity tap - closing swipe actions');
                 translateX.value = withSpring(0);
                 setIsOpen(false);
                 setActiveSwipeId(null);

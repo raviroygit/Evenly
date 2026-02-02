@@ -14,7 +14,6 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(err => {
-      console.error('Failed to open link:', err);
       Alert.alert(
         'Error',
         'Unable to open link. Please try again later.',

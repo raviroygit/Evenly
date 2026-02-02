@@ -37,7 +37,6 @@ interface Customer {
 }
 
 export const BooksScreen: React.FC = () => {
-  console.log('🔵 [BooksScreen] Component rendering...');
 
   const router = useRouter();
   const { colors, theme } = useTheme();
@@ -84,8 +83,6 @@ export const BooksScreen: React.FC = () => {
   };
 
   const loadCustomers = useCallback(async (isRefresh = false) => {
-    console.log('📒 [BooksScreen] loadCustomers called, isRefresh:', isRefresh);
-    console.log('📒 [BooksScreen] Params - search:', searchQuery, 'filter:', filterType, 'sort:', sortType);
 
     try {
       if (isRefresh) {
@@ -94,7 +91,6 @@ export const BooksScreen: React.FC = () => {
         setLoading(true);
       }
 
-      console.log('📒 [BooksScreen] Making API calls to backend...');
 
       const [customersData, summaryData] = await Promise.all([
         EvenlyBackendService.getKhataCustomers({
@@ -106,9 +102,6 @@ export const BooksScreen: React.FC = () => {
         EvenlyBackendService.getKhataFinancialSummary(),
       ]);
 
-      console.log('✅ [BooksScreen] API Response - Customers count:', customersData.length);
-      console.log('✅ [BooksScreen] API Response - First customer:', customersData[0]);
-      console.log('✅ [BooksScreen] API Response - Summary:', summaryData);
 
       const formattedCustomers: Customer[] = customersData.map((c) => ({
         id: c.id,
@@ -125,19 +118,14 @@ export const BooksScreen: React.FC = () => {
       setCustomers(formattedCustomers);
       setSummary(summaryData);
 
-      console.log('✅ [BooksScreen] State updated - Customers:', formattedCustomers.length);
     } catch (error) {
-      console.error('❌ [BooksScreen] Error loading customers:', error);
-      console.error('❌ [BooksScreen] Error details:', JSON.stringify(error, null, 2));
     } finally {
       setLoading(false);
       setRefreshing(false);
-      console.log('🏁 [BooksScreen] loadCustomers finished');
     }
   }, [searchQuery, filterType, sortType]);
 
   useEffect(() => {
-    console.log('🎯 [BooksScreen] useEffect triggered - calling loadCustomers');
     loadCustomers();
   }, [loadCustomers]);
 
@@ -180,14 +168,12 @@ export const BooksScreen: React.FC = () => {
       setCustomers(formattedCustomers);
       setSummary(summaryData);
     } catch (error) {
-      console.error('Error loading customers:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const onRefresh = useCallback(async () => {
-    console.log('BooksScreen: onRefresh called');
     await loadCustomers(true);
   }, [loadCustomers]);
 
@@ -228,7 +214,6 @@ export const BooksScreen: React.FC = () => {
       setCustomers(formattedCustomers);
       setSummary(summaryData);
     } catch (error) {
-      console.error('[BooksScreen] Error updating customer:', error);
       Alert.alert('Error', 'Failed to update customer. Please try again.');
     }
   };
@@ -275,7 +260,6 @@ export const BooksScreen: React.FC = () => {
       // Modal will close automatically, show success alert
       Alert.alert('Success', `"${deletingCustomer.name}" and all their transactions have been deleted successfully`);
     } catch (error) {
-      console.error('[BooksScreen] Error deleting customer:', error);
       setLoading(false);
       Alert.alert('Error', 'Failed to delete customer. Please try again.');
       throw error; // Re-throw to prevent modal from closing

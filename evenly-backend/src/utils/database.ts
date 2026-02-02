@@ -32,13 +32,6 @@ export class DatabaseService {
       return result.length > 0;
     } catch (error) {
       const dbError = error as DatabaseError;
-      console.error('Database exists check error:', {
-        table: table._.name,
-        conditions,
-        error: dbError.message,
-        code: dbError.code,
-        detail: dbError.detail,
-      });
       throw dbError;
     }
   }
@@ -55,13 +48,6 @@ export class DatabaseService {
       return (result as any)[0] as T;
     } catch (error) {
       const dbError = error as DatabaseError;
-      console.error('Database insert error:', {
-        table: table._.name,
-        data,
-        error: dbError.message,
-        code: dbError.code,
-        detail: dbError.detail,
-      });
       throw dbError;
     }
   }
@@ -89,14 +75,6 @@ export class DatabaseService {
       return result as T[];
     } catch (error) {
       const dbError = error as DatabaseError;
-      console.error('Database update error:', {
-        table: table._.name,
-        data,
-        conditions,
-        error: dbError.message,
-        code: dbError.code,
-        detail: dbError.detail,
-      });
       throw dbError;
     }
   }
@@ -122,13 +100,6 @@ export class DatabaseService {
       return result as T[];
     } catch (error) {
       const dbError = error as DatabaseError;
-      console.error('Database delete error:', {
-        table: table._.name,
-        conditions,
-        error: dbError.message,
-        code: dbError.code,
-        detail: dbError.detail,
-      });
       throw dbError;
     }
   }

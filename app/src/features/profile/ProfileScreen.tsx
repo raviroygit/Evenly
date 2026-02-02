@@ -48,7 +48,6 @@ export const ProfileScreen: React.FC = () => {
       // Force re-render after refresh
       setProfileUpdateTrigger(prev => prev + 1);
     } catch (error) {
-      console.error('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
@@ -56,7 +55,6 @@ export const ProfileScreen: React.FC = () => {
 
   const handlePersonalInfoSuccess = () => {
     // Force re-render when personal info is updated
-    console.log('[ProfileScreen] Personal info updated - forcing re-render');
     setProfileUpdateTrigger(prev => prev + 1);
   };
 

@@ -56,7 +56,6 @@ export class BalanceService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching group balances:', error);
       throw new DatabaseError('Failed to fetch group balances');
     }
   }
@@ -96,7 +95,6 @@ export class BalanceService {
         return balances;
       }
     } catch (error) {
-      console.error('Error fetching user balances:', error);
       throw new DatabaseError('Failed to fetch user balances');
     }
   }
@@ -184,7 +182,6 @@ export class BalanceService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error calculating simplified debts:', error);
       throw new DatabaseError('Failed to calculate simplified debts');
     }
   }
@@ -218,7 +215,6 @@ export class BalanceService {
         netBalance: totalOwed - totalOwing,
       };
     } catch (error) {
-      console.error('Error calculating user net balance:', error);
       throw new DatabaseError('Failed to calculate user net balance');
     }
   }
@@ -291,7 +287,6 @@ export class BalanceService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error calculating group balance summary:', error);
       throw new DatabaseError('Failed to calculate group balance summary');
     }
   }
@@ -326,13 +321,10 @@ export class BalanceService {
       // 2. Calculate balances from scratch
       // 3. Update userBalances table
       // 4. Verify calculations are correct
-
-      console.log(`Recalculating balances for group ${groupId}`);
     } catch (error) {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error recalculating group balances:', error);
       throw new DatabaseError('Failed to recalculate group balances');
     }
   }
@@ -373,7 +365,6 @@ export class BalanceService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching balance history:', error);
       throw new DatabaseError('Failed to fetch balance history');
     }
   }
@@ -427,7 +418,6 @@ export class BalanceService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error validating group balance consistency:', error);
       throw new DatabaseError('Failed to validate group balance consistency');
     }
   }

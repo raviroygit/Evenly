@@ -50,8 +50,6 @@ export class AuthController {
         data: null,
       });
     } catch (error: any) {
-      console.error('Signup error:', error);
-
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -90,7 +88,6 @@ export class AuthController {
         message: result.message || 'Failed to update user',
       });
     } catch (error: any) {
-      console.error('Update user error:', error);
       return reply.status(500).send({
         success: false,
         message: error.message || 'Failed to update user',
@@ -109,7 +106,6 @@ export class AuthController {
       }
       return reply.status(400).send({ success: false, message: result.message || 'Failed to delete account' });
     } catch (error: any) {
-      console.error('Delete user error:', error);
       return reply.status(500).send({ success: false, message: error.message || 'Failed to delete account' });
     }
   }
@@ -138,8 +134,6 @@ export class AuthController {
         data: null,
       });
     } catch (error: any) {
-      console.error('Request OTP error:', error);
-
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -183,15 +177,12 @@ export class AuthController {
             name: result.user.name,
             avatar: result.user.avatar,
           });
-          console.log('✅ User synced to local DB:', result.user.id);
         } catch (syncError: any) {
-          console.error('⚠️ Failed to sync user to local DB:', syncError.message);
         }
 
         // Sync organization to local database if provided
         if (result.organization) {
           try {
-            console.log('🔄 Syncing organization from login response data:', result.organization);
             const localOrgId = await OrganizationService.syncOrganizationFromData(
               {
                 id: result.organization.id,
@@ -203,12 +194,9 @@ export class AuthController {
               result.user.id
             );
             if (localOrgId) {
-              console.log('✅ Organization synced to local DB from login data:', localOrgId);
             } else {
-              console.warn('⚠️ Failed to sync organization to local DB');
             }
           } catch (orgSyncError: any) {
-            console.error('⚠️ Organization sync error:', orgSyncError.message);
           }
         }
 
@@ -230,8 +218,6 @@ export class AuthController {
         message: result.message || 'Invalid OTP',
       });
     } catch (error: any) {
-      console.error('Verify OTP error:', error);
-      
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -271,8 +257,6 @@ export class AuthController {
         message: result.message || 'Failed to refresh token',
       });
     } catch (error: any) {
-      console.error('Refresh token error:', error);
-      
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -311,8 +295,6 @@ export class AuthController {
         message: result.message || 'User not authenticated',
       });
     } catch (error: any) {
-      console.error('Get current user error:', error);
-      
       return reply.status(500).send({
         success: false,
         message: error.message || 'Failed to get user info',
@@ -338,8 +320,6 @@ export class AuthController {
         data: null,
       });
     } catch (error: any) {
-      console.error('Logout error:', error);
-      
       return reply.status(500).send({
         success: false,
         message: error.message || 'Failed to logout',
@@ -424,8 +404,6 @@ export class AuthController {
         message: result.message || 'Failed to refresh session',
       });
     } catch (error: any) {
-      console.error('Mobile refresh error:', error);
-
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -455,7 +433,6 @@ export class AuthController {
 
       return reply.status(401).send(result);
     } catch (error: any) {
-      console.error('Mobile session expiry error:', error);
       return reply.status(500).send({
         success: false,
         message: error.message || 'Failed to check session expiry',

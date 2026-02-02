@@ -1206,19 +1206,6 @@ const styles = StyleSheet.create({
   activityList: {
     gap: 4,
   },
-  // Dashboard stats skeleton styles
-  statCard: {
-    width: '47%',
-    minHeight: 80,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    marginHorizontal: '1.5%',
-    marginBottom: 12,
-  },
   statContent: {
     flex: 1,
     justifyContent: 'space-between',

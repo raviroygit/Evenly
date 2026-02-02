@@ -19,7 +19,6 @@ export class AuthService {
       // The interceptor will automatically add the Bearer token
       await evenlyApiClient.get('/groups');
     } catch (error) {
-      console.warn('Failed to sync user with evenly-backend:', error);
       // Don't throw error as this shouldn't block the auth flow
     }
   }
@@ -54,13 +53,6 @@ export class AuthService {
 
       return { data: response.data, accessToken, refreshToken };
     } catch (error: any) {
-      console.error('API Request failed:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        endpoint: endpoint,
-        options: options
-      });
       throw error;
     }
   }
@@ -142,7 +134,6 @@ export class AuthService {
 
         // Store organization if available
         if (organization) {
-          console.log('[AuthService] Organization received from verify-otp:', organization);
           await AuthStorage.setCurrentOrganizationId(organization.id);
         }
 
@@ -197,7 +188,6 @@ export class AuthService {
 
         // Store organizations
         if (organizations.length > 0) {
-          console.log('[AuthService] Organizations received from /auth/me:', organizations);
 
           // Set current organization to the first one if not already set
           const currentOrgId = await AuthStorage.getCurrentOrganizationId();
@@ -226,7 +216,6 @@ export class AuthService {
       }
       return null;
     } catch (error) {
-      console.error('Get current user failed:', error);
       return null;
     }
   }
@@ -301,7 +290,6 @@ export class AuthService {
       }
       return [];
     } catch (error) {
-      console.error('Get user organizations failed:', error);
       return [];
     }
   }
@@ -366,7 +354,6 @@ export class AuthService {
       }
       return [];
     } catch (error) {
-      console.error('Get organization members failed:', error);
       return [];
     }
   }
@@ -405,7 +392,6 @@ export class AuthService {
       }
       return [];
     } catch (error) {
-      console.error('Get my invitations failed:', error);
       return [];
     }
   }

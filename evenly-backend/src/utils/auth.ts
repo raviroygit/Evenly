@@ -10,9 +10,6 @@ export class AuthService {
    */
   static async validateToken(token: string): Promise<AuthServiceResponse> {
     try {
-      console.log('🔍 AuthService: Validating token with external auth service...');
-      console.log('🔍 AuthService: Token prefix:', token.substring(0, 8));
-      console.log('🔍 AuthService: Auth service URL:', this.baseURL);
       
       const response = await axios.get(`${this.baseURL}/me`, {
         headers: {
@@ -22,33 +19,21 @@ export class AuthService {
         timeout: 5000, // 5 second timeout
       });
 
-      console.log('🔍 AuthService: Response status:', response.status);
-      console.log('🔍 AuthService: Response data:', response.data);
 
       if (response.status === 200 && response.data.success) {
-        console.log('✅ AuthService: Token validation successful');
         return {
           success: true,
           user: response.data.user,
         };
       }
 
-      console.log('❌ AuthService: Invalid response from auth service');
       return {
         success: false,
         error: 'Invalid token',
       };
     } catch (error: any) {
-      console.error('❌ AuthService: Validation error:', error.message);
-      console.error('❌ AuthService: Error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        code: error.code
-      });
       
       if (error.response?.status === 401) {
-        console.log('❌ AuthService: 401 Unauthorized - Invalid token');
         return {
           success: false,
           error: 'Unauthorized - Invalid token',
@@ -56,14 +41,12 @@ export class AuthService {
       }
 
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        console.log('❌ AuthService: Connection error - Auth service unavailable');
         return {
           success: false,
           error: 'Auth service unavailable',
         };
       }
 
-      console.log('❌ AuthService: General token validation failed');
       return {
         success: false,
         error: 'Token validation failed',
@@ -95,7 +78,6 @@ export class AuthService {
         error: 'User not found',
       };
     } catch (error: any) {
-      console.error('Auth service user fetch error:', error.message);
       
       if (error.response?.status === 404) {
         return {
@@ -131,7 +113,6 @@ export class AuthService {
 
       return [];
     } catch (error: any) {
-      console.error('Auth service batch user fetch error:', error.message);
       return [];
     }
   }

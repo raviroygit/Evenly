@@ -203,8 +203,6 @@
 
         // Function to try opening the app
         function tryOpenApp() {
-            console.log('Attempting to open app...', 'Device:', device);
-
             // Set up detection: if app opens, page will be hidden – clear store redirect
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
@@ -234,7 +232,6 @@
 
             } else {
                 // Desktop or unknown device
-                console.log('Desktop/Unknown device detected');
                 updateUI(
                     'Desktop Detected',
                     'Please use your mobile device to download the Evenly app.',

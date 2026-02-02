@@ -86,31 +86,12 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       if (trimmedEmail && trimmedEmail !== user?.email) payload.email = trimmedEmail;
       if (trimmedPhone && trimmedPhone !== user?.phoneNumber) payload.phoneNumber = trimmedPhone;
 
-      console.log('[PersonalInfoModal] Preparing update:', {
-        originalName: user?.name,
-        newName: name,
-        originalEmail: user?.email,
-        newEmail: email,
-        originalPhone: user?.phoneNumber,
-        newPhone: phoneNumber,
-        payload: payload
-      });
-
       if (Object.keys(payload).length === 0) {
-        console.log('[PersonalInfoModal] No changes detected, closing modal');
         onClose();
         return;
       }
 
-      console.log('[PersonalInfoModal] Calling updateCurrentUser with payload:', JSON.stringify(payload));
       const result = await EvenlyBackendService.updateCurrentUser(payload);
-
-      console.log('[PersonalInfoModal] Update result:', {
-        success: result.success,
-        message: result.message,
-        hasUser: !!result.data?.user,
-        fullResult: result
-      });
 
       if (result.success) {
         // Update local state with the response data
@@ -144,19 +125,15 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
                 authData.accessToken,
                 authData.organizations
               );
-              console.log('[PersonalInfoModal] ✅ Updated user saved to storage');
             }
-          } catch (storageError) {
-            console.error('[PersonalInfoModal] ❌ Failed to save to storage:', storageError);
+          } catch {
             // Continue anyway - user is updated in memory
           }
 
           // Force refresh user data from backend to ensure consistency
           try {
             await refreshUser();
-            console.log('[PersonalInfoModal] ✅ User data refreshed from backend');
-          } catch (refreshError) {
-            console.error('[PersonalInfoModal] ⚠️ Failed to refresh user from backend:', refreshError);
+          } catch {
             // Continue anyway - local data is already updated
           }
         }
@@ -183,15 +160,6 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         Alert.alert('Error', result.message || 'Failed to update profile');
       }
     } catch (error: any) {
-      console.error('[PersonalInfoModal] ❌ Profile update failed:', {
-        message: error.message,
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        responseData: error?.response?.data,
-        requestData: payload,
-        fullError: error
-      });
-
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile';
       Alert.alert('Error', `${errorMessage}\n\nStatus: ${error?.response?.status || 'Network Error'}`);
     } finally {

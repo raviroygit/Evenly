@@ -78,7 +78,6 @@ export class GroupInvitationService {
 
       return response.data;
     } catch (error: any) {
-      console.error(`API request failed for ${endpoint}:`, error);
       throw error;
     }
   }

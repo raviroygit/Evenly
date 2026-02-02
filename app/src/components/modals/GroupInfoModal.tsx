@@ -73,7 +73,6 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
         });
       }
     } catch (error) {
-      console.error('Error loading creator:', error);
       setCreator({
         name: 'Unknown',
         email: 'Unknown',

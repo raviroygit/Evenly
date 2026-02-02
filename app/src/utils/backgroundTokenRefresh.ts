@@ -15,12 +15,10 @@ const BACKGROUND_REFRESH_TASK = 'BACKGROUND_TOKEN_REFRESH';
 // Define background task
 TaskManager.defineTask(BACKGROUND_REFRESH_TASK, async () => {
   try {
-    console.log('[Background] Task started at', new Date().toISOString());
 
     // Get stored tokens
     const authData = await AuthStorage.getAuthData();
     if (!authData?.accessToken) {
-      console.log('[Background] No auth data, skipping');
       return BackgroundFetch.BackgroundFetchResult.NoData;
     }
 
@@ -28,23 +26,18 @@ TaskManager.defineTask(BACKGROUND_REFRESH_TASK, async () => {
     const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(authData.accessToken);
 
     if (tokenInfo.needsUrgentRefresh) {
-      console.log(`[Background] Token has ${tokenInfo.minutesUntilExpiry} minutes remaining, refreshing...`);
       const success = await SilentTokenRefresh.refresh();
 
       if (success) {
-        console.log('[Background] ✅ Refresh successful');
         await SilentTokenRefresh.saveRefreshTimestamp();
         return BackgroundFetch.BackgroundFetchResult.NewData;
       } else {
-        console.error('[Background] ❌ Refresh failed');
         return BackgroundFetch.BackgroundFetchResult.Failed;
       }
     }
 
-    console.log('[Background] Token still healthy, no refresh needed');
     return BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
-    console.error('[Background] Task error:', error);
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
@@ -58,7 +51,6 @@ export async function registerBackgroundRefresh(): Promise<void> {
     const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_REFRESH_TASK);
 
     if (isRegistered) {
-      console.log('[Background] Task already registered, unregistering first');
       await BackgroundFetch.unregisterTaskAsync(BACKGROUND_REFRESH_TASK);
     }
 
@@ -68,9 +60,7 @@ export async function registerBackgroundRefresh(): Promise<void> {
       startOnBoot: true,        // Restart on device reboot
     });
 
-    console.log('[Background] ✅ Task registered successfully');
   } catch (error) {
-    console.error('[Background] ❌ Registration failed:', error);
     throw error;
   }
 }
@@ -82,9 +72,7 @@ export async function registerBackgroundRefresh(): Promise<void> {
 export async function unregisterBackgroundRefresh(): Promise<void> {
   try {
     await BackgroundFetch.unregisterTaskAsync(BACKGROUND_REFRESH_TASK);
-    console.log('[Background] Task unregistered');
   } catch (error) {
-    console.error('[Background] Unregister failed:', error);
   }
 }
 
@@ -100,7 +88,6 @@ export async function getBackgroundRefreshStatus(): Promise<BackgroundFetch.Back
     const status = await BackgroundFetch.getStatusAsync();
     return status;
   } catch (error) {
-    console.error('[Background] Failed to get status:', error);
     return BackgroundFetch.BackgroundFetchStatus.Denied;
   }
 }

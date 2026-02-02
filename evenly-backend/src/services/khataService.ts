@@ -30,7 +30,6 @@ export class KhataService {
 
       // If no organizationId provided, return empty array
       if (!organizationId) {
-        console.warn('[KhataService] No organizationId provided, returning empty customers list');
         return [];
       }
 
@@ -127,7 +126,6 @@ export class KhataService {
 
       return sorted;
     } catch (error: any) {
-      console.error('Error getting customers:', error);
       throw new DatabaseError('Failed to get customers');
     }
   }
@@ -201,7 +199,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error getting customer:', error);
       throw new DatabaseError('Failed to get customer');
     }
   }
@@ -249,26 +246,20 @@ export class KhataService {
               .limit(1);
 
             if (user) {
-              console.log('📧 [Background] Sending customer added email to:', customerEmail);
               await sendCustomerAddedEmail(
                 customerEmail,
                 customer.name,
                 user.name || 'User'
               );
-              console.log('✅ [Background] Customer added email sent successfully');
             }
-          } catch (emailError: any) {
-            console.error('⚠️ [Background] Failed to send customer added email:', emailError.message);
+          } catch {
             // Email failure doesn't affect customer creation
           }
-        })().catch((err) => {
-          console.error('⚠️ [Background] Email promise rejected:', err);
-        });
+        })().catch(() => {});
       }
 
       return customer;
     } catch (error: any) {
-      console.error('Error creating customer:', error);
       throw new DatabaseError('Failed to create customer');
     }
   }
@@ -315,7 +306,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error updating customer:', error);
       throw new DatabaseError('Failed to update customer');
     }
   }
@@ -333,7 +323,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error deleting customer:', error);
       throw new DatabaseError('Failed to delete customer');
     }
   }
@@ -361,7 +350,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error getting transactions:', error);
       throw new DatabaseError('Failed to get transactions');
     }
   }
@@ -439,7 +427,6 @@ export class KhataService {
           try {
             const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
-              console.log('📧 [Background] Sending transaction email to:', customerEmail);
               await sendKhataTransactionEmail(
                 customerEmail,
                 customer.name,
@@ -453,14 +440,11 @@ export class KhataService {
                   date: transaction.transactionDate.toISOString(),
                 }
               );
-              console.log('✅ [Background] Transaction email sent successfully');
             }
-          } catch (emailError) {
-            console.error('⚠️ [Background] Error sending transaction email:', emailError);
+          } catch {
+            // Ignore
           }
-        })().catch((err) => {
-          console.error('⚠️ [Background] Transaction email promise rejected:', err);
-        });
+        })().catch(() => {});
       }
 
       return transaction;
@@ -468,7 +452,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error creating transaction:', error);
       throw new DatabaseError('Failed to create transaction');
     }
   }
@@ -534,7 +517,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error updating transaction:', error);
       throw new DatabaseError('Failed to update transaction');
     }
   }
@@ -567,7 +549,6 @@ export class KhataService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error deleting transaction:', error);
       throw new DatabaseError('Failed to delete transaction');
     }
   }
@@ -603,7 +584,6 @@ export class KhataService {
           .where(eq(khataTransactions.id, transaction.id));
       }
     } catch (error: any) {
-      console.error('Error recalculating balances:', error);
       throw new DatabaseError('Failed to recalculate balances');
     }
   }
@@ -638,7 +618,6 @@ export class KhataService {
         totalGet: totalGet.toFixed(2),
       };
     } catch (error: any) {
-      console.error('Error getting financial summary:', error);
       throw new DatabaseError('Failed to get financial summary');
     }
   }

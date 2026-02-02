@@ -32,7 +32,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setTheme('dark');
         }
       } catch (error) {
-        console.log('Error loading theme:', error);
         // On error, default to dark theme
         setTheme('dark');
       }
@@ -46,7 +45,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme);
       setTheme(newTheme);
     } catch (error) {
-      console.log('Error saving theme:', error);
     }
   };
 

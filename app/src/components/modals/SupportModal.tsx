@@ -36,7 +36,6 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
   const handleOpenHelpCenter = () => {
     const helpUrl = 'https://evenly.app/help';
     Linking.openURL(helpUrl).catch(err => {
-      console.error('Failed to open help center:', err);
       Alert.alert(
         'Error',
         'Unable to open help center. Please try again later.',

@@ -134,7 +134,6 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       // Then refresh list in background
       await onSuccess();
     } catch (error: any) {
-      console.error(editCustomer ? 'Error updating customer:' : 'Error creating customer:', error);
       Alert.alert(
         'Error',
         error.response?.data?.message || `Failed to ${editCustomer ? 'update' : 'create'} customer. Please try again.`,

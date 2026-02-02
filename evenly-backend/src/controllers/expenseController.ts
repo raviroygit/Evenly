@@ -37,16 +37,9 @@ export class ExpenseController {
             try {
               const buffer = await part.toBuffer();
               const mimetype = part.mimetype;
-              console.log('Processing receipt image:', {
-                fieldname: part.fieldname,
-                filename: part.filename,
-                mimetype: mimetype,
-                bufferSize: buffer.length,
-              });
               const result = await uploadSingleImage(buffer, 'expenses', mimetype);
               receiptUrl = result.url;
             } catch (uploadError) {
-              console.error('Error uploading receipt image:', uploadError);
               return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
@@ -74,11 +67,9 @@ export class ExpenseController {
                 try {
                   data.splits = JSON.parse(value as string);
                 } catch (e) {
-                  console.error('Error parsing splits:', e);
                 }
               }
             } catch (fieldError) {
-              console.error('Error reading form field:', fieldError);
             }
           }
         }
@@ -88,7 +79,6 @@ export class ExpenseController {
           data.receipt = receiptUrl;
         }
       } catch (multipartError) {
-        console.error('Error parsing multipart data:', multipartError);
         return reply.status(400).send({
           success: false,
           message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
@@ -192,16 +182,9 @@ export class ExpenseController {
             try {
               const buffer = await part.toBuffer();
               const mimetype = part.mimetype;
-              console.log('Processing receipt image for update:', {
-                fieldname: part.fieldname,
-                filename: part.filename,
-                mimetype: mimetype,
-                bufferSize: buffer.length,
-              });
               const result = await uploadSingleImage(buffer, 'expenses', mimetype);
               receiptUrl = result.url;
             } catch (uploadError) {
-              console.error('Error uploading receipt image:', uploadError);
               return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
@@ -229,11 +212,9 @@ export class ExpenseController {
                 try {
                   data.splits = JSON.parse(value as string);
                 } catch (e) {
-                  console.error('Error parsing splits:', e);
                 }
               }
             } catch (fieldError) {
-              console.error('Error reading form field:', fieldError);
             }
           }
         }
@@ -243,7 +224,6 @@ export class ExpenseController {
           data.receipt = receiptUrl;
         }
       } catch (multipartError) {
-        console.error('Error parsing multipart data:', multipartError);
         return reply.status(400).send({
           success: false,
           message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
@@ -351,12 +331,6 @@ export class ExpenseController {
       const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join('/');
       // Remove file extension
       const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
-
-      console.log('Deleting image from Cloudinary:', {
-        imageUrl,
-        publicId,
-      });
-
       const deleted = await deleteImage(publicId);
 
       if (deleted) {
@@ -371,7 +345,6 @@ export class ExpenseController {
         });
       }
     } catch (error) {
-      console.error('Error deleting expense image:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to delete image',

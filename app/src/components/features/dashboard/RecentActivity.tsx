@@ -57,11 +57,6 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
 
   // Log when activities change to debug
   useEffect(() => {
-    console.log('[RecentActivity] Activities changed:', {
-      loaded: activities.length,
-      total: totalCount,
-      activities: activities.map(a => ({ id: a.id, title: a.title }))
-    });
   }, [activities, totalCount]);
 
   const { colors, theme } = useTheme();
@@ -78,16 +73,6 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
     (activities.length === 0 && loading);
 
   // Debug logging to understand why skeleton might not show
-  console.log('[RecentActivity] Render state:', {
-    hasInitiallyLoaded,
-    loading,
-    activitiesCount: activities.length,
-    isAddingExpense,
-    showSkeleton,
-    condition1: !hasInitiallyLoaded && loading,
-    condition2: isAddingExpense,
-    condition3: activities.length === 0 && loading,
-  });
 
   // Limit to first 3 activities to keep the dashboard clean and focused
   const displayedActivities = activities.slice(0, 3);

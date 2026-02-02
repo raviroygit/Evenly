@@ -41,48 +41,40 @@ export const GROUP_EVENTS = {
 
 // Helper functions to emit events
 export const emitGroupDeleted = (groupId: string) => {
-  console.log(`[GroupEvents] Emitting group deleted event for group: ${groupId}`);
   groupEvents.emit(GROUP_EVENTS.GROUP_DELETED, { groupId });
   groupEvents.emit(GROUP_EVENTS.GROUPS_REFRESH_NEEDED);
 };
 
 export const emitGroupCreated = (group: any) => {
-  console.log(`[GroupEvents] Emitting group created event for group: ${group.id}`);
   groupEvents.emit(GROUP_EVENTS.GROUP_CREATED, { group });
   groupEvents.emit(GROUP_EVENTS.GROUPS_REFRESH_NEEDED);
 };
 
 export const emitGroupUpdated = (group: any) => {
-  console.log(`[GroupEvents] Emitting group updated event for group: ${group.id}`);
   groupEvents.emit(GROUP_EVENTS.GROUP_UPDATED, { group });
   groupEvents.emit(GROUP_EVENTS.GROUPS_REFRESH_NEEDED);
 };
 
 export const emitGroupsRefreshNeeded = () => {
-  console.log('[GroupEvents] Emitting groups refresh needed event');
   groupEvents.emit(GROUP_EVENTS.GROUPS_REFRESH_NEEDED);
 };
 
 // Expense event helpers
 export const emitExpenseCreated = (expense: any) => {
-  console.log(`[GroupEvents] Emitting expense created event for expense: ${expense.id}`);
   groupEvents.emit(GROUP_EVENTS.EXPENSE_CREATED, { expense });
   groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
 };
 
 export const emitExpenseUpdated = (expense: any) => {
-  console.log(`[GroupEvents] Emitting expense updated event for expense: ${expense.id}`);
   groupEvents.emit(GROUP_EVENTS.EXPENSE_UPDATED, { expense });
   groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
 };
 
 export const emitExpenseDeleted = (expenseId: string) => {
-  console.log(`[GroupEvents] Emitting expense deleted event for expense: ${expenseId}`);
   groupEvents.emit(GROUP_EVENTS.EXPENSE_DELETED, { expenseId });
   groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
 };
 
 export const emitExpensesRefreshNeeded = () => {
-  console.log('[GroupEvents] Emitting expenses refresh needed event');
   groupEvents.emit(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED);
 };

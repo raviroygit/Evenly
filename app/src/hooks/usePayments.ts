@@ -21,7 +21,6 @@ export const usePayments = (groupId?: string) => {
       setPayments(paymentsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load payments');
-      console.error('Error loading payments:', err);
     } finally {
       setLoading(false);
     }
@@ -110,7 +109,6 @@ export const useUserPayments = () => {
       setPayments(paymentsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load user payments');
-      console.error('Error loading user payments:', err);
     } finally {
       setLoading(false);
     }

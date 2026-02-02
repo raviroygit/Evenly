@@ -17,7 +17,6 @@ export class CacheManager {
     try {
       const authData = await AuthStorage.getAuthData();
       if (!authData?.accessToken) {
-        console.log('[CacheManager] No access token - bypassing cache');
         return true;
       }
 
@@ -25,15 +24,11 @@ export class CacheManager {
 
       // Only bypass cache if token has < 5 minutes remaining
       if (tokenInfo.needsUrgentRefresh) {
-        console.log(
-          `[CacheManager] Token has ${tokenInfo.minutesUntilExpiry} minutes remaining (< 5 min) - bypassing cache`
-        );
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('[CacheManager] Error checking token expiry:', error);
       return true;
     }
   }
@@ -59,7 +54,6 @@ export class CacheManager {
       const remainingMs = tokenInfo.minutesUntilExpiry * 60 * 1000;
       return Math.max(0, remainingMs);
     } catch (error) {
-      console.error('[CacheManager] Error getting token lifetime:', error);
       return 0;
     }
   }
@@ -72,19 +66,16 @@ export class CacheManager {
     try {
       const authData = await AuthStorage.getAuthData();
       if (!authData?.accessToken) {
-        console.log('[CacheManager] No access token - session expired');
         return true;
       }
 
       const tokenInfo = SilentTokenRefresh.getTokenExpiryInfo(authData.accessToken);
 
       if (tokenInfo.isExpired) {
-        console.log('[CacheManager] Access token expired');
       }
 
       return tokenInfo.isExpired;
     } catch (error) {
-      console.error('[CacheManager] Error checking session expiry:', error);
       return true;
     }
   }
@@ -94,16 +85,13 @@ export class CacheManager {
    * Clears ALL cache entries - used on logout to prevent data leaks
    */
   static async invalidateAllData(): Promise<void> {
-    console.log('[CacheManager] Clearing ALL cache data...');
 
     try {
       // Use clearAll() to remove ALL cache entries
       // This ensures no cached data persists between user sessions
       await AppCache.clearAll();
 
-      console.log('[CacheManager] ✅ All cache cleared successfully');
     } catch (error) {
-      console.error('[CacheManager] ❌ Failed to clear cache:', error);
     }
   }
 
@@ -115,7 +103,6 @@ export class CacheManager {
     const tokenExpiringUrgently = await this.isTokenExpiringUrgently();
 
     if (tokenExpiringUrgently) {
-      console.log('[CacheManager] Bypassing cache - token expires in < 5 minutes');
     }
 
     return tokenExpiringUrgently;
@@ -133,7 +120,6 @@ export class CacheManager {
       // Check if token is expiring urgently (< 5 minutes)
       const shouldBypass = await this.shouldBypassCache();
       if (shouldBypass) {
-        console.log('[CacheManager] Using 0ms cache TTL (token < 5 min)');
         return 0;
       }
 
@@ -143,12 +129,10 @@ export class CacheManager {
       if (tokenLifetime > 0) {
         const hours = Math.floor(tokenLifetime / (1000 * 60 * 60));
         const minutes = Math.floor((tokenLifetime % (1000 * 60 * 60)) / (1000 * 60));
-        console.log(`[CacheManager] Using token TTL: ${hours}h ${minutes}m (${tokenLifetime}ms)`);
       }
 
       return tokenLifetime;
     } catch (error) {
-      console.error('[CacheManager] Error getting cache TTL:', error);
       return 0;
     }
   }
@@ -161,11 +145,8 @@ export class CacheManager {
    */
   static async invalidateByPrefix(prefix: string): Promise<void> {
     try {
-      console.log(`[CacheManager] Invalidating cache for prefix: ${prefix}`);
       await AppCache.invalidateByPrefixes([prefix]);
-      console.log(`[CacheManager] ✅ Cache invalidated for: ${prefix}`);
     } catch (error) {
-      console.error(`[CacheManager] ❌ Failed to invalidate cache for ${prefix}:`, error);
     }
   }
 }

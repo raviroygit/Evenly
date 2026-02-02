@@ -28,7 +28,6 @@ let healthCheckInterval: NodeJS.Timeout | null = null;
  * Start simple health check service
  */
 function startHealthCheckService(): void {
-  console.log('🔍 Starting simple health check service...');
   
   // Run health check every 2 minutes
   healthCheckInterval = setInterval(async () => {
@@ -46,18 +45,12 @@ function startHealthCheckService(): void {
       const responseTime = Date.now() - startTime;
       
       if (response.ok) {
-        console.log(`✅ Health check successful: ${responseTime}ms`);
       } else {
-        console.error(`❌ Health check failed: HTTP ${response.status}`);
       }
     } catch (error: any) {
-      console.error(`❌ Health check error: ${error.message}`);
     }
   }, 2 * 60 * 1000); // 2 minutes
   
-  console.log(`✅ Health check service started`);
-  console.log(`🎯 Target URL: http://${config.server.host}:${config.server.port}/health`);
-  console.log(`⏰ Interval: Every 2 minutes`);
 }
 
 /**
@@ -67,7 +60,6 @@ function stopHealthCheckService(): void {
   if (healthCheckInterval) {
     clearInterval(healthCheckInterval);
     healthCheckInterval = null;
-    console.log('✅ Health check service stopped');
   }
 }
 
@@ -83,9 +75,7 @@ async function registerPlugins() {
   // Cookie parser
   try {
     await fastify.register(cookie);
-    console.log('✅ Cookie plugin registered');
   } catch (error) {
-    console.warn('⚠️  Failed to register cookie plugin:', error);
   }
 
   // CORS - filter out empty origins
@@ -95,17 +85,13 @@ async function registerPlugins() {
       origin: corsOrigins.length > 0 ? corsOrigins : true, // Allow all if no origins configured
       credentials: true,
     });
-    console.log('✅ CORS plugin registered');
   } catch (error) {
-    console.warn('⚠️  Failed to register CORS plugin:', error);
   }
 
   // Helmet for security headers
   try {
     await fastify.register(helmet);
-    console.log('✅ Helmet plugin registered');
   } catch (error) {
-    console.warn('⚠️  Failed to register helmet plugin:', error);
   }
 
   // Rate limiting - DISABLED for development
@@ -154,9 +140,7 @@ async function registerPlugins() {
       ],
     },
   });
-    console.log('✅ Swagger plugin registered');
   } catch (error) {
-    console.warn('⚠️  Failed to register swagger plugin:', error);
   }
 
   // Swagger UI
@@ -182,9 +166,7 @@ async function registerPlugins() {
       },
       transformSpecificationClone: true,
     });
-    console.log('✅ Swagger UI plugin registered');
   } catch (error) {
-    console.warn('⚠️  Failed to register swagger UI plugin:', error);
   }
 }
 
@@ -204,10 +186,7 @@ async function registerRoutes() {
     await fastify.register(supportRoutes, { prefix: '/api/support' });
     await fastify.register(khataRoutes, { prefix: '/api/khata' });
     await fastify.register(appRedirectRoutes, { prefix: '/api' }); // No prefix needed, routes are /app/download
-    console.log('✅ All API routes registered successfully');
   } catch (error) {
-    console.warn('⚠️  Some API routes failed to register:', error);
-    console.warn('⚠️  Service will continue with basic functionality');
   }
   // Health check management routes removed - using simple background service instead
 }
@@ -219,17 +198,14 @@ fastify.setErrorHandler((error: Error, request, reply) => {
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
-  console.log(`Received ${signal}, shutting down gracefully...`);
   try {
     // Stop health check service
     stopHealthCheckService();
     
     await fastify.close();
     await closePool();
-    console.log('Server closed successfully');
     process.exit(0);
   } catch (error) {
-    console.error('Error during shutdown:', error);
     process.exit(1);
   }
 };
@@ -237,10 +213,6 @@ const gracefulShutdown = async (signal: string) => {
 // Start server
 const start = async () => {
   try {
-    console.log('📦 Starting server initialization...');
-    console.log(`🔧 Server configuration: PORT=${config.server.port}, HOST=${config.server.host}, NODE_ENV=${config.server.env}`);
-    console.log(`🔧 Environment PORT: ${process.env.PORT || 'not set'}`);
-    console.log(`🔧 Process PID: ${process.pid}`);
     
     // Register basic health check route FIRST (before plugins)
     // This ensures Cloud Run can detect the server is listening
@@ -270,68 +242,48 @@ const start = async () => {
     // We register them synchronously to ensure they're ready before the server starts
     try {
       await registerPlugins();
-      console.log('✅ Plugins registered');
     } catch (error) {
-      console.error('⚠️  Error registering plugins:', error);
-      console.error('⚠️  Continuing startup - some features may not be available');
     }
 
     try {
       await registerRoutes();
-      console.log('✅ Routes registered');
-      console.log(`📚 API Documentation available at http://${config.server.host}:${config.server.port}/docs`);
     } catch (error) {
-      console.error('⚠️  Error registering routes:', error);
-      console.error('⚠️  Continuing startup - basic routes are available');
     }
 
     // Run database migrations before starting the server
-    console.log('🔄 Running database migrations...');
     const migrationSuccess = await initializeDatabase();
     if (!migrationSuccess) {
-      console.error('❌ Database migration failed!');
       process.exit(1);
     }
-    console.log('✅ Database migrations completed successfully');
 
     // Now start the server after plugins and routes are registered
     const port = config.server.port || parseInt(process.env.PORT || '8080', 10);
     const host = config.server.host || '0.0.0.0';
 
-    console.log(`🔧 Starting server on ${host}:${port}...`);
 
     await fastify.listen({
       port: port,
       host: host,
     });
 
-    console.log(`🚀 Server running on http://${host}:${port}`);
     
     // Test database connection asynchronously after server starts
     // This prevents blocking Cloud Run startup timeout
     testConnection().then((dbConnected) => {
       if (!dbConnected) {
         if (config.server.env === 'production') {
-          console.warn('⚠️  Database connection failed, but continuing in production mode');
-          console.warn('⚠️  Some features may not work until database is properly configured');
         } else {
-          console.error('❌ Database connection failed');
         }
       }
     }).catch((error) => {
-      console.error('❌ Database connection error:', error);
       if (config.server.env !== 'production') {
-        console.error('⚠️  Continuing in development mode despite database error');
       }
     });
     
     // Auto-start health check service in background
     startHealthCheckService();
   } catch (error) {
-    console.error('❌ Fatal error starting server:', error);
     if (error instanceof Error) {
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
     }
     process.exit(1);
   }
@@ -339,12 +291,10 @@ const start = async () => {
 
 // Handle uncaught errors
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
@@ -353,8 +303,6 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the server
-console.log('🚀 Starting Evenly Backend server...');
 start().catch((error) => {
-  console.error('❌ Failed to start server:', error);
   process.exit(1);
 });

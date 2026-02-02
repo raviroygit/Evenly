@@ -33,7 +33,6 @@ export const useExpensesInfinite = () => {
         try {
           return await EvenlyBackendService.getGroupExpenses(group.id);
         } catch (error) {
-          console.warn(`[useExpensesInfinite] Failed to fetch expenses for group ${group.id}:`, error);
           // Return empty result for failed groups instead of throwing
           return { expenses: [], total: 0 };
         }
@@ -56,7 +55,6 @@ export const useExpensesInfinite = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
       setError(errorMessage);
-      console.error('[useExpensesInfinite] Error loading expenses:', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -104,7 +102,6 @@ export const useExpensesInfinite = () => {
         try {
           return await EvenlyBackendService.getGroupExpenses(group.id);
         } catch (error) {
-          console.warn(`[useExpensesInfinite] Failed to fetch expenses for group ${group.id}:`, error);
           // Return empty result for failed groups instead of throwing
           return { expenses: [], total: 0 };
         }
@@ -126,7 +123,6 @@ export const useExpensesInfinite = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load more expenses';
       setError(errorMessage);
-      console.error('[useExpensesInfinite] Error loading more expenses:', errorMessage);
     } finally {
       setLoadingMore(false);
     }
@@ -138,15 +134,11 @@ export const useExpensesInfinite = () => {
 
   const addExpense = useCallback(async (expenseData: any) => {
     try {
-      console.log('[useExpensesInfinite] Creating expense:', expenseData);
       const newExpense = await EvenlyBackendService.createExpense(expenseData);
-      console.log('[useExpensesInfinite] Expense created successfully:', newExpense);
       
       // Add the new expense to the beginning of the list
       setExpenses(prev => {
-        console.log('[useExpensesInfinite] Previous expenses count:', prev.length);
         const updated = [newExpense, ...prev];
-        console.log('[useExpensesInfinite] Updated expenses count:', updated.length);
         return updated;
       });
       
@@ -155,7 +147,6 @@ export const useExpensesInfinite = () => {
       
       return newExpense;
     } catch (error) {
-      console.error('[useExpensesInfinite] Error creating expense:', error);
       throw error;
     }
   }, []);

@@ -7,7 +7,6 @@ import { config } from '../config/config';
 export async function initializeDatabase(): Promise<boolean> {
   try {
     // eslint-disable-next-line no-console
-    console.log('🔄 Initializing database with Drizzle schema...');
     
     // Create database connection
     const sql = neon(config.database.url);
@@ -15,21 +14,16 @@ export async function initializeDatabase(): Promise<boolean> {
     // Test connection
     await sql`SELECT NOW()`;
     // eslint-disable-next-line no-console
-    console.log('✅ Database connected successfully');
 
     // Create tables using raw SQL based on schema
     // eslint-disable-next-line no-console
-    console.log('🔄 Creating database tables...');
     await createTablesFromSchema(sql);
     // eslint-disable-next-line no-console
-    console.log('✅ Schema created successfully');
     
     // eslint-disable-next-line no-console
-    console.log('✅ Database initialization completed');
     return true;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('❌ Database initialization failed:', error);
     return false;
   }
 }

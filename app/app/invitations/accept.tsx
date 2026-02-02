@@ -59,9 +59,7 @@ export default function AcceptInvitationScreen() {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching invitation details for token:', token);
       const details = await GroupInvitationService.getInvitationByToken(token as string);
-      console.log('Invitation details:', details);
 
       setInvitation(details);
 
@@ -89,7 +87,6 @@ export default function AcceptInvitationScreen() {
         setError('This invitation was declined');
       }
     } catch (err: any) {
-      console.error('Error fetching invitation:', err);
       setError(err.response?.data?.message || 'Failed to load invitation details');
     } finally {
       setLoading(false);
@@ -122,7 +119,6 @@ export default function AcceptInvitationScreen() {
     try {
       setAccepting(true);
 
-      console.log('Accepting invitation with token:', token);
       await GroupInvitationService.acceptInvitation({ token: token as string });
 
       // Show success message
@@ -140,7 +136,6 @@ export default function AcceptInvitationScreen() {
         ]
       );
     } catch (err: any) {
-      console.error('Error accepting invitation:', err);
       Alert.alert(
         'Error',
         err.response?.data?.message || 'Failed to accept invitation. Please try again.'

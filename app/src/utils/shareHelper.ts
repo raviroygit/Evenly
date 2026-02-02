@@ -21,7 +21,6 @@ export const openSMS = async (message: string, phoneNumber?: string): Promise<vo
       Alert.alert('Error', 'Cannot open SMS app. Please check your device settings.');
     }
   } catch (error) {
-    console.error('Error opening SMS:', error);
     Alert.alert('Error', 'Failed to open SMS app. Please try again.');
   }
 };
@@ -54,7 +53,6 @@ export const openWhatsApp = async (message: string, phoneNumber?: string): Promi
       await Linking.openURL(webUrl);
     }
   } catch (error) {
-    console.error('Error opening WhatsApp:', error);
     Alert.alert(
       'Cannot Open WhatsApp',
       'Please make sure WhatsApp is installed on your device.',

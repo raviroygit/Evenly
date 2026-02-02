@@ -13,7 +13,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
 
   const handleOpenLink = (url: string) => {
-    Linking.openURL(url).catch(err => console.error('Failed to open link:', err));
+    Linking.openURL(url).catch(() => {});
   };
 
   return (

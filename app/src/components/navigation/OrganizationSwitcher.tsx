@@ -38,7 +38,6 @@ export const OrganizationSwitcher: React.FC = () => {
       await switchOrganization(orgId);
       setModalVisible(false);
     } catch (error) {
-      console.error('Failed to switch organization:', error);
       // TODO: Show error toast
     } finally {
       setSwitching(false);

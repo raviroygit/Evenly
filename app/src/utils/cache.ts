@@ -76,12 +76,9 @@ export const AppCache = {
       const keys = await AsyncStorage.getAllKeys();
       const cacheKeys = keys.filter(k => k.startsWith(CACHE_PREFIX));
       if (cacheKeys.length > 0) {
-        console.log(`[AppCache] Clearing ${cacheKeys.length} cache entries`);
         await AsyncStorage.multiRemove(cacheKeys);
-        console.log('[AppCache] ✅ All cache cleared');
       }
     } catch (error) {
-      console.error('[AppCache] ❌ Failed to clear cache:', error);
     }
   },
 };

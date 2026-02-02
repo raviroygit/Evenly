@@ -50,7 +50,6 @@ export const useGroupInvitations = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load invitations';
       setError(errorMessage);
-      console.error('Error loading pending invitations:', err);
     } finally {
       setLoading(false);
     }
@@ -67,7 +66,6 @@ export const useGroupInvitations = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send invitation';
       setError(errorMessage);
-      console.error('Error sending invitation:', err);
       throw new Error(errorMessage);
     }
   };
@@ -82,7 +80,6 @@ export const useGroupInvitations = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to accept invitation';
       setError(errorMessage);
-      console.error('Error accepting invitation:', err);
       throw new Error(errorMessage);
     }
   };
@@ -97,7 +94,6 @@ export const useGroupInvitations = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to decline invitation';
       setError(errorMessage);
-      console.error('Error declining invitation:', err);
       throw new Error(errorMessage);
     }
   };
@@ -106,7 +102,6 @@ export const useGroupInvitations = () => {
   useEffect(() => {
     // Clear data when user logs out
     if (authState === 'unauthenticated' || authState === 'initializing') {
-      console.log('[useGroupInvitations] User logged out or initializing - clearing invitations');
       setInvitations([]);
       setLoading(true);
       setError(null);
@@ -115,11 +110,9 @@ export const useGroupInvitations = () => {
 
     // Only load data when authenticated
     if (authState !== 'authenticated') {
-      console.log('[useGroupInvitations] Auth not ready, skipping data load. State:', authState);
       return;
     }
 
-    console.log('[useGroupInvitations] Auth ready, loading invitations...');
     loadPendingInvitations();
   }, [authState]);
 

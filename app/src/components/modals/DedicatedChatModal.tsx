@@ -135,7 +135,6 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
       
       setAgentInfoFetched(true);
     } catch (error) {
-      console.error('Error fetching agent info:', error);
     }
   }, [agentInfoFetched, messages.length]);
 
@@ -188,7 +187,6 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
         }
       });
     } catch (error) {
-      console.error('Error sending message:', error);
       setIsTyping(false);
     }
   }, []);

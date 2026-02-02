@@ -52,7 +52,6 @@ export const useActivitiesInfinite = () => {
         const transactions = await EvenlyBackendService.getKhataRecentTransactions({ limit: 10 });
         setKhataTransactions(transactions);
       } catch (error) {
-        console.error('Error fetching khata transactions:', error);
       } finally {
         setKhataLoading(false);
       }
@@ -161,13 +160,8 @@ export const useActivitiesInfinite = () => {
       setPage(1);
       setHasMore(endIndex < combinedActivities.length);
 
-      console.log('[useActivitiesInfinite] generateActivities: Activities updated', {
-        total: combinedActivities.length,
-        showing: paginatedActivities.length
-      });
     } catch (err) {
       setError('Failed to generate activities');
-      console.error('Error generating activities:', err);
     } finally {
       setLoading(false);
     }
@@ -183,7 +177,6 @@ export const useActivitiesInfinite = () => {
   // Listen for expense refresh events to force regeneration
   useEffect(() => {
     const handleExpensesRefreshNeeded = () => {
-      console.log('[useActivitiesInfinite] Expense refresh event received, forcing activities regeneration');
       // Reset prev refs to force regeneration
       prevExpensesRef.current = '';
       // Don't clear activities - just regenerate to preserve data during refresh
@@ -233,28 +226,12 @@ export const useActivitiesInfinite = () => {
       const expensesChanged = expensesKey !== prevExpensesRef.current;
       const khataChanged = khataKey !== prevKhataRef.current;
 
-      console.log('[useActivitiesInfinite] useEffect triggered', {
-        groupsChanged,
-        expensesChanged,
-        khataChanged,
-        groupsCount: groups.length,
-        expensesCount: expenses.length,
-        khataCount: khataTransactions.length,
-        groupsKey: groupsKey.substring(0, 100),
-        prevGroupsKey: prevGroupsRef.current.substring(0, 100)
-      });
 
       if (groupsChanged || expensesChanged || khataChanged || prevGroupsRef.current === '') {
         prevGroupsRef.current = groupsKey;
         prevExpensesRef.current = expensesKey;
         prevKhataRef.current = khataKey;
         refreshTriggerRef.current += 1;
-        console.log('[useActivitiesInfinite] useEffect: Regenerating activities', {
-          trigger: refreshTriggerRef.current,
-          groupsCount: groups.length,
-          expensesCount: expenses.length,
-          khataCount: khataTransactions.length
-        });
         // Regenerate activities immediately
         generateActivities();
       }
@@ -358,7 +335,6 @@ export const useActivitiesInfinite = () => {
       setHasMore(endIndex < combinedActivities.length);
     } catch (err) {
       setError('Failed to load more activities');
-      console.error('Error loading more activities:', err);
     } finally{
       setLoadingMore(false);
     }
@@ -377,12 +353,6 @@ export const useActivitiesInfinite = () => {
   }, [hasMore, loadingMore, loadMoreActivities]);
 
   const refresh = useCallback(async () => {
-    console.log('[useActivitiesInfinite] Refresh called', {
-      groupsCount: groupsRef.current.length,
-      expensesCount: expensesRef.current.length,
-      groupsLoading,
-      expensesLoading
-    });
 
     // Get latest data from refs immediately - no waiting
     let currentGroups = groupsRef.current;
@@ -397,18 +367,12 @@ export const useActivitiesInfinite = () => {
         return freshKhata;
       })
       .catch(error => {
-        console.error('[useActivitiesInfinite] Error fetching fresh khata:', error);
         return currentKhata;
       });
 
     // Wait for khata to load
     currentKhata = await khataPromise;
 
-    console.log('[useActivitiesInfinite] Refresh proceeding with data', {
-      groupsCount: currentGroups.length,
-      expensesCount: currentExpenses.length,
-      khataCount: currentKhata.length,
-    });
 
     // Force refresh by resetting state first
     setActivities([]);
@@ -444,8 +408,6 @@ export const useActivitiesInfinite = () => {
 
       // Add expense activities - use createdAt/updatedAt for sorting (latest first)
       // Use the latest expenses and khata (already updated above)
-      console.log('[useActivitiesInfinite] Using expenses for activities:', currentExpenses.length);
-      console.log('[useActivitiesInfinite] Using khata for activities:', currentKhata.length);
       currentExpenses.forEach((expense) => {
         // Use createdAt or updatedAt (whichever is more recent) for sorting
         const expenseCreatedAt = expense.createdAt instanceof Date
@@ -517,13 +479,6 @@ export const useActivitiesInfinite = () => {
       const endIndex = startIndex + pageSize;
       const paginatedActivities = combinedActivities.slice(startIndex, endIndex);
 
-      console.log('[useActivitiesInfinite] Generated activities:', {
-        total: combinedActivities.length,
-        showing: paginatedActivities.length,
-        groupsCount: currentGroups.length,
-        expensesCount: currentExpenses.length,
-        activities: paginatedActivities.map(a => ({ id: a.id, type: a.type, title: a.title, date: a.date }))
-      });
 
       // Force new array reference to ensure React detects the change
       setActivities([...paginatedActivities]);
@@ -532,10 +487,8 @@ export const useActivitiesInfinite = () => {
       setHasMore(endIndex < combinedActivities.length);
       setLoading(false);
       
-      console.log('[useActivitiesInfinite] Activities state updated, count:', paginatedActivities.length);
     } catch (err) {
       setError('Failed to generate activities');
-      console.error('Error generating activities in refresh:', err);
       setLoading(false);
     }
   }, [groupsLoading, expensesLoading]); // Don't depend on groups/expenses - use refs instead

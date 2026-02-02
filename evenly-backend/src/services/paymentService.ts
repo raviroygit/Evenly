@@ -90,7 +90,6 @@ export class PaymentService {
       if (error instanceof ForbiddenError || error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error creating payment:', error);
       throw new DatabaseError('Failed to create payment');
     }
   }
@@ -139,7 +138,6 @@ export class PaymentService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching payment:', error);
       throw new DatabaseError('Failed to fetch payment');
     }
   }
@@ -242,7 +240,6 @@ export class PaymentService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching group payments:', error);
       throw new DatabaseError('Failed to fetch group payments');
     }
   }
@@ -352,7 +349,6 @@ export class PaymentService {
         total: totalResult.count,
       };
     } catch (error) {
-      console.error('Error fetching user payments:', error);
       throw new DatabaseError('Failed to fetch user payments');
     }
   }
@@ -409,7 +405,6 @@ export class PaymentService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
-      console.error('Error updating payment status:', error);
       throw new DatabaseError('Failed to update payment status');
     }
   }
@@ -442,7 +437,6 @@ export class PaymentService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof ValidationError) {
         throw error;
       }
-      console.error('Error deleting payment:', error);
       throw new DatabaseError('Failed to delete payment');
     }
   }
@@ -476,7 +470,6 @@ export class PaymentService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching user balance:', error);
       return 0;
     }
   }
@@ -523,7 +516,6 @@ export class PaymentService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error updating balances after payment:', error);
       throw new DatabaseError('Failed to update balances after payment');
     }
   }
@@ -570,7 +562,6 @@ export class PaymentService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error fetching payment statistics:', error);
       throw new DatabaseError('Failed to fetch payment statistics');
     }
   }

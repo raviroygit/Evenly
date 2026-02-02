@@ -74,7 +74,6 @@ export const GroupsScreen: React.FC = () => {
         await refreshInvitations();
       }
     } catch (error) {
-      console.error('Error refreshing data:', error);
       showErrorWithRetry(error, () => onRefresh());
     } finally {
       setRefreshing(false);
@@ -110,7 +109,6 @@ export const GroupsScreen: React.FC = () => {
       // Silently refresh to show the new group
       await refresh();
     } catch (err) {
-      console.error('Error creating group:', err);
       // Silent error - user can see it in the UI state
     }
   };
@@ -128,7 +126,6 @@ export const GroupsScreen: React.FC = () => {
       // Silently refresh to show updated group
       await refresh();
     } catch (err) {
-      console.error('Error updating group:', err);
       // Silent error - user can see it in the UI state
     }
   };
@@ -150,7 +147,6 @@ export const GroupsScreen: React.FC = () => {
       // Modal will close automatically, show success alert
       Alert.alert('Success', `"${deletingGroup.name}" has been deleted successfully`);
     } catch (error) {
-      console.error('Error deleting group:', error);
       Alert.alert('Error', 'Failed to delete group. Please try again.');
       throw error; // Re-throw to prevent modal from closing
     }
@@ -159,16 +155,10 @@ export const GroupsScreen: React.FC = () => {
 
 
   const handleInviteUser = (groupId: string, groupName: string) => {
-    console.log('=== GroupsScreen: handleInviteUser called ===');
-    console.log('GroupId:', groupId, 'GroupName:', groupName);
-    console.log('Before setState - showInviteModal:', showInviteModal);
-    console.log('Before setState - selectedGroupForInvite:', selectedGroupForInvite);
 
     setSelectedGroupForInvite({ id: groupId, name: groupName });
     setShowInviteModal(true);
 
-    console.log('After setState calls');
-    console.log('=== GroupsScreen: handleInviteUser completed ===');
   };
 
   const handleShareBalance = (groupId: string, groupName: string) => {
@@ -243,7 +233,6 @@ export const GroupsScreen: React.FC = () => {
       await refresh();
       Alert.alert('Success', 'Expense added successfully!');
     } catch (error: any) {
-      console.error('Error adding expense:', error);
       Alert.alert('Error', error.message || 'Failed to add expense');
       throw error; // Re-throw to let modal handle it
     }
@@ -292,14 +281,9 @@ export const GroupsScreen: React.FC = () => {
 
   const renderGroupItem = ({ item: group }: { item: any }) => {
     const handleEditGroup = (group: any) => {
-      console.log('=== GroupsScreen: handleEditGroup called ===');
-      console.log('Group:', group.name, group.id);
-      console.log('Before setState - editingGroup:', editingGroup);
       
       setEditingGroup(group);
       
-      console.log('After setState call');
-      console.log('=== GroupsScreen: handleEditGroup completed ===');
     };
 
     return (
@@ -311,7 +295,6 @@ export const GroupsScreen: React.FC = () => {
         onDeleteGroup={handleDeleteGroup}
         onShareBalance={handleShareBalance}
         onActionExecuted={() => {
-          console.log('GroupItem action executed, closing swipe actions with animation frames');
           // Use requestAnimationFrame to ensure modal has time to render
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {

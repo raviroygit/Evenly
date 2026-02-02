@@ -97,16 +97,9 @@ export const uploadSingleImage = async (
   try {
     validateImageFile(fileBuffer, mimetype);
   } catch (validationError: any) {
-    console.error('Image validation failed:', validationError.message);
     throw validationError;
   }
 
-  console.log('Uploading to Cloudinary:', {
-    cloudName: config.cloudinary.cloudName,
-    folder: `evenly/${folder}`,
-    bufferSize: fileBuffer.length,
-    mimetype: mimetype || 'unknown',
-  });
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -117,25 +110,13 @@ export const uploadSingleImage = async (
       },
       (error, result) => {
         if (error) {
-          console.error('Cloudinary upload error:', {
-            message: error.message,
-            http_code: error.http_code,
-            name: error.name,
-          });
           return reject(new Error(`Cloudinary upload failed: ${error.message} (HTTP ${error.http_code || 'N/A'})`));
         }
 
         if (!result || !result.secure_url) {
-          console.error('Cloudinary upload returned invalid result:', result);
           return reject(new Error('Cloudinary upload failed: Invalid response from Cloudinary'));
         }
 
-        console.log('Cloudinary upload successful:', {
-          url: result.secure_url,
-          publicId: result.public_id,
-          format: result.format,
-          size: result.bytes,
-        });
 
         resolve({
           url: result.secure_url,
@@ -146,7 +127,6 @@ export const uploadSingleImage = async (
 
     // Handle stream errors
     stream.on('error', (streamError) => {
-      console.error('Cloudinary stream error:', streamError);
       reject(new Error(`Cloudinary stream error: ${streamError.message}`));
     });
 
@@ -179,7 +159,6 @@ export const deleteImage = async (publicId: string): Promise<boolean> => {
     const result = await cloudinary.uploader.destroy(publicId);
     return result.result === 'ok';
   } catch (error) {
-    console.error('Error deleting image from Cloudinary:', error);
     return false;
   }
 };

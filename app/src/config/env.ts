@@ -50,7 +50,6 @@ const validateEnvironment = () => {
       `EXPO_PUBLIC_VOAGENTS_AGENT_ID=your-agent-id`;
 
     if (isDevelopment()) {
-      console.error('🚨 Environment Configuration Error:', errorMessage);
     }
 
     throw new Error(errorMessage);
@@ -62,7 +61,6 @@ if (isDevelopment()) {
   try {
     validateEnvironment();
   } catch (error) {
-    console.error('Environment validation failed:', error);
     // In development, we'll continue but log the error
   }
 }

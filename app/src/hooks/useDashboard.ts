@@ -138,7 +138,6 @@ export const useDashboard = (): DashboardData => {
   // which will automatically update dashboard stats
   useEffect(() => {
     const handleTokenRefreshed = () => {
-      console.log('[useDashboard] Token refreshed event received');
       // The underlying hooks (useGroups, useUserBalances) will auto-reload
       // Dashboard stats will update reactively via useMemo
     };

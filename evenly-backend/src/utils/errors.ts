@@ -64,11 +64,6 @@ export class AuthServiceError extends AppError {
 }
 
 export const handleError = (error: Error, reply: FastifyReply) => {
-  console.error('Error occurred:', {
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
-  });
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {

@@ -21,12 +21,9 @@ export default function RootLayout() {
   useEffect(() => {
     // Handle deep links when app is opened from a link
     const handleDeepLink = (url: string) => {
-      console.log('Deep link received:', url);
-
       try {
         // Parse the URL
-        const { hostname, path, queryParams } = Linking.parse(url);
-        console.log('Parsed URL:', { hostname, path, queryParams });
+        const { hostname, path } = Linking.parse(url);
 
         // Handle invitation deep links
         // Format: evenly://invitation/token123 or https://evenly.app/invitation/token123
@@ -42,7 +39,6 @@ export default function RootLayout() {
           }
 
           if (token) {
-            console.log('Navigating to invitation:', token);
             router.replace(`/invitations/accept?token=${token}`);
           }
         }
@@ -54,12 +50,10 @@ export default function RootLayout() {
             // Specific group: evenly://tabs/groups/groupId or https://evenly.app/tabs/groups/groupId
             const groupId = path.match(/\/groups\/([a-f0-9-]+)/)?.[1];
             if (groupId) {
-              console.log('Navigating to group:', groupId);
               router.replace(`/tabs/groups/${groupId}`);
             }
           } else if (path === '/groups' || path === '/tabs/groups') {
             // Groups list: evenly://tabs/groups or https://evenly.app/tabs/groups
-            console.log('Navigating to groups tab');
             router.replace('/tabs/groups');
           }
         }
@@ -67,7 +61,6 @@ export default function RootLayout() {
         // Handle tabs/books deep links (new format)
         // Format: evenly://tabs/books
         else if (hostname === 'tabs' && path?.includes('/books')) {
-          console.log('Navigating to Books/Khata');
           router.replace('/tabs/books');
         }
 
@@ -85,7 +78,6 @@ export default function RootLayout() {
           }
 
           if (groupId) {
-            console.log('Navigating to group (legacy):', groupId);
             router.replace(`/tabs/groups/${groupId}`);
           }
         }
@@ -93,27 +85,20 @@ export default function RootLayout() {
         // Legacy Khata deep links (backward compatibility)
         // Format: evenly://khata or https://evenly.app/khata or https://evenly.app/books
         else if (hostname === 'khata' || path === '/khata' || path === '/books' || path === '/tabs/books') {
-          console.log('Navigating to Khata/Books');
           router.replace('/tabs/books');
         }
-      } catch (error) {
-        console.error('Error handling deep link:', error);
+      } catch {
+        // Deep link handling failed; ignore
       }
     };
 
     // Get initial URL (when app is opened from a closed state)
     Linking.getInitialURL().then((url) => {
-      if (url) {
-        console.log('Initial URL:', url);
-        handleDeepLink(url);
-      }
+      if (url) handleDeepLink(url);
     });
 
     // Listen for deep links when app is already running
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('URL event:', url);
-      handleDeepLink(url);
-    });
+    const subscription = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
 
     // Cleanup
     return () => {
@@ -126,21 +111,10 @@ export default function RootLayout() {
   // To enable: Run `npx expo prebuild` then `npx expo run:ios` or `npx expo run:android`
   /*
   useEffect(() => {
-    console.log('[App] Registering background token refresh task...');
+    registerBackgroundRefresh().catch(() => {});
 
-    registerBackgroundRefresh()
-      .then(() => {
-        console.log('[App] ✅ Background refresh task registered successfully');
-      })
-      .catch((error) => {
-        console.error('[App] ❌ Failed to register background refresh task:', error);
-      });
-
-    // Cleanup on unmount (when app is closed)
     return () => {
-      unregisterBackgroundRefresh().catch((error) => {
-        console.error('[App] Failed to unregister background refresh:', error);
-      });
+      unregisterBackgroundRefresh().catch(() => {});
     };
   }, []);
   */

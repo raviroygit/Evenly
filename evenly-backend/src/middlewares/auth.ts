@@ -16,19 +16,14 @@ export const authenticateToken = async (
     const cookies = request.cookies;
     let token = cookies?.sso_token;
 
-    console.log('[Auth Middleware] Request cookies:', cookies);
-    console.log('[Auth Middleware] Extracted sso_token:', token);
-    console.log('[Auth Middleware] Request headers:', request.headers);
 
     // Handle duplicate sso_token issue from iOS
     if (typeof token === 'string' && token.includes(',')) {
-      console.log('[Auth Middleware] Detected duplicate sso_token, cleaning...');
       // Split by comma and take the first one, then clean it
       const tokenParts = token.split(',');
       const firstToken = tokenParts[0].trim();
       // Remove any 'sso_token=' prefix if present
       token = firstToken.replace(/^sso_token=/, '');
-      console.log('[Auth Middleware] Cleaned token:', token);
     }
 
     if (!token) {
@@ -97,7 +92,6 @@ export const optionalAuth = async (
   } catch (error) {
     // For optional auth, we don't throw errors
     // Just log and continue without user
-    console.warn('Optional auth failed:', error);
   }
 };
 
@@ -162,18 +156,15 @@ async function extractOrganizationContext(
     const authServiceOrgId = request.headers['x-organization-id'] as string;
 
     if (!authServiceOrgId) {
-      console.log('⚠️  OrganizationContext: No organization ID provided in header');
       return;
     }
 
-    console.log('🏢 OrganizationContext: Extracting org context:', authServiceOrgId);
 
     // Check if org exists in local DB
     let localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
 
     if (!localOrg) {
       // Sync from auth service
-      console.log('🔄 OrganizationContext: Organization not found locally, syncing...');
       const localOrgId = await OrganizationService.syncOrganizationFromAuthService(
         authServiceOrgId,
         ssoToken,
@@ -186,18 +177,12 @@ async function extractOrganizationContext(
     }
 
     if (!localOrg) {
-      console.error('❌ OrganizationContext: Failed to sync organization');
-      console.error('❌ OrganizationContext: Auth service org ID:', authServiceOrgId);
-      console.error('❌ OrganizationContext: User ID:', userId);
       return;
     }
 
     // Verify user is a member
     const isMember = await OrganizationService.isMember(localOrg.id, userId);
     if (!isMember) {
-      console.error('❌ OrganizationContext: User is not a member of this organization');
-      console.error('❌ OrganizationContext: Local org ID:', localOrg.id);
-      console.error('❌ OrganizationContext: User ID:', userId);
       return;
     }
 
@@ -209,13 +194,7 @@ async function extractOrganizationContext(
     (request as any).authServiceOrgId = authServiceOrgId;
     (request as any).organizationRole = membership?.role;
 
-    console.log('✅ OrganizationContext: Context attached:', {
-      localOrgId: localOrg.id,
-      authServiceOrgId,
-      role: membership?.role
-    });
   } catch (error: any) {
-    console.error('❌ OrganizationContext: Failed to extract context:', error.message);
     // Don't fail the request, just log the error
   }
 }

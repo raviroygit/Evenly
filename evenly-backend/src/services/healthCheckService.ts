@@ -19,13 +19,8 @@ export class HealthCheckService {
    */
   static start(): void {
     if (this.isRunning) {
-      console.log('[HealthCheckService] Service is already running');
       return;
     }
-
-    console.log('[HealthCheckService] Starting scheduled health checks every 2 minutes');
-    console.log(`[HealthCheckService] Target URL: ${config.app.baseUrl}/health`);
-
     this.isRunning = true;
     
     // Run immediately on start
@@ -42,12 +37,8 @@ export class HealthCheckService {
    */
   static stop(): void {
     if (!this.isRunning) {
-      console.log('[HealthCheckService] Service is not running');
       return;
     }
-
-    console.log('[HealthCheckService] Stopping scheduled health checks');
-    
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
@@ -65,9 +56,6 @@ export class HealthCheckService {
     
     try {
       const healthUrl = `${config.app.baseUrl}/health`;
-      
-      console.log(`[HealthCheckService] Performing health check at ${timestamp}`);
-      
       const response = await axios.get(healthUrl, {
         timeout: 10000, // 10 second timeout
         headers: {
@@ -84,19 +72,8 @@ export class HealthCheckService {
         responseTime,
         status: response.data?.status || 'unknown',
       };
-
-      console.log(`[HealthCheckService] ✅ Health check successful:`, {
-        status: result.status,
-        responseTime: `${result.responseTime}ms`,
-        timestamp: result.timestamp,
-      });
-
       // Log additional details if available
       if (response.data) {
-        console.log(`[HealthCheckService] Response data:`, {
-          database: response.data.database,
-          version: response.data.version,
-        });
       }
 
     } catch (error: any) {
@@ -108,20 +85,9 @@ export class HealthCheckService {
         responseTime,
         error: error.message || 'Unknown error',
       };
-
-      console.error(`[HealthCheckService] ❌ Health check failed:`, {
-        error: result.error,
-        responseTime: `${result.responseTime}ms`,
-        timestamp: result.timestamp,
-        url: `${config.app.baseUrl}/health`,
-      });
-
       // Log additional error details
       if (error.response) {
-        console.error(`[HealthCheckService] HTTP Status: ${error.response.status}`);
-        console.error(`[HealthCheckService] Response Data:`, error.response.data);
       } else if (error.request) {
-        console.error(`[HealthCheckService] No response received. Network error.`);
       }
     }
   }

@@ -37,7 +37,6 @@ export class AuthService {
         message: response.data.message || 'Magic link sent to your email!',
       };
     } catch (error: any) {
-      console.error('Auth service signup error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to send magic link',
@@ -62,7 +61,6 @@ export class AuthService {
       // Forward mobile client header to shared auth system
       if (isMobile) {
         headers['x-client-type'] = 'mobile';
-        console.log('📱 [evenly-backend] Forwarding mobile client header for OTP request');
       }
 
       const response = await axios.post(`${this.AUTH_SERVICE_URL}/login/otp`, {
@@ -77,7 +75,6 @@ export class AuthService {
         message: response.data.message || 'OTP sent to your email!',
       };
     } catch (error: any) {
-      console.error('Auth service request OTP error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to send OTP',
@@ -112,7 +109,6 @@ export class AuthService {
       // Forward mobile client header to shared auth system
       if (isMobile) {
         headers['x-client-type'] = 'mobile';
-        console.log('📱 [evenly-backend] Forwarding mobile client header to auth system');
       }
 
       const response = await axios.post(`${this.AUTH_SERVICE_URL}/login/verify-otp`, {
@@ -126,11 +122,6 @@ export class AuthService {
       if (response.data.user && response.data.accessToken) {
         // Log what we received from shared auth system
         if (isMobile) {
-          console.log('✅ [evenly-backend] Received mobile tokens from auth system:', {
-            platform: response.data.platform,
-            expiresIn: response.data.expiresIn,
-            hasRefreshToken: !!response.data.refreshToken,
-          });
         }
 
         // Extract sso_token from response headers
@@ -178,7 +169,6 @@ export class AuthService {
         message: response.data.message || 'Invalid OTP',
       };
     } catch (error: any) {
-      console.error('Auth service verify OTP error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to verify OTP',
@@ -217,7 +207,6 @@ export class AuthService {
       }
       return { success: false, message: response.data?.message || 'Google login failed' };
     } catch (error: any) {
-      console.error('Auth service social google error:', error);
       return { success: false, message: error.response?.data?.message || 'Google login failed' };
     }
   }
@@ -250,7 +239,6 @@ export class AuthService {
         message: 'Failed to refresh token',
       };
     } catch (error: any) {
-      console.error('Auth service refresh token error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to refresh token',
@@ -311,7 +299,6 @@ export class AuthService {
         message: 'User not authenticated',
       };
     } catch (error: any) {
-      console.error('Auth service get current user error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to get user info',
@@ -326,7 +313,6 @@ export class AuthService {
     try {
       let ssoToken = request.cookies?.sso_token;
       // Minimal diagnostics: inbound cookie and token presence
-      console.log('[evenly-backend] /auth/me PUT inbound Cookie:', (request.headers as any)?.cookie);
       // Fallback: parse from raw Cookie header if not populated by cookie parser
       if (!ssoToken && (request.headers as any)?.cookie) {
         const raw = String((request.headers as any).cookie);
@@ -334,8 +320,6 @@ export class AuthService {
         const ssoPart = parts.find(p => p.startsWith('sso_token='));
         if (ssoPart) ssoToken = ssoPart.substring('sso_token='.length);
       }
-      console.log('[evenly-backend] /auth/me PUT sso_token present:', !!ssoToken, 'len:', ssoToken?.length);
-
       if (!ssoToken) {
         return {
           success: false,
@@ -351,8 +335,6 @@ export class AuthService {
         },
         timeout: 30000,
       });
-      console.log('[evenly-backend] /auth/me PUT auth-service response success:', !!response.data?.success, 'message:', response.data?.message);
-
       const respData = response.data;
       if (respData?.success) {
         // Optionally sync with local DB if auth returns user
@@ -376,7 +358,6 @@ export class AuthService {
         message: respData?.message || 'Failed to update user',
       };
     } catch (error: any) {
-      console.error('[evenly-backend] /auth/me PUT error:', error?.response?.status, error?.response?.data || error?.message);
       return {
         success: false,
         message: error?.response?.data?.message || 'Failed to update user',
@@ -410,7 +391,6 @@ export class AuthService {
       }
       return { success: false, message: respData?.message || 'Failed to delete account' };
     } catch (error: any) {
-      console.error('Auth service delete user error:', error);
       return { success: false, message: error.response?.data?.message || 'Failed to delete account' };
     }
   }
@@ -438,7 +418,6 @@ export class AuthService {
         message: 'Logged out successfully',
       };
     } catch (error: any) {
-      console.error('Auth service logout error:', error);
       // Even if logout fails on auth service, we should still return success
       // as the local session will be cleared
       return {
@@ -454,8 +433,6 @@ export class AuthService {
    */
   static async mobileRefresh(refreshToken: string): Promise<AuthResponse> {
     try {
-      console.log('[evenly-backend] Proxying mobile refresh to auth service');
-
       const response = await axios.post(
         `${this.AUTH_SERVICE_URL}/../mobile/refresh`, // Goes to /api/v1/mobile/refresh
         { refreshToken },
@@ -469,8 +446,6 @@ export class AuthService {
       );
 
       if (response.data.success && response.data.user) {
-        console.log('[evenly-backend] Mobile refresh successful - syncing user');
-
         // Sync user with local database
         const syncedUser = await UserService.createOrUpdateUser({
           id: response.data.user.id,
@@ -493,14 +468,11 @@ export class AuthService {
           refreshToken: response.data.refreshToken,
         };
       }
-
-      console.log('[evenly-backend] Mobile refresh failed - invalid response');
       return {
         success: false,
         message: response.data.message || 'Failed to refresh session',
       };
     } catch (error: any) {
-      console.error('[evenly-backend] Mobile refresh error:', error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to refresh session',
@@ -522,9 +494,6 @@ export class AuthService {
           message: 'No authentication token provided',
         };
       }
-
-      console.log('[evenly-backend] Checking session expiry via auth service');
-
       const response = await axios.get(
         `${this.AUTH_SERVICE_URL}/../mobile/session-expiry`, // Goes to /api/v1/mobile/session-expiry
         {
@@ -539,7 +508,6 @@ export class AuthService {
 
       return response.data;
     } catch (error: any) {
-      console.error('[evenly-backend] Session expiry check error:', error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to check session expiry',

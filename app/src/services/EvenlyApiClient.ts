@@ -35,13 +35,10 @@ class EvenlyApiClient {
       const authData = await AuthStorage.getAuthData();
       if (authData?.user?.currentOrganization?.id) {
         this.currentOrganizationId = authData.user.currentOrganization.id;
-        console.log('[EvenlyApiClient] Initialized with organization ID:', this.currentOrganizationId);
       } else if (authData?.user?.organizations && authData.user.organizations.length > 0) {
         this.currentOrganizationId = authData.user.organizations[0].id;
-        console.log('[EvenlyApiClient] Initialized with first organization ID:', this.currentOrganizationId);
       }
     } catch (error) {
-      console.error('[EvenlyApiClient] Failed to initialize organization ID:', error);
     }
   }
 
@@ -50,7 +47,6 @@ class EvenlyApiClient {
    */
   setOrganizationId(organizationId: string | null) {
     this.currentOrganizationId = organizationId;
-    console.log('[EvenlyApiClient] Organization ID updated:', organizationId);
   }
 
   /**
@@ -67,9 +63,6 @@ class EvenlyApiClient {
       async (config) => {
         try {
           // Debug: Log data type
-          console.log(`[${Platform.OS}] 🔍 Request data type:`, typeof config.data);
-          console.log(`[${Platform.OS}] 🔍 Is FormData:`, config.data instanceof FormData);
-          console.log(`[${Platform.OS}] 🔍 Data constructor:`, config.data?.constructor?.name);
 
           // For FormData, don't set Content-Type - let axios handle it automatically
           if (config.data instanceof FormData) {
@@ -77,8 +70,6 @@ class EvenlyApiClient {
             if (config.headers) {
               delete (config.headers as any)['Content-Type'];
             }
-            console.log(`[${Platform.OS}] 📤 Detected FormData - removed Content-Type header (axios will set multipart/form-data with boundary)`);
-            console.log(`[${Platform.OS}] ⏱️ Request timeout: ${config.timeout || 120000}ms`);
           }
 
           // Get auth data from storage
@@ -89,7 +80,6 @@ class EvenlyApiClient {
             // Simply attach the token - it never expires for mobile
             config.headers = config.headers || {};
             config.headers['Authorization'] = `Bearer ${accessToken}`;
-            console.log(`[${Platform.OS}] Using Bearer token authentication`);
           }
 
           // Add organization context header from in-memory storage
@@ -97,19 +87,15 @@ class EvenlyApiClient {
           if (this.currentOrganizationId) {
             config.headers = config.headers || {};
             config.headers['x-organization-id'] = this.currentOrganizationId;
-            console.log(`[${Platform.OS}] ✅ Added organization ID header:`, this.currentOrganizationId);
           } else {
-            console.warn(`[${Platform.OS}] ⚠️ No organization ID available - request will fail on backend`);
           }
 
           return config;
         } catch (error) {
-          console.error('Request interceptor error:', error);
           return config;
         }
       },
       (error) => {
-        console.error('Request interceptor error:', error);
         return Promise.reject(error);
       }
     );
@@ -126,23 +112,10 @@ class EvenlyApiClient {
 
         // Enhanced error logging for FormData uploads
         if (error.config?.data instanceof FormData || error.code === 'ERR_NETWORK') {
-          console.error('[EvenlyApiClient] ❌ Upload/Network Error Details:', {
-            code: error.code,
-            message: error.message,
-            url: error.config?.url,
-            method: error.config?.method,
-            timeout: error.config?.timeout,
-            hasResponse: !!error.response,
-            responseStatus: error.response?.status,
-            responseData: error.response?.data,
-            isFormData: error.config?.data instanceof FormData,
-          });
         }
 
         // Handle 401 Unauthorized - token might be revoked or network issue
         if (error.response?.status === 401) {
-          console.warn('[EvenlyApiClient] ⚠️ Got 401 error - token may be revoked or network issue');
-          console.warn('[EvenlyApiClient] ⚠️ Keeping user logged in with cached data');
 
           // Since mobile tokens never expire, 401 means:
           // 1. Token was revoked remotely (security issue)

@@ -18,7 +18,6 @@ export const useExpenses = (groupId?: string) => {
   // Listen for token refresh events to reload data with fresh token
   useEffect(() => {
     const handleTokenRefreshed = () => {
-      console.log('[useExpenses] Token refreshed event received, reloading expenses...');
       if (groupId) {
         loadGroupExpenses(groupId);
       }
@@ -39,7 +38,6 @@ export const useExpenses = (groupId?: string) => {
       // Use token's remaining lifetime as cache TTL
       const cacheTTL = await CacheManager.getCacheTTL();
 
-      console.log('[useExpenses] Loading group expenses with cache TTL:', cacheTTL);
 
       const { expenses: expensesData } = await EvenlyBackendService.getGroupExpenses(groupId, {
         cacheTTLMs: cacheTTL
@@ -48,7 +46,6 @@ export const useExpenses = (groupId?: string) => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
       setError(errorMessage);
-      console.error('Error loading expenses:', err);
     } finally {
       setLoading(false);
     }
@@ -111,7 +108,6 @@ export const useExpenses = (groupId?: string) => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create expense';
       setError(errorMessage);
-      console.error('Error creating expense:', err);
       throw new Error(errorMessage);
     }
   };

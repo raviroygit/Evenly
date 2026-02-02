@@ -64,9 +64,7 @@ function serveSmartRedirect(
     );
 
     return reply.type('text/html').send(html);
-  } catch (error) {
-    console.error('Error serving smart redirect:', error);
-
+  } catch {
     // Fallback to store redirect
     let redirectUrl: string;
     switch (device) {
@@ -101,13 +99,6 @@ export async function appDownloadRedirect(
   const device = detectDevice(userAgent);
   const invitationToken = request.query.token || '';
 
-  console.log('App download request:', {
-    userAgent,
-    device,
-    invitationToken: invitationToken ? 'present' : 'none',
-    ip: request.ip
-  });
-
   return serveSmartRedirect(reply, device, `evenly://invitation/${invitationToken}`, {
     type: 'invitation',
     data: { token: invitationToken }
@@ -129,13 +120,6 @@ export async function openGroupRedirect(
   const userAgent = request.headers['user-agent'] || '';
   const device = detectDevice(userAgent);
   const { groupId } = request.params;
-
-  console.log('Open group request:', {
-    userAgent,
-    device,
-    groupId,
-    ip: request.ip
-  });
 
   return serveSmartRedirect(reply, device, `evenly://group/${groupId}`, {
     type: 'group',
@@ -159,13 +143,6 @@ export async function openExpenseRedirect(
   const device = detectDevice(userAgent);
   const { groupId } = request.params;
 
-  console.log('Open expense/group request:', {
-    userAgent,
-    device,
-    groupId,
-    ip: request.ip
-  });
-
   return serveSmartRedirect(reply, device, `evenly://group/${groupId}`, {
     type: 'expense',
     data: { groupId }
@@ -182,12 +159,6 @@ export async function openKhataRedirect(
 ): Promise<void> {
   const userAgent = request.headers['user-agent'] || '';
   const device = detectDevice(userAgent);
-
-  console.log('Open Khata request:', {
-    userAgent,
-    device,
-    ip: request.ip
-  });
 
   return serveSmartRedirect(reply, device, 'evenly://khata', {
     type: 'khata'

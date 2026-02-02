@@ -115,7 +115,6 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
         throw new Error(result.message || 'Failed to send support request');
       }
     } catch (error: any) {
-      console.error('Error sending support request:', error);
       Alert.alert(
         'Error',
         'Failed to send your support request. Please try again or contact us directly.',

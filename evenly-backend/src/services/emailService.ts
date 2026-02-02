@@ -22,13 +22,7 @@ const transporter = nodemailer.createTransport({
 } as nodemailer.TransportOptions);
 
 // Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('❌ EmailService - SMTP connection verification failed:', error);
-  } else {
-    console.log('✅ EmailService - SMTP connection verified successfully');
-  }
-});
+transporter.verify(() => {});
 
 /**
  * Render an EJS template from the templates folder.
@@ -49,14 +43,6 @@ async function renderTemplate(templateName: string, data: any): Promise<string> 
  */
 export async function sendEmail(to: string, subject: string, htmlBody: string): Promise<void> {
   try {
-    console.log("📧 EmailService - Preparing to send email to:", to);
-    console.log("📧 EmailService - Email config:", {
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.secure,
-      user: config.email.auth.user
-    });
-
     const mailOptions = {
       from: `"EvenlySplit" <${config.email.auth.user}>`,
       to,
@@ -64,42 +50,17 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
       html: htmlBody
     };
 
-    console.log("📤 EmailService - Sending email via transporter");
-
     // Add timeout to prevent hanging
     const sendMailPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000);
     });
 
-    const info = await Promise.race([sendMailPromise, timeoutPromise]) as any;
-    console.log(`✅ EmailService - Email sent to ${to}: ${info.messageId}`);
+    await Promise.race([sendMailPromise, timeoutPromise]);
   } catch (error: any) {
-    console.error('💥 EmailService - Error sending email:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-      response: error.response,
-      responseCode: error.responseCode
-    });
-
-    // Log detailed error information
     if (error.code === 'EAUTH' || error.responseCode === 535) {
-      console.error(`🚨 SMTP authentication failed for ${to}. Email credentials are incorrect!`);
-      console.error('Current email config:', {
-        host: config.email.host,
-        port: config.email.port,
-        user: config.email.auth.user,
-        secure: config.email.secure
-      });
-      console.error('To fix: Check EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in your .env file');
-      // THROW error so invitation service knows email failed
       throw new Error(`SMTP_AUTH_FAILED: Cannot send email to ${to}. Please configure email credentials.`);
     }
-
-    // For other errors, also throw so system knows email failed
-    console.error(`🚨 Email sending failed for ${to}:`, error.message);
     throw error;
   }
 }
@@ -142,9 +103,7 @@ export async function sendGroupInvitationEmail(
       : `Join "${groupName}" on EvenlySplit - Expense Sharing Made Easy`;
 
     await sendEmail(email, subject, htmlBody);
-  } catch (error: any) {
-    console.error('Error in sendGroupInvitationEmail:', error);
-    console.warn(`Failed to send invitation email to ${email}, but this will not affect invitation creation`);
+  } catch {
     // Don't throw error - let the invitation creation continue
   }
 }
@@ -180,14 +139,6 @@ export async function sendExpenseNotificationEmail(
     amount: string;
   }
 ): Promise<void> {
-  console.log('sendExpenseNotificationEmail called with:', {
-    to: email,
-    expenseTitle: expense.title,
-    addedByName: addedBy.name,
-    groupName: group.name,
-    userSplitAmount: userSplit.amount
-  });
-
   try {
     // Create smart app open link for expense/group
     const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
@@ -203,12 +154,8 @@ export async function sendExpenseNotificationEmail(
     });
     
     const subject = `New expense "${expense.title}" added to ${group.name}`;
-    
-    console.log('Sending email with subject:', subject);
     await sendEmail(email, subject, htmlBody);
-    console.log('Email sent successfully to:', email);
   } catch (error) {
-    console.error('Error in sendExpenseNotificationEmail:', error);
     throw error;
   }
 }
@@ -230,14 +177,6 @@ export async function sendSupportEmail(
   priority: 'low' | 'medium' | 'high' = 'medium',
   category: 'technical' | 'billing' | 'feature' | 'other' = 'other'
 ): Promise<void> {
-  console.log('sendSupportEmail called with:', {
-    from: userEmail,
-    userName,
-    subject,
-    priority,
-    category
-  });
-
   try {
     // Create HTML body for support email
     const htmlBody = `
@@ -307,15 +246,11 @@ export async function sendSupportEmail(
     `;
     
     const emailSubject = `[${priority.toUpperCase()}] Support Request: ${subject}`;
-    
-    console.log('Sending support email with subject:', emailSubject);
     await sendEmail(config.email.supportEmail || 'support@evenly.com', emailSubject, htmlBody);
-    console.log('Support email sent successfully');
-    
+
     // Send confirmation email to user
     await sendSupportConfirmationEmail(userEmail, userName, subject, message, priority, category);
   } catch (error) {
-    console.error('Error in sendSupportEmail:', error);
     throw error;
   }
 }
@@ -337,8 +272,6 @@ async function sendSupportConfirmationEmail(
   priority: 'low' | 'medium' | 'high' = 'medium',
   category: 'technical' | 'billing' | 'feature' | 'other' = 'other'
 ): Promise<void> {
-  console.log('Sending support confirmation email to:', userEmail);
-
   try {
     // Create HTML body for confirmation email
     const htmlBody = `
@@ -422,12 +355,8 @@ async function sendSupportConfirmationEmail(
     `;
     
     const confirmationSubject = `Support Request Confirmation: ${subject}`;
-    
-    console.log('Sending confirmation email with subject:', confirmationSubject);
     await sendEmail(userEmail, confirmationSubject, htmlBody);
-    console.log('Support confirmation email sent successfully to:', userEmail);
-  } catch (error) {
-    console.error('Error in sendSupportConfirmationEmail:', error);
+  } catch {
     // Don't throw error - confirmation email failure shouldn't break the main flow
   }
 }
@@ -452,14 +381,6 @@ export async function sendKhataTransactionEmail(
     date: string;
   }
 ): Promise<void> {
-  console.log('sendKhataTransactionEmail called with:', {
-    to: customerEmail,
-    customerName,
-    userName,
-    transactionType: transaction.type,
-    amount: transaction.amount,
-  });
-
   try {
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
@@ -517,12 +438,8 @@ export async function sendKhataTransactionEmail(
     `;
     
     const subject = `Khata Transaction: ${transactionType} ₹${transaction.amount}`;
-    
-    console.log('Sending Khata transaction email with subject:', subject);
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('Khata transaction email sent successfully to:', customerEmail);
   } catch (error) {
-    console.error('Error in sendKhataTransactionEmail:', error);
     throw error;
   }
 }
@@ -553,14 +470,6 @@ export async function sendExpenseUpdatedEmail(
     amount: string;
   }
 ): Promise<void> {
-  console.log('sendExpenseUpdatedEmail called with:', {
-    to: email,
-    expenseTitle: expense.title,
-    updatedByName: updatedBy.name,
-    groupName: group.name,
-    userSplitAmount: userSplit.amount
-  });
-
   try {
     // Create smart app open link for expense/group
     const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
@@ -576,11 +485,8 @@ export async function sendExpenseUpdatedEmail(
     });
 
     const subject = `Expense "${expense.title}" updated in ${group.name}`;
-
     await sendEmail(email, subject, htmlBody);
-    console.log('Expense updated email sent successfully to:', email);
-  } catch (error) {
-    console.error('Error in sendExpenseUpdatedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the update operation
   }
 }
@@ -608,13 +514,6 @@ export async function sendExpenseDeletedEmail(
     name: string;
   }
 ): Promise<void> {
-  console.log('sendExpenseDeletedEmail called with:', {
-    to: email,
-    expenseTitle: expense.title,
-    deletedByName: deletedBy.name,
-    groupName: group.name
-  });
-
   try {
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
@@ -629,11 +528,8 @@ export async function sendExpenseDeletedEmail(
     });
 
     const subject = `Expense "${expense.title}" deleted from ${group.name}`;
-
     await sendEmail(email, subject, htmlBody);
-    console.log('Expense deleted email sent successfully to:', email);
-  } catch (error) {
-    console.error('Error in sendExpenseDeletedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the delete operation
   }
 }
@@ -646,37 +542,17 @@ export async function sendCustomerAddedEmail(
   customerName: string,
   userName: string
 ): Promise<void> {
-  console.log('📧 sendCustomerAddedEmail called with:', {
-    to: customerEmail,
-    customerName,
-    userName
-  });
-
   try {
-    // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
-
-    console.log('🎨 Rendering customerAdded.ejs template...');
     const htmlBody = await renderTemplate('customerAdded.ejs', {
       customerName,
       userName,
       appOpenLink,
       year: new Date().getFullYear()
     });
-    console.log('✅ Template rendered successfully');
-
-    const subject = `You've been added to ${userName}'s Khata on EvenlySplit`;  
-
-    console.log('📤 Sending customer added email...');
+    const subject = `You've been added to ${userName}'s Khata on EvenlySplit`;
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('✅ Customer added email sent successfully to:', customerEmail);
-  } catch (error: any) {
-    console.error('❌ Error in sendCustomerAddedEmail:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      to: customerEmail
-    });
+  } catch {
     // Don't throw - email failure shouldn't break customer creation
   }
 }
@@ -690,13 +566,6 @@ export async function sendCustomerDeletedEmail(
   userName: string,
   finalBalance?: string
 ): Promise<void> {
-  console.log('sendCustomerDeletedEmail called with:', {
-    to: customerEmail,
-    customerName,
-    userName,
-    finalBalance
-  });
-
   try {
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
@@ -712,9 +581,7 @@ export async function sendCustomerDeletedEmail(
     const subject = `Khata account closed with ${userName}`;
 
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('Customer deleted email sent successfully to:', customerEmail);
-  } catch (error) {
-    console.error('Error in sendCustomerDeletedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break customer deletion
   }
 }
@@ -735,14 +602,6 @@ export async function sendTransactionUpdatedEmail(
     date: string;
   }
 ): Promise<void> {
-  console.log('sendTransactionUpdatedEmail called with:', {
-    to: customerEmail,
-    customerName,
-    userName,
-    transactionType: transaction.type,
-    amount: transaction.amount,
-  });
-
   try {
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
@@ -769,9 +628,7 @@ export async function sendTransactionUpdatedEmail(
     const subject = `Transaction Updated: ${transactionType} ₹${transaction.amount}`;
 
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('Transaction updated email sent successfully to:', customerEmail);
-  } catch (error) {
-    console.error('Error in sendTransactionUpdatedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the update
   }
 }
@@ -792,14 +649,6 @@ export async function sendTransactionDeletedEmail(
     date: string;
   }
 ): Promise<void> {
-  console.log('sendTransactionDeletedEmail called with:', {
-    to: customerEmail,
-    customerName,
-    userName,
-    transactionType: transaction.type,
-    amount: transaction.amount,
-  });
-
   try {
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const balanceNum = parseFloat(transaction.balance);
@@ -824,9 +673,7 @@ export async function sendTransactionDeletedEmail(
     const subject = `Transaction Deleted: ${transactionType} ₹${transaction.amount}`;
 
     await sendEmail(customerEmail, subject, htmlBody);
-    console.log('Transaction deleted email sent successfully to:', customerEmail);
-  } catch (error) {
-    console.error('Error in sendTransactionDeletedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the deletion
   }
 }
@@ -844,13 +691,6 @@ export async function sendGroupJoinedEmail(
   },
   memberCount: number
 ): Promise<void> {
-  console.log('sendGroupJoinedEmail called with:', {
-    to: userEmail,
-    userName,
-    groupName: group.name,
-    memberCount
-  });
-
   try {
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
@@ -867,9 +707,7 @@ export async function sendGroupJoinedEmail(
     const subject = `Welcome to ${group.name}!`;
 
     await sendEmail(userEmail, subject, htmlBody);
-    console.log('Group joined email sent successfully to:', userEmail);
-  } catch (error) {
-    console.error('Error in sendGroupJoinedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the join operation
   }
 }
@@ -889,13 +727,6 @@ export async function sendNewMemberJoinedEmail(
   },
   memberCount: number
 ): Promise<void> {
-  console.log('sendNewMemberJoinedEmail called with:', {
-    to: existingMemberEmail,
-    newMemberName: newMember.name,
-    groupName: group.name,
-    memberCount
-  });
-
   try {
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
@@ -913,9 +744,7 @@ export async function sendNewMemberJoinedEmail(
     const subject = `${newMember.name} joined ${group.name}`;
 
     await sendEmail(existingMemberEmail, subject, htmlBody);
-    console.log('New member notification sent successfully to:', existingMemberEmail);
-  } catch (error) {
-    console.error('Error in sendNewMemberJoinedEmail:', error);
+  } catch {
     // Don't throw - email failure shouldn't break the join operation
   }
 }

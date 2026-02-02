@@ -21,8 +21,6 @@ export const startHealthCheckController = async (req: FastifyRequest, res: Fasti
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error in health check controller:', error);
-    
     res.status(500).send({
       success: false,
       message: 'Failed to get health check service status',
@@ -52,8 +50,6 @@ export const stopHealthCheckController = async (req: FastifyRequest, res: Fastif
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error in health check controller:', error);
-    
     res.status(500).send({
       success: false,
       message: 'Failed to get health check service status',
@@ -81,8 +77,6 @@ export const getHealthCheckStatusController = async (req: FastifyRequest, res: F
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error getting health check service status:', error);
-    
     res.status(500).send({
       success: false,
       message: 'Failed to get health check service status',

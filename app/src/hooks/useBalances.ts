@@ -28,7 +28,6 @@ export const useBalances = (groupId?: string) => {
   // Listen for token refresh events to reload data with fresh token
   useEffect(() => {
     const handleTokenRefreshed = () => {
-      console.log('[useBalances] Token refreshed event received, reloading balances...');
       if (groupId) {
         loadGroupBalances(groupId);
       }
@@ -49,7 +48,6 @@ export const useBalances = (groupId?: string) => {
       // Use token's remaining lifetime as cache TTL
       const cacheTTL = await CacheManager.getCacheTTL();
 
-      console.log('[useBalances] Loading group balances with cache TTL:', cacheTTL);
 
       const [balancesData, debtsData] = await Promise.all([
         EvenlyBackendService.getGroupBalances(groupId, { cacheTTLMs: cacheTTL }),
@@ -59,7 +57,6 @@ export const useBalances = (groupId?: string) => {
       setSimplifiedDebts(debtsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load balances');
-      console.error('Error loading balances:', err);
     } finally {
       setLoading(false);
     }
@@ -128,7 +125,6 @@ export const useUserBalances = () => {
 
       // If another instance is already loading, wait and use cached data
       if (globalUserBalancesIsLoading && !globalUserBalancesIsFirstFetch) {
-        console.log('[useUserBalances] Another instance is loading - waiting for cache...');
 
         // Wait for the other instance to finish loading (max 5 seconds)
         let attempts = 0;
@@ -139,11 +135,9 @@ export const useUserBalances = () => {
 
         // Use the cached data that was just loaded
         if (globalUserBalancesCache) {
-          console.log('[useUserBalances] Using freshly loaded cache');
           setBalances(globalUserBalancesCache.balances);
           setNetBalance(globalUserBalancesCache.netBalance);
         } else {
-          console.log('[useUserBalances] Cache still empty after wait - force loading');
           // Cache is still empty, don't skip - continue to load below
         }
         setLoading(false);
@@ -166,7 +160,6 @@ export const useUserBalances = () => {
       let cacheTTL: number;
       if (globalUserBalancesIsFirstFetch) {
         cacheTTL = 0; // Bypass cache - force fresh fetch
-        console.log('[useUserBalances] 🔄 First fetch - bypassing cache for fresh data');
         globalUserBalancesIsFirstFetch = false;
         globalUserBalancesLastFetchTime = Date.now();
       } else {
@@ -174,12 +167,10 @@ export const useUserBalances = () => {
         const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
         if (timeSinceLastFetch > USER_BALANCES_CACHE_DURATION) {
           cacheTTL = 0; // Cache expired - fetch fresh data silently
-          console.log('[useUserBalances] 🔄 Cache expired - silent refresh');
           globalUserBalancesLastFetchTime = Date.now();
         } else {
           // Use cache for subsequent fetches within 1 minute
           cacheTTL = USER_BALANCES_CACHE_DURATION - timeSinceLastFetch;
-          console.log('[useUserBalances] Loading with cache TTL:', cacheTTL);
         }
       }
 
@@ -188,11 +179,6 @@ export const useUserBalances = () => {
         EvenlyBackendService.getUserNetBalance({ cacheTTLMs: cacheTTL }),
       ]);
 
-      console.log('[useUserBalances] ✅ Balances loaded:', {
-        balancesCount: balancesData.length,
-        silent,
-        netBalance: netBalanceData
-      });
 
       // Update global cache
       globalUserBalancesCache = {
@@ -205,11 +191,9 @@ export const useUserBalances = () => {
     } catch (err: any) {
       // If in offline mode (session expired), don't show error to user
       if (err._offlineMode) {
-        console.warn('[useUserBalances] ⚠️ Offline mode - using cached data');
         // Don't set error message - user is in offline mode
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load user balances');
-        console.error('Error loading user balances:', err);
       }
     } finally {
       globalUserBalancesIsLoading = false;
@@ -221,7 +205,6 @@ export const useUserBalances = () => {
   useEffect(() => {
     // Clear data when user logs out
     if (authState === 'unauthenticated') {
-      console.log('[useUserBalances] User logged out - clearing balances');
       setBalances([]);
       setNetBalance(null);
       setLoading(true);
@@ -235,34 +218,25 @@ export const useUserBalances = () => {
 
     // Skip during initialization phase - wait for authenticated state
     if (authState === 'initializing') {
-      console.log('[useUserBalances] Auth initializing - waiting...');
       return;
     }
 
     // Only load data when authenticated
     if (authState !== 'authenticated') {
-      console.log('[useUserBalances] Auth not ready, skipping data load. State:', authState);
       return;
     }
 
-    console.log('[useUserBalances] Auth ready, loading balances...', {
-      hasCache: !!globalUserBalancesCache,
-      isFirstFetch: globalUserBalancesIsFirstFetch
-    });
     // Load balances immediately - first fetch will bypass cache
     loadUserBalances();
   }, [authState, loadUserBalances]);
 
   // Register with DataRefreshCoordinator
   useEffect(() => {
-    console.log('[useUserBalances] Registering with DataRefreshCoordinator');
     const unregister = DataRefreshCoordinator.register(async () => {
-      console.log('[useUserBalances] Coordinator triggered refresh');
       await loadUserBalances({ silent: true }); // Silent - automatic background coordination
     });
 
     return () => {
-      console.log('[useUserBalances] Unregistering from DataRefreshCoordinator');
       unregister();
     };
   }, [loadUserBalances]);
@@ -270,7 +244,6 @@ export const useUserBalances = () => {
   // Listen for token refresh events (backwards compatibility)
   useEffect(() => {
     const handleTokenRefreshed = () => {
-      console.log('[useUserBalances] Token refreshed event received, reloading balances...');
       loadUserBalances({ silent: true }); // Silent - automatic background event
     };
 
@@ -288,7 +261,6 @@ export const useUserBalances = () => {
     const checkCacheExpiry = () => {
       const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
       if (timeSinceLastFetch > USER_BALANCES_CACHE_DURATION && !globalUserBalancesIsFirstFetch) {
-        console.log('[useUserBalances] Cache expired - triggering silent refresh');
         loadUserBalances({ silent: true }); // Silent - automatic cache expiry refresh
       }
     };

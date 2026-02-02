@@ -40,17 +40,13 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       return;
     }
 
-    console.log('GroupItem handlePress called for group:', group.name, group.id);
     if (onPress) {
-      console.log('Calling custom onPress handler');
       onPress();
     } else {
       // Navigate to group details screen
-      console.log('Navigating to group details:', `/tabs/groups/${group.id}`);
       try {
         router.push(`/tabs/groups/${group.id}` as any);
       } catch (error) {
-        console.error('Navigation error:', error);
       }
     }
   };
@@ -92,11 +88,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       color: '#FFFFFF',
       backgroundColor: '#007AFF', // Blue for invite
       onPress: () => {
-        console.log('=== GroupItem: Invite action pressed ===');
-        console.log('Group:', group.name, group.id);
-        console.log('onInviteUser function:', typeof onInviteUser);
         onInviteUser(group.id, group.name);
-        console.log('=== GroupItem: Invite action completed ===');
       },
     }] : []),
     ...(onEditGroup ? [{
@@ -107,11 +99,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       backgroundColor: '#FF9500', // Orange for edit
       onPress: () => {
         if (isCreator) {
-          console.log('=== GroupItem: Edit action pressed ===');
-          console.log('Group:', group.name, group.id);
-          console.log('onEditGroup function:', typeof onEditGroup);
           onEditGroup(group);
-          console.log('=== GroupItem: Edit action completed ===');
         } else {
           showPermissionAlert('edit');
         }
@@ -125,11 +113,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       backgroundColor: '#FF3B30', // Red for delete
       onPress: () => {
         if (isCreator) {
-          console.log('=== GroupItem: Delete action pressed ===');
-          console.log('Group:', group.name, group.id);
-          console.log('onDeleteGroup function:', typeof onDeleteGroup);
           onDeleteGroup(group.id, group.name);
-          console.log('=== GroupItem: Delete action completed ===');
         } else {
           showPermissionAlert('delete');
         }

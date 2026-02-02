@@ -22,15 +22,6 @@ export class GroupController {
     const { user } = request as AuthenticatedRequest;
     const organizationId = (request as any).organizationId;
     const groupData = createGroupSchema.parse(request.body);
-
-    console.log('📝 GroupController.createGroup:', {
-      userId: user.id,
-      userEmail: user.email,
-      organizationId,
-      hasOrgId: !!organizationId,
-      groupName: groupData.name
-    });
-
     const group = await GroupService.createGroup(groupData, user.id, organizationId);
 
     reply.status(201).send({

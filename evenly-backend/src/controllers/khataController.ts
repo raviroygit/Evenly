@@ -159,33 +159,20 @@ export class KhataController {
     
     // Check if request has multipart data
     const isMultipart = request.isMultipart();
-    console.log('Request isMultipart:', isMultipart);
-    console.log('Content-Type:', request.headers['content-type']);
-    
     if (isMultipart) {
       // Parse multipart form data
       try {
         const parts = request.parts();
         
         for await (const part of parts) {
-          console.log('Processing part:', { type: part.type, fieldname: part.fieldname });
-          
           if (part.type === 'file') {
             // Handle image upload
             try {
               const buffer = await part.toBuffer();
               const mimetype = part.mimetype;
-              console.log('Processing image:', {
-                fieldname: part.fieldname,
-                filename: part.filename,
-                mimetype: mimetype,
-                bufferSize: buffer.length,
-              });
               const result = await uploadSingleImage(buffer, 'khata', mimetype);
               imageUrl = result.url;
-              console.log('Image uploaded successfully:', imageUrl);
             } catch (uploadError) {
-              console.error('Error uploading image:', uploadError);
               return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
@@ -199,9 +186,6 @@ export class KhataController {
               const value = typeof part.value === 'string' 
                 ? part.value 
                 : await part.value;
-              
-              console.log('Read field:', fieldname, '=', value);
-              
               if (fieldname === 'customerId') data.customerId = value;
               else if (fieldname === 'type') data.type = value as 'give' | 'get';
               else if (fieldname === 'amount') data.amount = value;
@@ -209,19 +193,14 @@ export class KhataController {
               else if (fieldname === 'description') data.description = value;
               else if (fieldname === 'transactionDate') data.transactionDate = value;
             } catch (fieldError) {
-              console.error('Error reading form field:', fieldError, 'fieldname:', part.fieldname);
               // Continue with other fields
             }
           }
         }
-        
-        console.log('Parsed data after multipart:', JSON.stringify(data, null, 2));
-        
         if (imageUrl) {
           data.imageUrl = imageUrl;
         }
       } catch (multipartError) {
-        console.error('Error parsing multipart data:', multipartError);
         return reply.status(400).send({
           success: false,
           message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
@@ -240,16 +219,7 @@ export class KhataController {
       };
       Object.assign(data, body);
     }
-
-    console.log('Final data before validation:', JSON.stringify(data, null, 2));
-    
     if (!data.customerId || !data.type || !data.amount) {
-      console.error('Validation failed - missing required fields:', {
-        hasCustomerId: !!data.customerId,
-        hasType: !!data.type,
-        hasAmount: !!data.amount,
-        data: data,
-      });
       return reply.status(400).send({
         success: false,
         message: 'Customer ID, type, and amount are required',
@@ -291,16 +261,9 @@ export class KhataController {
             try {
               const buffer = await part.toBuffer();
               const mimetype = part.mimetype;
-              console.log('Processing image for update:', {
-                fieldname: part.fieldname,
-                filename: part.filename,
-                mimetype: mimetype,
-                bufferSize: buffer.length,
-              });
               const result = await uploadSingleImage(buffer, 'khata', mimetype);
               imageUrl = result.url;
             } catch (uploadError) {
-              console.error('Error uploading image:', uploadError);
               return reply.status(400).send({
                 success: false,
                 message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
@@ -321,7 +284,6 @@ export class KhataController {
               else if (fieldname === 'transactionDate') data.transactionDate = value;
               else if (fieldname === 'removeImage' && value === 'true') data.imageUrl = null;
             } catch (fieldError) {
-              console.error('Error reading form field:', fieldError);
             }
           }
         }
@@ -330,7 +292,6 @@ export class KhataController {
           data.imageUrl = imageUrl;
         }
       } catch (multipartError) {
-        console.error('Error parsing multipart data:', multipartError);
         return reply.status(400).send({
           success: false,
           message: 'Failed to parse form data: ' + (multipartError instanceof Error ? multipartError.message : 'Unknown error'),
@@ -408,11 +369,6 @@ export class KhataController {
     try {
       const buffer = await data.toBuffer();
       const mimetype = data.mimetype;
-      console.log('Direct image upload:', {
-        filename: data.filename,
-        mimetype: mimetype,
-        bufferSize: buffer.length,
-      });
       const result = await uploadSingleImage(buffer, 'khata', mimetype);
 
       reply.send({
@@ -424,7 +380,6 @@ export class KhataController {
         message: 'Image uploaded successfully',
       });
     } catch (uploadError) {
-      console.error('Error in direct upload:', uploadError);
       return reply.status(400).send({
         success: false,
         message: 'Failed to upload image: ' + (uploadError instanceof Error ? uploadError.message : 'Unknown error'),
@@ -462,12 +417,6 @@ export class KhataController {
       const publicIdWithExtension = urlParts.slice(uploadIndex + 2).join('/');
       // Remove file extension
       const publicId = publicIdWithExtension.substring(0, publicIdWithExtension.lastIndexOf('.'));
-
-      console.log('Deleting transaction image from Cloudinary:', {
-        imageUrl,
-        publicId,
-      });
-
       const deleted = await deleteImage(publicId);
 
       if (deleted) {
@@ -482,7 +431,6 @@ export class KhataController {
         });
       }
     } catch (error) {
-      console.error('Error deleting transaction image:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to delete image',

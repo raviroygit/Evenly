@@ -46,8 +46,6 @@ export const sendSupportEmailController = async (req: FastifyRequest, res: Fasti
       },
     });
   } catch (error: any) {
-    console.error('Error in sendSupportEmailController:', error);
-    
     res.status(500).send({
       success: false,
       message: 'Failed to send support request',
@@ -70,8 +68,6 @@ export const supportHealthCheck = async (req: FastifyRequest, res: FastifyReply)
       version: '1.0.0',
     });
   } catch (error: any) {
-    console.error('Error in supportHealthCheck:', error);
-    
     res.status(500).send({
       success: false,
       message: 'Support service health check failed',

@@ -70,10 +70,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Auto-reset when user logs out (watch BOTH user and authState for immediate reset)
   useEffect(() => {
     if (!user || authState === 'unauthenticated' || authState === 'initializing') {
-      console.log('[ActivitiesContext] User logged out or auth initializing - resetting activities', {
-        user: !!user,
-        authState
-      });
       setActivities([]);
       setTotalCount(0);
       setLoading(true);
@@ -90,7 +86,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isFirstGroupsFetchAfterLogin.current = true;
       isFirstExpensesFetchAfterLogin.current = true;
       lastGeneratedForUserId.current = null;
-      console.log('[ActivitiesContext] ✅ Activities auto-reset on logout');
     }
   }, [user, authState]);
 
@@ -107,14 +102,11 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setGroupsLoading(true);
         const cacheTTL = isFirstGroupsFetchAfterLogin.current ? 0 : 30000;
         if (isFirstGroupsFetchAfterLogin.current) {
-          console.log('[ActivitiesContext] 🔄 First groups fetch - bypassing cache');
           isFirstGroupsFetchAfterLogin.current = false;
         }
         const groupsData = await EvenlyBackendService.getGroups({ cacheTTLMs: cacheTTL });
-        console.log('[ActivitiesContext] ✅ Groups loaded:', { count: groupsData.length });
         setGroups(groupsData);
       } catch (error) {
-        console.error('[ActivitiesContext] Error fetching groups:', error);
       } finally {
         setGroupsLoading(false);
       }
@@ -140,7 +132,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setExpensesLoading(true);
         const cacheTTL = isFirstExpensesFetchAfterLogin.current ? 0 : 30000;
         if (isFirstExpensesFetchAfterLogin.current) {
-          console.log('[ActivitiesContext] 🔄 First expenses fetch - bypassing cache');
           isFirstExpensesFetchAfterLogin.current = false;
         }
 
@@ -149,10 +140,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         );
         const allExpensesResults = await Promise.all(allExpensesPromises);
         const allExpenses = allExpensesResults.flatMap(result => result.expenses);
-        console.log('[ActivitiesContext] ✅ Expenses loaded:', { count: allExpenses.length });
         setExpenses(allExpenses);
       } catch (error) {
-        console.error('[ActivitiesContext] Error fetching expenses:', error);
       } finally {
         setExpensesLoading(false);
       }
@@ -176,12 +165,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         let cacheTTL: number;
         if (isFirstKhataFetchAfterLogin.current) {
           cacheTTL = 0; // Bypass cache - force fresh fetch
-          console.log('[ActivitiesContext] 🔄 First khata fetch after login - bypassing cache for fresh data');
           isFirstKhataFetchAfterLogin.current = false;
         } else {
           // Use a reasonable cache TTL for subsequent fetches (30 seconds)
           cacheTTL = 30000;
-          console.log('[ActivitiesContext] Loading khata with cache TTL:', cacheTTL);
         }
 
         const transactions = await EvenlyBackendService.getKhataRecentTransactions({
@@ -189,14 +176,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           cacheTTLMs: cacheTTL
         });
 
-        console.log('[ActivitiesContext] ✅ Khata transactions loaded:', {
-          count: transactions.length,
-          transactions: transactions.map((t: any) => ({ id: t.id, description: t.description }))
-        });
 
         setKhataTransactions(transactions);
       } catch (error) {
-        console.error('[ActivitiesContext] Error fetching khata:', error);
       } finally {
         setKhataLoading(false);
       }
@@ -206,13 +188,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const generateActivities = useCallback(() => {
     try {
-      console.log('[ActivitiesContext] 🔄 generateActivities called with:', {
-        groupsCount: groups.length,
-        expensesCount: expenses.length,
-        khataCount: khataTransactions.length,
-        groups: groups.map(g => ({ id: g.id, name: g.name })),
-        expenses: expenses.map(e => ({ id: e.id, title: e.title || e.description })),
-      });
 
       const generatedActivities: ActivityItem[] = [];
 
@@ -283,9 +258,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setTotalCount(generatedActivities.length);
       setHasInitiallyLoaded(true);
 
-      console.log('[ActivitiesContext] Activities generated:', generatedActivities.length);
     } catch (error) {
-      console.error('[ActivitiesContext] Error generating activities:', error);
     } finally {
       setLoading(false);
     }
@@ -295,23 +268,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     // Prevent generating activities if not authenticated
     if (!user || authState !== 'authenticated') {
-      console.log('[ActivitiesContext] Skipping activity generation - not authenticated', {
-        user: !!user,
-        authState
-      });
       return;
     }
 
     // Log current loading states for debugging
-    console.log('[ActivitiesContext] Data loading status:', {
-      groupsLoading,
-      expensesLoading,
-      khataLoading,
-      groupsCount: groups.length,
-      expensesCount: expenses.length,
-      khataCount: khataTransactions.length,
-      userId: user.id
-    });
 
     // Wait for ALL data sources to finish loading before generating
     // This prevents using stale data from previous user during the loading phase
@@ -321,15 +281,10 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const currentUserId = user.id;
 
       if (lastGeneratedForUserId.current !== currentUserId) {
-        console.log('[ActivitiesContext] ✅ All data loaded for NEW user - generating fresh activities', {
-          newUserId: currentUserId,
-          previousUserId: lastGeneratedForUserId.current
-        });
         lastGeneratedForUserId.current = currentUserId;
         generateActivities();
       } else {
         // Data changed for same user - regenerate
-        console.log('[ActivitiesContext] ✅ Data changed for same user - regenerating activities');
         generateActivities();
       }
     }
@@ -338,7 +293,6 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Listen for events to regenerate
   useEffect(() => {
     const handleRefreshNeeded = () => {
-      console.log('[ActivitiesContext] Refresh event received');
       generateActivities();
     };
 
@@ -359,24 +313,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const refresh = useCallback(async () => {
     if (!user || authState !== 'authenticated') {
-      console.log('[ActivitiesContext] Cannot refresh - not authenticated', {
-        user: !!user,
-        authState
-      });
       return;
     }
 
-    console.log('[ActivitiesContext] Manual refresh triggered - bypassing cache');
     try {
       // Always bypass cache on manual refresh
       const freshKhata = await EvenlyBackendService.getKhataRecentTransactions({ limit: 10, cacheTTLMs: 0 });
-      console.log('[ActivitiesContext] ✅ Fresh khata loaded:', {
-        count: freshKhata.length
-      });
       setKhataTransactions(freshKhata);
       generateActivities();
     } catch (error) {
-      console.error('[ActivitiesContext] Error refreshing:', error);
     }
   }, [user, authState, generateActivities]);
 
@@ -384,14 +329,12 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
    * Reset all activities state - used on logout
    */
   const reset = useCallback(() => {
-    console.log('[ActivitiesContext] Resetting all activities...');
     setActivities([]);
     setTotalCount(0);
     setLoading(true);
     setHasInitiallyLoaded(false);
     setKhataTransactions([]);
     setKhataLoading(true);
-    console.log('[ActivitiesContext] ✅ Activities reset');
   }, []);
 
   const value = {

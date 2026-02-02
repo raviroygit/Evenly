@@ -41,7 +41,6 @@ export class ChatService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching agent info:', error);
       throw error;
     }
   }
@@ -88,7 +87,6 @@ export class ChatService {
               chunks.push(parsed.chunk);
             }
           } catch (parseError) {
-            console.warn('Failed to parse SSE line:', data, parseError);
           }
         }
       }
@@ -118,7 +116,6 @@ export class ChatService {
       
       return mockStream;
     } catch (error) {
-      console.error('Error sending message:', error);
       throw error;
     }
   }
@@ -153,7 +150,6 @@ export class ChatService {
                 onChunk(parsed);
               }
             } catch (parseError) {
-              console.warn('Failed to parse chunk:', parseError);
             }
           }
         }

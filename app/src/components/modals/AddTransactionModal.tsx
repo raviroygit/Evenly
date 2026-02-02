@@ -107,20 +107,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const pixels = width * height;
     const estimatedSizeMB = (pixels * 3) / (1024 * 1024); // RGB, rough estimate
 
-    console.log('[Image Quality] Estimating quality for', width, 'x', height, '(~', estimatedSizeMB.toFixed(1), 'MB)');
 
     // Adaptive quality based on estimated size
     if (estimatedSizeMB > 8) {
-      console.log('[Image Quality] Large image - using quality 0.5');
       return 0.5; // Aggressive compression for very large images
     } else if (estimatedSizeMB > 4) {
-      console.log('[Image Quality] Medium-large image - using quality 0.6');
       return 0.6; // Moderate compression
     } else if (estimatedSizeMB > 2) {
-      console.log('[Image Quality] Medium image - using quality 0.7');
       return 0.7; // Light compression
     } else {
-      console.log('[Image Quality] Small image - using quality 0.8');
       return 0.8; // Minimal compression
     }
   };
@@ -130,16 +125,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     try {
       const fileInfo = await FileSystem.getInfoAsync(uri);
 
-      console.log('[Image Validation] File info:', fileInfo);
 
       if (!fileInfo.exists) {
-        console.warn('[Image Validation] File does not exist');
         return { valid: false, sizeMB: 0 };
       }
 
       // File exists but size might be 0 or undefined for some URIs (e.g., content:// URIs on Android)
       if (!fileInfo.size || fileInfo.size === 0) {
-        console.warn('[Image Validation] File size unavailable, allowing upload (compressed by ImagePicker)');
         // Since we're using ImagePicker with quality: 0.7, the image is already compressed
         // Allow upload even if we can't determine exact size
         return { valid: true, sizeMB: 0 };
@@ -148,18 +140,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const sizeMB = fileInfo.size / (1024 * 1024);
       const isValid = sizeMB <= MAX_FILE_SIZE_MB;
 
-      console.log('[Image Validation]', {
-        sizeMB: sizeMB.toFixed(2),
-        maxSizeMB: MAX_FILE_SIZE_MB,
-        valid: isValid
-      });
 
       return { valid: isValid, sizeMB };
     } catch (error) {
-      console.error('[Image Validation] Error:', error);
       // Allow upload if validation fails (graceful fallback)
       // Image is already compressed by ImagePicker with quality: 0.7
-      console.warn('[Image Validation] Validation failed, allowing upload (image already compressed)');
       return { valid: true, sizeMB: 0 };
     }
   };
@@ -225,15 +210,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         const width = result.assets[0].width;
         const height = result.assets[0].height;
 
-        console.log('[Image Selection] Selected image:', width, 'x', height);
 
         // Check file size
         const { valid, sizeMB } = await validateImageSize(selectedUri);
 
         if (sizeMB > 0) {
-          console.log('[Image Selection] Compressed image size:', sizeMB.toFixed(2), 'MB');
         } else {
-          console.log('[Image Selection] Image size unknown (already compressed by ImagePicker)');
         }
 
         if (!valid) {
@@ -250,13 +232,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
         setImageUri(selectedUri);
         if (sizeMB > 0) {
-          console.log('[Image Selection] Image ready for upload:', sizeMB.toFixed(2), 'MB');
         } else {
-          console.log('[Image Selection] Image ready for upload (compressed by ImagePicker)');
         }
       }
     } catch (error) {
-      console.error('[Image Selection] Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -277,15 +256,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         const width = result.assets[0].width;
         const height = result.assets[0].height;
 
-        console.log('[Camera] Captured photo:', width, 'x', height);
 
         // Check file size
         const { valid, sizeMB } = await validateImageSize(photoUri);
 
         if (sizeMB > 0) {
-          console.log('[Camera] Compressed photo size:', sizeMB.toFixed(2), 'MB');
         } else {
-          console.log('[Camera] Photo size unknown (already compressed by ImagePicker)');
         }
 
         if (!valid) {
@@ -302,13 +278,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
         setImageUri(photoUri);
         if (sizeMB > 0) {
-          console.log('[Camera] Photo ready for upload:', sizeMB.toFixed(2), 'MB');
         } else {
-          console.log('[Camera] Photo ready for upload (compressed by ImagePicker)');
         }
       }
     } catch (error) {
-      console.error('[Camera] Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
@@ -379,13 +352,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-          console.log('[Transaction Update] Uploading new image:', {
-            transactionId: editTransaction.id,
-            filename,
-            type,
-            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown',
-            deletingOldImage: shouldDeleteOldImage
-          });
 
           formData.append('image', {
             uri: imageUri,
@@ -407,7 +373,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           shouldDeleteOldImage ? oldImageUrl : undefined
         );
 
-        console.log('[Transaction Update] Success');
       } else {
         // Create new transaction
         formData.append('customerId', customerId);
@@ -429,11 +394,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-          console.log('[Transaction Create] Uploading image:', {
-            filename,
-            type,
-            sizeMB: fileInfo.size ? (fileInfo.size / (1024 * 1024)).toFixed(2) : 'unknown'
-          });
 
           formData.append('image', {
             uri: imageUri,
@@ -447,7 +407,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           setUploadProgress(progress);
         });
 
-        console.log('[Transaction Create] Success');
       }
 
       // Reset form
@@ -464,14 +423,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       await onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('[Transaction Error]', {
-        type: editTransaction ? 'update' : 'create',
-        hasImage: !!imageUri,
-        error: error.message,
-        code: error.code,
-        status: error.response?.status,
-        responseData: error.response?.data
-      });
 
       // Determine error type and show specific message
       let errorTitle = 'Error';
@@ -841,14 +792,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 16,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  form: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    gap: 20,
   },
   inputContainer: {
     marginBottom: 20,

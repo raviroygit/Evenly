@@ -26,7 +26,6 @@ export const useAllExpenses = () => {
   useEffect(() => {
     // Clear data when user logs out
     if (authState === 'unauthenticated') {
-      console.log('[useAllExpenses] User logged out - clearing expenses');
       setExpenses([]);
       setLoading(true);
       setError(null);
@@ -39,22 +38,14 @@ export const useAllExpenses = () => {
 
     // Skip during initialization phase - wait for authenticated state
     if (authState === 'initializing') {
-      console.log('[useAllExpenses] Auth initializing - waiting...');
       return;
     }
 
     // Only load data when authenticated
     if (authState !== 'authenticated') {
-      console.log('[useAllExpenses] Auth not ready, skipping data load. State:', authState);
       return;
     }
 
-    console.log('[useAllExpenses] Auth ready, loading expenses...', {
-      hasCache: globalExpensesCache.length > 0,
-      isFirstFetch: globalExpensesIsFirstFetch,
-      groupsCount: groups.length,
-      groupsLoading
-    });
     if (groupsLoading) {
       setLoading(true);
     } else if (groups.length > 0) {
@@ -68,14 +59,11 @@ export const useAllExpenses = () => {
 
   // Register with DataRefreshCoordinator
   useEffect(() => {
-    console.log('[useAllExpenses] Registering with DataRefreshCoordinator');
     const unregister = DataRefreshCoordinator.register(async () => {
-      console.log('[useAllExpenses] Coordinator triggered refresh');
       await loadAllExpenses({ silent: true }); // Silent - automatic background coordination
     });
 
     return () => {
-      console.log('[useAllExpenses] Unregistering from DataRefreshCoordinator');
       unregister();
     };
   }, [loadAllExpenses]);
@@ -83,13 +71,8 @@ export const useAllExpenses = () => {
   // Listen for expense refresh events from other screens
   useEffect(() => {
     const handleExpensesRefreshNeeded = async () => {
-      console.log('[useAllExpenses] Expenses refresh needed event received, refreshing...', {
-        groupsCount: groups.length,
-        groupsLoading
-      });
       // Wait for groups to be loaded if they're still loading
       if (groupsLoading) {
-        console.log('[useAllExpenses] Groups are loading, waiting...');
         let attempts = 0;
         while (groupsLoading && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -100,9 +83,6 @@ export const useAllExpenses = () => {
       // The loadAllExpenses function will handle empty groups gracefully
       // Show loader for manual user actions (create/update/delete)
       await loadAllExpenses({ silent: false });
-      console.log('[useAllExpenses] Expenses refresh completed', {
-        expensesCount: expenses.length
-      });
     };
 
     groupEvents.on(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleExpensesRefreshNeeded);
@@ -122,7 +102,6 @@ export const useAllExpenses = () => {
   // Token refresh is automatic, so keep it silent
   useEffect(() => {
     const handleTokenRefreshed = () => {
-      console.log('[useAllExpenses] Token refreshed event received, reloading expenses...');
       loadAllExpenses({ silent: true }); // Silent - automatic background event
     };
 
@@ -140,7 +119,6 @@ export const useAllExpenses = () => {
 
       // If another instance is already loading, wait and use cached data
       if (globalExpensesIsLoading && !globalExpensesIsFirstFetch) {
-        console.log('[useAllExpenses] Another instance is loading - waiting for cache...');
 
         // Wait for the other instance to finish loading (max 5 seconds)
         let attempts = 0;
@@ -151,10 +129,8 @@ export const useAllExpenses = () => {
 
         // Use the cached data that was just loaded
         if (globalExpensesCache.length > 0) {
-          console.log('[useAllExpenses] Using freshly loaded cache');
           setExpenses(globalExpensesCache);
         } else {
-          console.log('[useAllExpenses] Cache still empty after wait - force loading');
           // Cache is still empty, don't skip - continue to load below
         }
         setLoading(false);
@@ -175,13 +151,8 @@ export const useAllExpenses = () => {
       // Fetch fresh groups to avoid closure issue
       const currentGroups = await EvenlyBackendService.getGroups({ cacheTTLMs: 0 });
 
-      console.log('[useAllExpenses] loadAllExpenses called', {
-        groupsCount: currentGroups.length,
-        silent,
-      });
 
       if (currentGroups.length === 0) {
-        console.log('[useAllExpenses] No groups, setting empty expenses');
         setExpenses([]);
         setLoading(false);
         return;
@@ -192,7 +163,6 @@ export const useAllExpenses = () => {
       let cacheTTL: number;
       if (globalExpensesIsFirstFetch) {
         cacheTTL = 0; // Bypass cache - force fresh fetch
-        console.log('[useAllExpenses] 🔄 First fetch - bypassing cache for fresh data');
         globalExpensesIsFirstFetch = false;
         globalExpensesLastFetchTime = Date.now();
       } else {
@@ -200,12 +170,10 @@ export const useAllExpenses = () => {
         const timeSinceLastFetch = Date.now() - globalExpensesLastFetchTime;
         if (timeSinceLastFetch > EXPENSES_CACHE_DURATION) {
           cacheTTL = 0; // Cache expired - fetch fresh data silently
-          console.log('[useAllExpenses] 🔄 Cache expired - silent refresh');
           globalExpensesLastFetchTime = Date.now();
         } else {
           // Use cache for subsequent fetches within 1 minute
           cacheTTL = EXPENSES_CACHE_DURATION - timeSinceLastFetch;
-          console.log('[useAllExpenses] Loading all expenses with cache TTL:', cacheTTL);
         }
       }
 
@@ -219,10 +187,6 @@ export const useAllExpenses = () => {
       // Flatten all expenses into a single array
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
 
-      console.log('[useAllExpenses] ✅ Expenses loaded', {
-        totalExpenses: allExpenses.length,
-        expenses: allExpenses.map(e => ({ id: e.id, title: e.title || e.description }))
-      });
 
       // Update global cache
       globalExpensesCache = allExpenses;
@@ -232,11 +196,9 @@ export const useAllExpenses = () => {
     } catch (err: any) {
       // If in offline mode (session expired), don't show error to user
       if (err._offlineMode) {
-        console.warn('[useAllExpenses] ⚠️ Offline mode - using cached data');
         // Don't set error message - user is in offline mode
       } else {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load expenses';
-        console.error('[useAllExpenses] Error loading expenses:', err);
         setError(errorMessage);
       }
     } finally {
@@ -316,7 +278,6 @@ export const useAllExpenses = () => {
     const checkCacheExpiry = () => {
       const timeSinceLastFetch = Date.now() - globalExpensesLastFetchTime;
       if (timeSinceLastFetch > EXPENSES_CACHE_DURATION && !globalExpensesIsFirstFetch) {
-        console.log('[useAllExpenses] Cache expired - triggering silent refresh');
         loadAllExpenses({ silent: true }); // Silent - automatic cache expiry refresh
       }
     };

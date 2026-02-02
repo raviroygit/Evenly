@@ -20,7 +20,7 @@ export const LiquidGlassCardExamples = () => {
       {/* Card with press handler */}
       <LiquidGlassCard 
         padding={16} 
-        onPress={() => console.log('Card pressed!')}
+        onPress={() => {}}
         borderRadius={12}
       >
         <Text>Pressable Glass Card</Text>

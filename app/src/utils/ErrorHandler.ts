@@ -140,7 +140,6 @@ export class ErrorHandler {
 
     // Don't show alert if error should be handled silently (e.g., 401 auth errors)
     if (!userFriendlyError) {
-      console.log('[ErrorHandler] Skipping error alert - handled silently');
       return;
     }
 
@@ -162,7 +161,6 @@ export class ErrorHandler {
 
     // Don't show alert if error should be handled silently (e.g., 401 auth errors)
     if (!userFriendlyError) {
-      console.log('[ErrorHandler] Skipping error alert - handled silently');
       return;
     }
 
@@ -203,7 +201,6 @@ export class ErrorHandler {
       } : null,
     };
 
-    console.error(`[ErrorHandler] ${context || 'Error'}:`, errorInfo);
     
     // In production, you might want to send this to a logging service
     // this.sendToLoggingService(errorInfo);

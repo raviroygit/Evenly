@@ -48,7 +48,6 @@ export const LoginScreen: React.FC = () => {
         setErrors({ email: result.message });
       }
     } catch (error: any) {
-      console.error('Request OTP error:', error);
       let errorMessage = 'Failed to send OTP. Please try again.';
       
       if (error.message.includes('User does not exist')) {
@@ -88,7 +87,6 @@ export const LoginScreen: React.FC = () => {
         setErrors({ otp: result.message });
       }
     } catch (error: any) {
-      console.error('Login error:', error);
       let errorMessage = 'Login failed. Please try again.';
 
       if (error.message.includes('400') || error.message.includes('Invalid')) {
@@ -122,7 +120,6 @@ export const LoginScreen: React.FC = () => {
         setErrors({ otp: result.message });
       }
     } catch (error: any) {
-      console.error('Request new OTP error:', error);
       setErrors({ otp: error.message || 'Failed to send new OTP. Please try again.' });
     } finally {
       setIsLoading(false);

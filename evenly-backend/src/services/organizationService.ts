@@ -27,8 +27,6 @@ export class OrganizationService {
     ssoToken: string
   ): Promise<AuthServiceOrganization | null> {
     try {
-      console.log('🔍 OrganizationService: Fetching org from auth service:', orgId);
-
       // Remove '/auth' from URL since organizations endpoint is at /api/v1/organizations not /api/v1/auth/organizations
       const baseUrl = this.authServiceUrl.replace(/\/auth$/, '');
       const response = await axios.get(
@@ -43,7 +41,6 @@ export class OrganizationService {
       );
 
       if (response.status === 200 && response.data.success) {
-        console.log('✅ OrganizationService: Organization fetched successfully');
         return {
           _id: response.data.organization.id || response.data.organization._id,
           name: response.data.organization.name,
@@ -59,7 +56,6 @@ export class OrganizationService {
 
       return null;
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to fetch org:', error.message);
       return null;
     }
   }
@@ -71,8 +67,6 @@ export class OrganizationService {
     ssoToken: string
   ): Promise<AuthServiceOrganization[]> {
     try {
-      console.log('🔍 OrganizationService: Fetching user orgs from auth service');
-
       const response = await axios.get(
         `${this.authServiceUrl}/organizations`,
         {
@@ -85,7 +79,6 @@ export class OrganizationService {
       );
 
       if (response.status === 200 && response.data.success) {
-        console.log('✅ OrganizationService: Organizations fetched successfully');
         return response.data.organizations.map((org: any) => ({
           _id: org.id || org._id,
           name: org.name,
@@ -101,7 +94,6 @@ export class OrganizationService {
 
       return [];
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to fetch orgs:', error.message);
       return [];
     }
   }
@@ -123,7 +115,6 @@ export class OrganizationService {
         .limit(1);
 
       if (existingOrgs.length > 0) {
-        console.log('✅ OrganizationService: Organization already synced');
         return existingOrgs[0].id;
       }
 
@@ -134,7 +125,6 @@ export class OrganizationService {
       );
 
       if (!authOrg) {
-        console.error('❌ OrganizationService: Failed to fetch org from auth service');
         return null;
       }
 
@@ -152,9 +142,6 @@ export class OrganizationService {
           createdBy: userId,
         })
         .returning();
-
-      console.log('✅ OrganizationService: Organization synced to local DB:', newOrg.id);
-
       // Create local membership record if role is provided
       if (authOrg.role) {
         await db.insert(organizationMembers).values({
@@ -163,13 +150,10 @@ export class OrganizationService {
           role: authOrg.role as 'owner' | 'admin' | 'member' | 'guest',
           status: 'active',
         }).onConflictDoNothing();
-
-        console.log('✅ OrganizationService: Membership synced to local DB');
       }
 
       return newOrg.id;
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to sync organization:', error.message);
       return null;
     }
   }
@@ -196,7 +180,6 @@ export class OrganizationService {
         .limit(1);
 
       if (existingOrgs.length > 0) {
-        console.log('✅ OrganizationService: Organization already exists in local DB');
         // Make sure membership exists
         if (orgData.role) {
           await db.insert(organizationMembers).values({
@@ -223,9 +206,6 @@ export class OrganizationService {
           createdBy: userId,
         })
         .returning();
-
-      console.log('✅ OrganizationService: Organization created in local DB:', newOrg.id);
-
       // Create local membership record
       if (orgData.role) {
         await db.insert(organizationMembers).values({
@@ -234,13 +214,10 @@ export class OrganizationService {
           role: orgData.role as 'owner' | 'admin' | 'member' | 'guest',
           status: 'active',
         }).onConflictDoNothing();
-
-        console.log('✅ OrganizationService: Membership created in local DB');
       }
 
       return newOrg.id;
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to sync organization from data:', error.message);
       return null;
     }
   }
@@ -260,7 +237,6 @@ export class OrganizationService {
 
       return orgs.length > 0 ? orgs[0] : null;
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to get organization:', error.message);
       return null;
     }
   }
@@ -287,7 +263,6 @@ export class OrganizationService {
 
       return memberships.length > 0 ? memberships[0] : null;
     } catch (error: any) {
-      console.error('❌ OrganizationService: Failed to get membership:', error.message);
       return null;
     }
   }

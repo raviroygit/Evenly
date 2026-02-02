@@ -73,18 +73,14 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
           if (!user) return true;
           const isCurrentUser = m.id === user.id || m.userId === user.id;
           if (isCurrentUser) {
-            console.log('Filtering out current user:', m.name, m.email);
           }
           return !isCurrentUser;
         });
 
-      console.log('Current user ID:', user?.id);
-      console.log('Total members after filtering:', allMembers.length);
 
       setMembers(allMembers);
       setSimplifiedDebts(debtsData);
     } catch (error) {
-      console.error('Error loading group data:', error);
     } finally {
       setLoading(false);
     }
@@ -108,15 +104,11 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
     // Use userId (actual user ID) instead of id (member ID) for matching
     const userIdToMatch = member.userId || member.id;
 
-    console.log('Getting balance for:', member.name, 'UserID:', userIdToMatch);
-    console.log('Total debts to check:', simplifiedDebts.length);
 
     simplifiedDebts.forEach((debt: any) => {
-      console.log('Debt:', debt.fromUserId, '->', debt.toUserId, 'Amount:', debt.amount);
 
       // If this member owes money (fromUserId matches)
       if (debt.fromUserId === userIdToMatch) {
-        console.log('  -> Member owes', debt.amount, 'to', debt.toUser?.name);
         debts.push({
           owesTo: debt.toUser?.name || 'Unknown',
           amount: debt.amount?.toString() || '0',
@@ -124,7 +116,6 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
       }
       // If this member is owed money (toUserId matches)
       if (debt.toUserId === userIdToMatch) {
-        console.log('  -> Member is owed', debt.amount, 'from', debt.fromUser?.name);
         credits.push({
           owesTo: debt.fromUser?.name || 'Unknown',
           amount: debt.amount?.toString() || '0',
@@ -132,7 +123,6 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
       }
     });
 
-    console.log('Final result - Debts:', debts.length, 'Credits:', credits.length);
     return { debts, credits };
   };
 

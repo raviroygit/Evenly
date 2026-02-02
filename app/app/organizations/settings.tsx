@@ -51,7 +51,6 @@ export default function OrganizationSettings() {
       const orgMembers = await authService.getOrganizationMembers(currentOrganization.id);
       setMembers(orgMembers);
     } catch (error) {
-      console.error('Failed to load members:', error);
       Alert.alert('Error', 'Failed to load organization members');
     } finally {
       setLoading(false);
@@ -85,7 +84,6 @@ export default function OrganizationSettings() {
       setInviteModalVisible(false);
       await loadMembers();
     } catch (error: any) {
-      console.error('Failed to invite member:', error);
       Alert.alert('Error', error.message || 'Failed to send invitation');
     } finally {
       setInviting(false);

@@ -40,7 +40,6 @@ export class SilentTokenRefresh {
       // Return true if token expires in less than threshold minutes
       return minutesUntilExpiry < thresholdMinutes;
     } catch (error) {
-      console.warn('[SilentRefresh] Failed to decode token, assuming expired:', error);
       // If we can't decode, assume token needs refresh
       return true;
     }
@@ -73,7 +72,6 @@ export class SilentTokenRefresh {
         needsUrgentRefresh: minutesUntilExpiry < 5,   // Less than 5 minutes
       };
     } catch (error) {
-      console.warn('[SilentRefresh] Failed to decode token:', error);
       // If we can't decode, assume token is expired
       return {
         isExpired: true,
@@ -91,9 +89,7 @@ export class SilentTokenRefresh {
   static async saveRefreshTimestamp(): Promise<void> {
     try {
       await AsyncStorage.setItem('evenly_last_refresh', Date.now().toString());
-      console.log('[SilentRefresh] Saved refresh timestamp');
     } catch (error) {
-      console.error('[SilentRefresh] Failed to save refresh timestamp:', error);
     }
   }
 
@@ -106,7 +102,6 @@ export class SilentTokenRefresh {
       const timestamp = await AsyncStorage.getItem('evenly_last_refresh');
       return timestamp ? parseInt(timestamp, 10) : null;
     } catch (error) {
-      console.error('[SilentRefresh] Failed to get refresh timestamp:', error);
       return null;
     }
   }
@@ -121,7 +116,6 @@ export class SilentTokenRefresh {
   static async refresh(): Promise<boolean> {
     // If already refreshing, queue this request
     if (isRefreshing) {
-      console.log('[SilentRefresh] Refresh already in progress, queueing request...');
 
       return new Promise((resolve, reject) => {
         pendingRequests.push({
@@ -138,12 +132,10 @@ export class SilentTokenRefresh {
       let newAccessToken: string | null = null;
 
       try {
-        console.log('[SilentRefresh] Starting silent token refresh...');
 
         const authData = await AuthStorage.getAuthData();
 
         if (!authData?.refreshToken) {
-          console.log('[SilentRefresh] No refresh token available');
           throw new Error('No refresh token available');
         }
 
@@ -166,9 +158,6 @@ export class SilentTokenRefresh {
 
         if (response.data.accessToken && response.data.refreshToken) {
           const duration = Date.now() - startTime;
-          console.log(`[SilentRefresh] ✅ Mobile session refreshed successfully in ${duration}ms`);
-          console.log(`[SilentRefresh] ✅ Session extended to 90 days`);
-          console.log(`[SilentRefresh] ✅ New refresh token received and will be saved`);
 
           newAccessToken = response.data.accessToken;
 
@@ -184,29 +173,23 @@ export class SilentTokenRefresh {
           await this.saveRefreshTimestamp();
 
           // Resolve all pending requests with the new token
-          console.log(`[SilentRefresh] Resolving ${pendingRequests.length} queued requests`);
           pendingRequests.forEach(req => req.resolve(newAccessToken));
           pendingRequests = [];
 
           resolve(true);
         } else {
-          console.log('[SilentRefresh] ❌ Refresh failed - invalid response');
           throw new Error('Invalid refresh response');
         }
       } catch (error: any) {
         const duration = Date.now() - startTime;
-        console.error(`[SilentRefresh] ❌ Refresh failed after ${duration}ms:`, error.message);
 
         // NEVER clear auth data - keep user logged in with cached data
         // Even if refresh token is invalid/expired, user should stay logged in
         if (error.response?.status === 401) {
-          console.warn('[SilentRefresh] ⚠️ Refresh token invalid - keeping user logged in with cached data');
-          console.warn('[SilentRefresh] ⚠️ User can continue using app in offline mode');
           // Do NOT clear auth data - user stays logged in
         }
 
         // Reject all pending requests
-        console.log(`[SilentRefresh] Rejecting ${pendingRequests.length} queued requests`);
         pendingRequests.forEach(req => req.reject(error));
         pendingRequests = [];
 
@@ -230,7 +213,6 @@ export class SilentTokenRefresh {
       const authData = await AuthStorage.getAuthData();
 
       if (!authData?.accessToken || !authData?.refreshToken) {
-        console.log('[SilentRefresh] No auth data, skipping refresh check');
         return;
       }
 
@@ -243,11 +225,7 @@ export class SilentTokenRefresh {
           const currentTime = Date.now();
           const minutesUntilExpiry = Math.floor((expiryTime - currentTime) / 60000);
 
-          console.log(
-            `[SilentRefresh] Token expires in ${minutesUntilExpiry} minutes - refreshing now`
-          );
         } catch {
-          console.log('[SilentRefresh] Token expired or invalid - refreshing now');
         }
 
         await this.refresh();
@@ -259,15 +237,10 @@ export class SilentTokenRefresh {
           const currentTime = Date.now();
           const minutesUntilExpiry = Math.floor((expiryTime - currentTime) / 60000);
 
-          console.log(
-            `[SilentRefresh] Token OK - expires in ${minutesUntilExpiry} minutes`
-          );
         } catch {
-          console.log('[SilentRefresh] Token status unknown');
         }
       }
     } catch (error: any) {
-      console.log('[SilentRefresh] Check failed:', error.message);
       // Don't throw - just log the error
     }
   }
@@ -284,7 +257,6 @@ export class SilentTokenRefresh {
    * Used when refresh fails completely
    */
   static async silentLogout(): Promise<void> {
-    console.log('[SilentRefresh] Performing silent logout');
     await AuthStorage.clearAuthData();
     // AuthContext will detect this and redirect to login automatically
   }

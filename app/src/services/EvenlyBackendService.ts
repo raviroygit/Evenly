@@ -145,28 +145,18 @@ export class EvenlyBackendService {
       });
       
       return response.data.status === 'ok';
-    } catch (error) {
-      console.error('Backend connection test failed:', error);
+    } catch {
       return false;
     }
   }
 
   // User API
   static async updateCurrentUser(update: { name?: string; email?: string; phoneNumber?: string }): Promise<ApiResponse<any>> {
-    console.log('[EvenlyBackendService] ========== UPDATE USER REQUEST ==========');
-    console.log('[EvenlyBackendService] updateCurrentUser called with:', JSON.stringify(update, null, 2));
-    console.log('[EvenlyBackendService] Update object type:', typeof update);
-    console.log('[EvenlyBackendService] Update keys:', Object.keys(update));
-    console.log('[EvenlyBackendService] Update values:', Object.values(update));
-
     const response = await this.makeRequest<any>('/auth/me', {
       method: 'PUT',
       body: JSON.stringify(update),
       invalidatePrefixes: ['/auth/me', '/balances', '/groups', '/expenses']
     });
-
-    console.log('[EvenlyBackendService] ========== UPDATE USER RESPONSE ==========');
-    console.log('[EvenlyBackendService] Response:', JSON.stringify(response, null, 2));
     return response;
   }
 
@@ -195,13 +185,9 @@ export class EvenlyBackendService {
         // If it's FormData, pass it directly to axios
         if (options.body instanceof FormData) {
           axiosConfig.data = options.body;
-          console.log('[makeRequest] Detected FormData body');
         } else {
           const parsedData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
           axiosConfig.data = parsedData;
-          console.log('[makeRequest] Parsed body data:', JSON.stringify(parsedData, null, 2));
-          console.log('[makeRequest] Data keys:', Object.keys(parsedData));
-          console.log('[makeRequest] Data values:', Object.values(parsedData));
         }
       }
 
@@ -239,16 +225,6 @@ export class EvenlyBackendService {
 
       return data;
     } catch (error: any) {
-      // Reduce console noise for offline mode
-      if (error._offlineMode) {
-        console.warn(`⚠️ [makeRequest] Offline mode for ${endpoint} - attempting cache fallback`);
-      } else {
-        console.error(`❌ [makeRequest] API request failed for ${endpoint}:`, error);
-        console.error(`❌ [makeRequest] Error response:`, error.response?.data);
-        console.error(`❌ [makeRequest] Error status:`, error.response?.status);
-        console.error(`❌ [makeRequest] Error message:`, error.message);
-      }
-
       // If offline mode (session expired) and this is a GET request, try to return cached data
       if (error._offlineMode && methodUpper === 'GET') {
         const bodyForKey = options.body
@@ -259,10 +235,8 @@ export class EvenlyBackendService {
         try {
           const cached = await AppCache.get<ApiResponse<T>>(computedCacheKey);
           if (cached) {
-            console.log(`✅ [makeRequest] Loaded ${endpoint} from cache (offline mode)`);
             return cached;
           } else {
-            console.warn(`⚠️ [makeRequest] No cached data for ${endpoint} - returning empty data`);
             // Return empty array/object for GET requests in offline mode with no cache
             // This allows the app to show empty state instead of eternal loading
             if (endpoint.includes('/groups') || endpoint.includes('/expenses') || endpoint.includes('/balances')) {
@@ -271,8 +245,7 @@ export class EvenlyBackendService {
             // For other endpoints, return empty object
             return { data: {} as T } as ApiResponse<T>;
           }
-        } catch (cacheError) {
-          console.error(`❌ [makeRequest] Failed to load from cache:`, cacheError);
+        } catch {
           // Return empty data on cache error too
           if (endpoint.includes('/groups') || endpoint.includes('/expenses') || endpoint.includes('/balances')) {
             return { data: [] } as ApiResponse<T>;
@@ -678,15 +651,12 @@ export class EvenlyBackendService {
     balance: string;
     type: 'give' | 'get' | 'settled';
   }>> {
-    console.log('🔷 [EvenlyBackendService] getKhataCustomers called with options:', options);
-
     const queryParams = new URLSearchParams();
     if (options.search) queryParams.append('search', options.search);
     if (options.filterType) queryParams.append('filterType', options.filterType);
     if (options.sortType) queryParams.append('sortType', options.sortType);
 
     const endpoint = `/khata/customers?${queryParams.toString()}`;
-    console.log('🔷 [EvenlyBackendService] Calling endpoint:', endpoint);
 
     const response = await this.makeRequest<Array<{
       id: string;
@@ -708,8 +678,6 @@ export class EvenlyBackendService {
         cacheTTLMs: options.cacheTTLMs || 30000,
       }
     );
-
-    console.log('✅ [EvenlyBackendService] getKhataCustomers response - count:', response.data.length);
 
     return response.data;
   }
@@ -911,8 +879,6 @@ export class EvenlyBackendService {
   }> {
     const isFormData = data instanceof FormData;
 
-    console.log('[EvenlyBackendService] createKhataTransaction - isFormData:', isFormData);
-
     // If FormData, send as multipart/form-data, otherwise send as JSON
     const requestConfig: any = {};
 
@@ -937,8 +903,6 @@ export class EvenlyBackendService {
           }
         };
       }
-
-      console.log('[EvenlyBackendService] Sending FormData to /khata/transactions (timeout: 120s)');
     }
 
     const response = await this.makeRequest<{
@@ -1000,11 +964,7 @@ export class EvenlyBackendService {
     createdAt: string;
     updatedAt: string;
   }> {
-    console.log('[EvenlyBackendService] ========== UPDATE KHATA TRANSACTION ==========');
-    console.log('[EvenlyBackendService] Transaction ID:', transactionId);
-
     const isFormData = data instanceof FormData;
-    console.log('[EvenlyBackendService] Data type:', isFormData ? 'FormData' : 'JSON');
 
     // If FormData, send as multipart/form-data, otherwise send as JSON
     const requestConfig: any = {};
@@ -1021,32 +981,18 @@ export class EvenlyBackendService {
       // Increase timeout for image uploads (2 minutes instead of 30 seconds)
       requestConfig.timeout = 120000;
 
-      console.log('[EvenlyBackendService] Timeout set to: 120000ms (2 minutes)');
-
       // Add upload progress tracking
       if (onUploadProgress) {
         requestConfig.onUploadProgress = (progressEvent: any) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            console.log('[EvenlyBackendService] Upload progress:', progress + '%');
             onUploadProgress(progress);
           }
         };
-        console.log('[EvenlyBackendService] Upload progress tracking enabled');
       }
-
-      console.log('[EvenlyBackendService] Request config:', {
-        timeout: requestConfig.timeout,
-        hasProgressCallback: !!onUploadProgress,
-        headers: requestConfig.headers
-      });
-    } else {
-      console.log('[EvenlyBackendService] Sending JSON data:', data);
     }
 
     const endpoint = `/khata/transactions/${transactionId}`;
-    console.log('[EvenlyBackendService] Endpoint:', endpoint);
-    console.log('[EvenlyBackendService] Full URL will be:', `${EVENLY_BACKEND_URL}${endpoint}`);
 
     try {
       const response = await this.makeRequest<{
@@ -1072,24 +1018,8 @@ export class EvenlyBackendService {
         }
       );
 
-      console.log('[EvenlyBackendService] ✅ Update successful');
-      console.log('[EvenlyBackendService] Response data:', response.data);
-
       return response.data;
     } catch (error: any) {
-      console.error('[EvenlyBackendService] ========== UPDATE FAILED ==========');
-      console.error('[EvenlyBackendService] Error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        responseData: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          timeout: error.config?.timeout,
-        }
-      });
       throw error;
     }
   }
@@ -1108,8 +1038,6 @@ export class EvenlyBackendService {
     totalGive: string;
     totalGet: string;
   }> {
-    console.log('🔷 [EvenlyBackendService] getKhataFinancialSummary called');
-
     const response = await this.makeRequest<{
       totalGive: string;
       totalGet: string;
@@ -1117,9 +1045,6 @@ export class EvenlyBackendService {
       method: 'GET',
       cacheTTLMs: 0, // Force bypass cache
     });
-
-    console.log('✅ [EvenlyBackendService] getKhataFinancialSummary response:', response.data);
-
     return response.data;
   }
 
@@ -1181,8 +1106,7 @@ export class EvenlyBackendService {
               customerName: customer.name,
             });
           });
-        } catch (error) {
-          console.error(`Failed to fetch transactions for customer ${customer.id}:`, error);
+        } catch {
           // Continue even if one customer's transactions fail
         }
       })

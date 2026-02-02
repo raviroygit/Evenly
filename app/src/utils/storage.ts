@@ -26,7 +26,6 @@ class StorageManager {
         await AsyncStorage.setItem(key, value);
       }
     } catch (error) {
-      console.error('Storage setItem error:', error);
     }
   }
 
@@ -39,7 +38,6 @@ class StorageManager {
         return await AsyncStorage.getItem(key);
       }
     } catch (error) {
-      console.error('Storage getItem error:', error);
       return null;
     }
   }
@@ -53,7 +51,6 @@ class StorageManager {
         await AsyncStorage.removeItem(key);
       }
     } catch (error) {
-      console.error('Storage removeItem error:', error);
     }
   }
 }
@@ -71,7 +68,6 @@ export const AuthStorage = {
     };
 
     await storage.setItem(STORAGE_KEY, JSON.stringify(data));
-    console.log('[AuthStorage] ✅ Auth data saved (token never expires)');
   },
 
   async getAuthData(): Promise<{ user: any; accessToken?: string; organizations?: Organization[]; timestamp?: number } | null> {
@@ -92,7 +88,6 @@ export const AuthStorage = {
 
       // Check if accessToken is present (required for backend authentication)
       if (!data.accessToken) {
-        console.warn('[AuthStorage] No accessToken found in stored data');
         return null;
       }
 
@@ -104,7 +99,6 @@ export const AuthStorage = {
         timestamp: timestamp,
       };
     } catch (error) {
-      console.error('[AuthStorage] Error getting auth data:', error);
       return null;
     }
   },
@@ -124,17 +118,8 @@ export const AuthStorage = {
 
       if (dataString) {
         const data = JSON.parse(dataString);
-        console.log('[AuthStorage] DEBUG - Parsed data:', {
-          hasUser: !!data.user,
-          hasAccessToken: !!data.accessToken,
-          hasOrganizations: !!data.organizations,
-          organizationsCount: data.organizations?.length || 0,
-          timestamp: data.timestamp,
-          user: data.user
-        });
       }
     } catch (error) {
-      console.error('[AuthStorage] DEBUG - Error:', error);
     }
   },
 
@@ -143,7 +128,6 @@ export const AuthStorage = {
     try {
       return await storage.getItem(ORGANIZATION_KEY);
     } catch (error) {
-      console.error('[AuthStorage] Error getting current organization:', error);
       return null;
     }
   },
@@ -151,18 +135,14 @@ export const AuthStorage = {
   async setCurrentOrganizationId(organizationId: string): Promise<void> {
     try {
       await storage.setItem(ORGANIZATION_KEY, organizationId);
-      console.log('[AuthStorage] Current organization set:', organizationId);
     } catch (error) {
-      console.error('[AuthStorage] Error setting current organization:', error);
     }
   },
 
   async clearCurrentOrganization(): Promise<void> {
     try {
       await storage.removeItem(ORGANIZATION_KEY);
-      console.log('[AuthStorage] Current organization cleared');
     } catch (error) {
-      console.error('[AuthStorage] Error clearing current organization:', error);
     }
   },
 };

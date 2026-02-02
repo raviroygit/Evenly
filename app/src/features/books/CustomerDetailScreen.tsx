@@ -145,7 +145,6 @@ export const CustomerDetailScreen: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Error loading customer data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -212,7 +211,6 @@ export const CustomerDetailScreen: React.FC = () => {
 
         setTransactions(formattedTransactions);
       } catch (error) {
-        console.error('Error refreshing data:', error);
       } finally {
         setLoading(false);
       }
@@ -225,34 +223,23 @@ export const CustomerDetailScreen: React.FC = () => {
     onProgress?: (progress: number) => void,
     oldImageUrl?: string
   ) => {
-    console.log('[CustomerDetailScreen] ========== UPDATE TRANSACTION START ==========');
-    console.log('[CustomerDetailScreen] Transaction ID:', transactionId);
-    console.log('[CustomerDetailScreen] Data is FormData:', data instanceof FormData);
-    console.log('[CustomerDetailScreen] Progress callback provided:', !!onProgress);
-    console.log('[CustomerDetailScreen] Old image URL for deletion:', oldImageUrl);
 
     try {
       // Delete old image if provided
       if (oldImageUrl) {
-        console.log('[CustomerDetailScreen] Deleting old transaction image from Cloudinary...');
         try {
           await EvenlyBackendService.deleteTransactionImage(oldImageUrl);
-          console.log('[CustomerDetailScreen] ✅ Old image deleted successfully');
         } catch (deleteError) {
-          console.error('[CustomerDetailScreen] ⚠️ Failed to delete old image, continuing with update:', deleteError);
           // Continue with update even if deletion fails
         }
       }
 
-      console.log('[CustomerDetailScreen] Calling updateKhataTransaction...');
       const result = await EvenlyBackendService.updateKhataTransaction(transactionId, data, onProgress);
-      console.log('[CustomerDetailScreen] ✅ Update successful:', result);
 
       setEditingTransaction(null);
 
       // Refresh data with cache bypass
       if (params.customerId) {
-        console.log('[CustomerDetailScreen] Refreshing customer data...');
         setLoading(true);
         const [customerData, transactionsData] = await Promise.all([
           EvenlyBackendService.getKhataCustomerById(params.customerId, { cacheTTLMs: 0 }),
@@ -283,16 +270,8 @@ export const CustomerDetailScreen: React.FC = () => {
 
         setTransactions(formattedTransactions);
         setLoading(false);
-        console.log('[CustomerDetailScreen] Data refresh complete');
       }
     } catch (error: any) {
-      console.error('[CustomerDetailScreen] ========== UPDATE TRANSACTION FAILED ==========');
-      console.error('[CustomerDetailScreen] Error type:', error.constructor.name);
-      console.error('[CustomerDetailScreen] Error message:', error.message);
-      console.error('[CustomerDetailScreen] Error code:', error.code);
-      console.error('[CustomerDetailScreen] Error response:', error.response?.data);
-      console.error('[CustomerDetailScreen] Error status:', error.response?.status);
-      console.error('[CustomerDetailScreen] Full error:', error);
       Alert.alert('Error', 'Failed to update transaction. Please try again.');
     }
   };
@@ -345,7 +324,6 @@ export const CustomerDetailScreen: React.FC = () => {
       // Modal will close automatically, show success alert
       Alert.alert('Success', 'Transaction deleted successfully');
     } catch (error) {
-      console.error('[CustomerDetailScreen] Error deleting transaction:', error);
       setLoading(false);
       Alert.alert('Error', 'Failed to delete transaction. Please try again.');
       throw error; // Re-throw to prevent modal from closing
@@ -375,7 +353,6 @@ export const CustomerDetailScreen: React.FC = () => {
   };
 
   const onRefresh = useCallback(async () => {
-    console.log('CustomerDetailScreen: onRefresh called');
     await loadData(true);
   }, [loadData]);
 

@@ -94,8 +94,8 @@ export const GroupDetailsScreen: React.FC = () => {
       const response = await EvenlyBackendService.getGroupExpenses(groupId);
       setExpenses(response.expenses || []);
       setHasMore(false); // For now, we'll load all expenses
-    } catch (error) {
-      console.error('Error loading group expenses:', error);
+    } catch {
+      // Ignore
     } finally {
       if (!skipLoadingState) {
         setLoading(false);
@@ -155,7 +155,6 @@ export const GroupDetailsScreen: React.FC = () => {
       // Show success message
       Alert.alert('Success', 'Expense added successfully!');
     } catch (error: any) {
-      console.error('Error adding expense:', error);
       // Don't show alert here - let the modal handle error display
       // Re-throw so modal can handle it and keep modal open
       throw error;
@@ -181,8 +180,7 @@ export const GroupDetailsScreen: React.FC = () => {
       if (oldImageUrl) {
         try {
           await EvenlyBackendService.deleteExpenseImage(oldImageUrl);
-        } catch (error) {
-          console.warn('Failed to delete old expense image:', error);
+        } catch {
           // Continue with update even if deletion fails
         }
       }
@@ -191,8 +189,7 @@ export const GroupDetailsScreen: React.FC = () => {
       setEditingExpense(null);
       // Reload expenses to show updated data
       await loadExpenses();
-    } catch (error) {
-      console.error('[GroupDetailsScreen] Error updating expense:', error);
+    } catch {
       Alert.alert('Error', 'Failed to update expense. Please try again.');
     } finally {
       setIsUpdatingExpense(false);
@@ -214,10 +211,9 @@ export const GroupDetailsScreen: React.FC = () => {
 
       // Modal will close automatically, show success alert
       Alert.alert('Success', `"${deletingExpense.title}" has been deleted successfully`);
-    } catch (error) {
-      console.error('[GroupDetailsScreen] Error deleting expense:', error);
+    } catch (err) {
       Alert.alert('Error', 'Failed to delete expense. Please try again.');
-      throw error; // Re-throw to prevent modal from closing
+      throw err; // Re-throw to prevent modal from closing
     }
   };
 

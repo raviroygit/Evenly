@@ -17,16 +17,8 @@ export class GroupService {
     organizationId?: string
   ): Promise<Group> {
     try {
-      console.log('🆕 Creating group:', {
-        groupName: groupData.name,
-        createdBy,
-        organizationId,
-        hasOrgId: !!organizationId
-      });
-
       // Validate organizationId is provided
       if (!organizationId) {
-        console.error('❌ CreateGroup: Organization ID is missing!');
         throw new ValidationError('Organization ID is required');
       }
 
@@ -50,7 +42,6 @@ export class GroupService {
 
       return createdGroup;
     } catch (error) {
-      console.error('Error creating group:', error);
       if (error instanceof ValidationError || error instanceof DatabaseError || error instanceof NotFoundError) {
         throw error;
       }
@@ -103,7 +94,6 @@ export class GroupService {
         members,
       };
     } catch (error) {
-      console.error('Error fetching group:', error);
       throw new DatabaseError('Failed to fetch group');
     }
   }
@@ -155,11 +145,8 @@ export class GroupService {
         .where(and(...conditions))
         .groupBy(groups.id)
         .orderBy(desc(groups.updatedAt));
-
-      console.log('User groups with member counts:', userGroups);
       return userGroups;
     } catch (error) {
-      console.error('Error fetching user groups:', error);
       throw new DatabaseError('Failed to fetch user groups');
     }
   }
@@ -221,7 +208,6 @@ export class GroupService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
-      console.error('Error updating group:', error);
       throw new DatabaseError('Failed to update group');
     }
   }
@@ -257,13 +243,10 @@ export class GroupService {
         conditions.push(eq(groups.organizationId, organizationId));
       }
       await db.delete(groups).where(and(...conditions));
-
-      console.log(`Group ${groupId} deleted successfully with all related data`);
     } catch (error) {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error deleting group:', error);
       throw new DatabaseError('Failed to delete group');
     }
   }
@@ -319,7 +302,6 @@ export class GroupService {
       if (error instanceof ConflictError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error adding group member:', error);
       throw new DatabaseError('Failed to add group member');
     }
   }
@@ -370,7 +352,6 @@ export class GroupService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error removing group member:', error);
       throw new DatabaseError('Failed to remove group member');
     }
   }
@@ -432,7 +413,6 @@ export class GroupService {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
-      console.error('Error updating member role:', error);
       throw new DatabaseError('Failed to update member role');
     }
   }
@@ -451,7 +431,6 @@ export class GroupService {
           .limit(1);
 
         if (!group) {
-          console.log('Group not found or does not belong to organization');
           return false;
         }
       }
@@ -465,11 +444,8 @@ export class GroupService {
           eq(groupMembers.isActive, true)
         ))
         .limit(1);
-
-      console.log('Group membership check:', { groupId, userId, found: member.length > 0 });
       return member.length > 0;
     } catch (error) {
-      console.error('Error checking group membership:', error);
       return false;
     }
   }
@@ -488,7 +464,6 @@ export class GroupService {
           .limit(1);
 
         if (!group) {
-          console.log('Group not found or does not belong to organization');
           return false;
         }
       }
@@ -507,7 +482,6 @@ export class GroupService {
 
       return member.length > 0;
     } catch (error) {
-      console.error('Error checking group admin status:', error);
       return false;
     }
   }
@@ -526,7 +500,6 @@ export class GroupService {
           .limit(1);
 
         if (!group) {
-          console.warn('Group not found or does not belong to organization');
           return [];
         }
       }
@@ -552,7 +525,6 @@ export class GroupService {
 
       return members;
     } catch (error) {
-      console.error('Error fetching group members:', error);
       throw new DatabaseError('Failed to fetch group members');
     }
   }
@@ -595,7 +567,6 @@ export class GroupService {
       if (error instanceof ForbiddenError || error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error leaving group:', error);
       throw new DatabaseError('Failed to leave group');
     }
   }

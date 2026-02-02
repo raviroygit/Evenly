@@ -20,9 +20,7 @@ export class SessionManager {
     this.refreshInterval = setInterval(async () => {
       try {
         await refreshCallback();
-        console.log('[SessionManager] Session refreshed successfully');
       } catch (error) {
-        console.log('[SessionManager] Session refresh failed:', error);
       }
     }, this.REFRESH_INTERVAL);
   }
@@ -41,7 +39,6 @@ export class SessionManager {
       const authData = await AuthStorage.getAuthData();
       return authData !== null;
     } catch (error) {
-      console.error('[SessionManager] Error checking session validity:', error);
       return false;
     }
   }
@@ -51,9 +48,7 @@ export class SessionManager {
     try {
       await AuthStorage.clearAuthData();
       this.stopSessionRefresh();
-      console.log('[SessionManager] Session cleared');
     } catch (error) {
-      console.error('[SessionManager] Error clearing session:', error);
     }
   }
 
@@ -70,7 +65,6 @@ export class SessionManager {
       }
       return { isValid: false };
     } catch (error) {
-      console.error('[SessionManager] Error getting session info:', error);
       return { isValid: false };
     }
   }

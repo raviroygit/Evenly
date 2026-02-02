@@ -49,11 +49,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       backgroundColor: '#FF9500', // Orange for edit
       onPress: () => {
         if (isPayer) {
-          console.log('=== ExpenseItem: Edit action pressed ===');
-          console.log('Expense:', item.title, item.id);
-          console.log('onEditExpense function:', typeof onEditExpense);
           onEditExpense(item);
-          console.log('=== ExpenseItem: Edit action completed ===');
         } else {
           showPermissionAlert('edit');
         }
@@ -67,11 +63,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
       backgroundColor: '#FF3B30', // Red for delete
       onPress: () => {
         if (isPayer) {
-          console.log('=== ExpenseItem: Delete action pressed ===');
-          console.log('Expense:', item.title, item.id);
-          console.log('onDeleteExpense function:', typeof onDeleteExpense);
           onDeleteExpense(item.id, item.title);
-          console.log('=== ExpenseItem: Delete action completed ===');
         } else {
           showPermissionAlert('delete');
         }

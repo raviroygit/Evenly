@@ -100,7 +100,6 @@ export default function CreateOrganization() {
         Alert.alert('Error', result.message || 'Failed to create organization');
       }
     } catch (error: any) {
-      console.error('Failed to create organization:', error);
       Alert.alert('Error', error.message || 'Failed to create organization');
     } finally {
       setCreating(false);

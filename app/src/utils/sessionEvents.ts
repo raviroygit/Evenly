@@ -50,7 +50,6 @@ export const sessionEvents = {
  * This notifies all components to reload their data with fresh token
  */
 export const emitTokenRefreshed = () => {
-  console.log('[SessionEvents] 🔄 Token refreshed - notifying all components');
   sessionEvents.emit(SESSION_EVENTS.TOKEN_REFRESHED);
   sessionEvents.emit(SESSION_EVENTS.DATA_RELOAD_NEEDED);
 };
@@ -59,7 +58,6 @@ export const emitTokenRefreshed = () => {
  * Emit session expired event
  */
 export const emitSessionExpired = () => {
-  console.log('[SessionEvents] ⚠️ Session expired');
   sessionEvents.emit(SESSION_EVENTS.SESSION_EXPIRED);
 };
 
@@ -68,6 +66,5 @@ export const emitSessionExpired = () => {
  * Use this to force all screens to reload their data
  */
 export const emitDataReloadNeeded = () => {
-  console.log('[SessionEvents] 🔄 Data reload needed - notifying all components');
   sessionEvents.emit(SESSION_EVENTS.DATA_RELOAD_NEEDED);
 };

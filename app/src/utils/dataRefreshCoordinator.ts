@@ -21,12 +21,10 @@ export class DataRefreshCoordinator {
    * Returns cleanup function to unregister on unmount
    */
   static register(callback: RefreshCallback): () => void {
-    console.log('[DataRefreshCoordinator] Registering refresh callback');
     this.refreshCallbacks.add(callback);
 
     // Return cleanup function
     return () => {
-      console.log('[DataRefreshCoordinator] Unregistering refresh callback');
       this.refreshCallbacks.delete(callback);
     };
   }
@@ -37,7 +35,6 @@ export class DataRefreshCoordinator {
    */
   static async refreshAll(): Promise<void> {
     if (this.isRefreshing) {
-      console.log('[DataRefreshCoordinator] Refresh already in progress, skipping');
       return;
     }
 
@@ -45,15 +42,12 @@ export class DataRefreshCoordinator {
     const startTime = Date.now();
 
     try {
-      console.log(`[DataRefreshCoordinator] Starting coordinated refresh of ${this.refreshCallbacks.size} data sources`);
 
       // Execute all refresh callbacks in parallel
       const refreshPromises = Array.from(this.refreshCallbacks).map(async (callback, index) => {
         try {
           await callback();
-          console.log(`[DataRefreshCoordinator] Refresh callback ${index + 1} completed`);
         } catch (error) {
-          console.error(`[DataRefreshCoordinator] Refresh callback ${index + 1} failed:`, error);
           // Don't throw - allow other callbacks to complete
         }
       });
@@ -61,9 +55,7 @@ export class DataRefreshCoordinator {
       await Promise.all(refreshPromises);
 
       const duration = Date.now() - startTime;
-      console.log(`[DataRefreshCoordinator] ✅ All data refreshed successfully in ${duration}ms`);
     } catch (error) {
-      console.error('[DataRefreshCoordinator] Error during coordinated refresh:', error);
     } finally {
       this.isRefreshing = false;
     }
@@ -87,7 +79,6 @@ export class DataRefreshCoordinator {
    * Clear all registered callbacks (useful for testing)
    */
   static clearAll(): void {
-    console.log('[DataRefreshCoordinator] Clearing all registered callbacks');
     this.refreshCallbacks.clear();
   }
 }

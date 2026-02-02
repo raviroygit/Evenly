@@ -107,14 +107,8 @@ export class GroupInvitationService {
             existingUser.length > 0,
             invitation.token // Pass the invitation token
           );
-          console.log(`✅ Invitation email resent successfully to ${invitedEmail}`);
           emailSent = true;
         } catch (emailError: any) {
-          console.error(`💥 FAILED to resend invitation email to ${invitedEmail}:`, emailError);
-          console.error(`⚠️  IMPORTANT: Invitation exists but email NOT sent!`);
-          console.error(`⚠️  User will NOT receive email. Please check email configuration.`);
-          console.error(`⚠️  Or manually share this link: ${invitationLink}`);
-
           // Add email failure info to invitation object for API response
           (invitation as any).emailSent = false;
           (invitation as any).emailError = emailError.message;
@@ -162,14 +156,8 @@ export class GroupInvitationService {
           existingUser.length > 0,
           token // Pass the invitation token
         );
-        console.log(`✅ Invitation email sent successfully to ${invitedEmail}`);
         emailSent = true;
       } catch (emailError: any) {
-        console.error(`💥 FAILED to send invitation email to ${invitedEmail}:`, emailError);
-        console.error(`⚠️  IMPORTANT: Invitation created but email NOT sent!`);
-        console.error(`⚠️  User will NOT receive email. Please check email configuration.`);
-        console.error(`⚠️  Or manually share this link: ${invitationLink}`);
-
         // Add email failure info to invitation object for API response
         (createdInvitation as any).emailSent = false;
         (createdInvitation as any).emailError = emailError.message;
@@ -179,7 +167,6 @@ export class GroupInvitationService {
       (createdInvitation as any).emailSent = emailSent;
       return createdInvitation;
     } catch (error) {
-      console.error('Error sending group invitation:', error);
       if (error instanceof NotFoundError || error instanceof ValidationError || error instanceof ForbiddenError) {
         throw error;
       }
@@ -195,13 +182,10 @@ export class GroupInvitationService {
       // First, get the user's email to match invitations
       const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       if (!user.length) {
-        console.warn('[GroupInvitationService] User not found in local DB, returning empty invitations');
         return [];
       }
 
       const userEmail = user[0].email;
-      console.log(`[GroupInvitationService] Getting pending invitations for user: ${userId}, email: ${userEmail}`);
-
       // Build where conditions
       const whereConditions = [
         or(
@@ -228,25 +212,14 @@ export class GroupInvitationService {
         .innerJoin(groups, eq(groupInvitations.groupId, groups.id))
         .innerJoin(users, eq(groupInvitations.invitedBy, users.id))
         .where(and(...whereConditions));
-
-      console.log(`[GroupInvitationService] Found ${invitations.length} pending invitations`);
-      console.log(`[GroupInvitationService] Invitations:`, invitations.map(inv => ({
-        id: inv.invitation.id,
-        invitedEmail: inv.invitation.invitedEmail,
-        invitedUserId: inv.invitation.invitedUserId,
-        status: inv.invitation.status
-      })));
-
       return invitations.map(row => ({
         ...row.invitation,
         group: row.group,
         inviter: row.inviter,
       }));
     } catch (error) {
-      console.error('Error getting pending invitations:', error);
       // Return empty array instead of throwing error for better UX
       // New users or users with no data should see empty state, not error
-      console.warn('[GroupInvitationService] Returning empty invitations due to error');
       return [];
     }
   }
@@ -335,7 +308,6 @@ export class GroupInvitationService {
         .where(eq(groupInvitations.id, inv.id));
 
     } catch (error) {
-      console.error('Error accepting invitation:', error);
       if (error instanceof NotFoundError || error instanceof ValidationError || error instanceof ForbiddenError) {
         throw error;
       }
@@ -393,7 +365,6 @@ export class GroupInvitationService {
         .where(eq(groupInvitations.id, inv.id));
 
     } catch (error) {
-      console.error('Error declining invitation:', error);
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
       }
@@ -440,7 +411,6 @@ export class GroupInvitationService {
         inviter: row.inviter,
       };
     } catch (error) {
-      console.error('Error getting invitation by token:', error);
       throw new DatabaseError('Failed to get invitation details');
     }
   }

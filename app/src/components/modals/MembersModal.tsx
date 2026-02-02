@@ -56,7 +56,6 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         role: m.role || 'member',
       })));
     } catch (error) {
-      console.error('Error loading group members:', error);
     } finally {
       setLoadingMembers(false);
     }
@@ -69,7 +68,6 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const debtsData = await EvenlyBackendService.getSimplifiedDebts(groupId);
       setSimplifiedDebts(debtsData);
     } catch (error) {
-      console.error('Error loading simplified debts:', error);
       setSimplifiedDebts([]);
     }
   };

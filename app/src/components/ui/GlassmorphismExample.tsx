@@ -35,13 +35,13 @@ const GlassmorphismExample: React.FC = () => {
       <View style={styles.buttonRow}>
         <GlassButton
           title="Add Income"
-          onPress={() => console.log('Income pressed')}
+          onPress={() => {}}
           variant="primary"
           size="medium"
         />
         <GlassButton
           title="Add Expense"
-          onPress={() => console.log('Expense pressed')}
+          onPress={() => {}}
           variant="secondary"
           size="medium"
         />

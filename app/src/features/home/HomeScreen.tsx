@@ -78,8 +78,8 @@ export const HomeScreen: React.FC = () => {
         setKhataSummary(summary);
         setCustomerCount(customersData.length);
         setCustomers(customersData);
-      } catch (error) {
-        console.error('Error fetching khata summary:', error);
+      } catch {
+        // Ignore fetch error
       } finally {
         setKhataLoading(false);
       }
@@ -91,7 +91,6 @@ export const HomeScreen: React.FC = () => {
   // Listen for group events to refresh when groups are created/updated from other screens
   useEffect(() => {
     const handleGroupsRefreshNeeded = async () => {
-      console.log('[HomeScreen] Groups refresh needed event received, refreshing...');
       setKhataLoading(true);
 
       try {
@@ -109,8 +108,8 @@ export const HomeScreen: React.FC = () => {
               setKhataSummary(summary);
               setCustomerCount(customersData.length);
               setCustomers(customersData);
-            } catch (error) {
-              console.error('Error refreshing khata summary:', error);
+            } catch {
+              // Ignore
             }
           })(),
         ]);
@@ -119,8 +118,8 @@ export const HomeScreen: React.FC = () => {
         if (activitiesRefreshRef.current) {
           activitiesRefreshRef.current();
         }
-      } catch (error) {
-        console.error('[HomeScreen] Error refreshing on event:', error);
+      } catch {
+        // Ignore
       } finally {
         setKhataLoading(false);
       }
@@ -128,7 +127,6 @@ export const HomeScreen: React.FC = () => {
 
     // Listen for expense events to refresh when expenses are created/updated from other screens
     const handleExpensesRefreshNeeded = async () => {
-      console.log('[HomeScreen] Expenses refresh needed event received, refreshing...');
       setKhataLoading(true);
 
       try {
@@ -145,8 +143,8 @@ export const HomeScreen: React.FC = () => {
               setKhataSummary(summary);
               setCustomerCount(customersData.length);
               setCustomers(customersData);
-            } catch (error) {
-              console.error('Error refreshing khata summary:', error);
+            } catch {
+              // Ignore
             }
           })(),
         ]);
@@ -155,8 +153,8 @@ export const HomeScreen: React.FC = () => {
         if (activitiesRefreshRef.current) {
           activitiesRefreshRef.current();
         }
-      } catch (error) {
-        console.error('[HomeScreen] Error refreshing on expense event:', error);
+      } catch {
+        // Ignore
       } finally {
         setKhataLoading(false);
       }
@@ -190,8 +188,8 @@ export const HomeScreen: React.FC = () => {
             setKhataSummary(summary);
             setCustomerCount(customersData.length);
             setCustomers(customersData);
-          } catch (error) {
-            console.error('Error refreshing khata summary:', error);
+          } catch {
+            // Ignore
           }
         })(),
       ]);
@@ -200,8 +198,8 @@ export const HomeScreen: React.FC = () => {
       if (activitiesRefreshRef.current) {
         activitiesRefreshRef.current();
       }
-    } catch (error) {
-      console.error('Error refreshing data:', error);
+    } catch {
+      // Ignore
     } finally {
       setKhataLoading(false);
       setRefreshing(false);
@@ -237,8 +235,8 @@ export const HomeScreen: React.FC = () => {
             setKhataSummary(summary);
             setCustomerCount(customersData.length);
             setCustomers(customersData);
-          } catch (error) {
-            console.error('Error refreshing khata summary:', error);
+          } catch {
+            // Ignore
           } finally {
             setKhataLoading(false);
           }
@@ -249,8 +247,7 @@ export const HomeScreen: React.FC = () => {
       if (activitiesRefreshRef.current) {
         activitiesRefreshRef.current();
       }
-    } catch (error) {
-      console.error('Error creating group:', error);
+    } catch {
       // Silent error - user can see it in the UI state
     } finally {
       setIsCreatingGroup(false);
@@ -305,7 +302,7 @@ export const HomeScreen: React.FC = () => {
             setCustomerCount(customersData.length);
             setCustomers(customersData);
           } catch (error) {
-            console.error('Error refreshing khata summary:', error);
+            // Ignore
           } finally {
             setKhataLoading(false);
           }
@@ -317,7 +314,6 @@ export const HomeScreen: React.FC = () => {
         activitiesRefreshRef.current();
       }
     } catch (error) {
-      console.error('Error adding expense:', error);
       // Silent error - user can see it in the UI state
     } finally {
       setIsAddingExpense(false);

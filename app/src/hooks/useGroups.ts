@@ -26,7 +26,6 @@ export const useGroups = () => {
 
       // If another instance is already loading, wait and use cached data
       if (globalIsLoading && !globalIsFirstFetch) {
-        console.log('[useGroups] Another instance is loading - waiting for cache...');
 
         // Wait for the other instance to finish loading (max 5 seconds)
         let attempts = 0;
@@ -37,10 +36,8 @@ export const useGroups = () => {
 
         // Use the cached data that was just loaded
         if (globalGroupsCache.length > 0) {
-          console.log('[useGroups] Using freshly loaded cache');
           setGroups(globalGroupsCache);
         } else {
-          console.log('[useGroups] Cache still empty after wait - force loading');
           // Cache is still empty, don't skip - continue to load below
         }
         setLoading(false);
@@ -63,7 +60,6 @@ export const useGroups = () => {
       let cacheTTL: number;
       if (globalIsFirstFetch) {
         cacheTTL = 0; // Bypass cache - force fresh fetch
-        console.log('[useGroups] 🔄 First fetch - bypassing cache for fresh data');
         globalIsFirstFetch = false;
         globalLastFetchTime = Date.now();
       } else {
@@ -71,12 +67,10 @@ export const useGroups = () => {
         const timeSinceLastFetch = Date.now() - globalLastFetchTime;
         if (timeSinceLastFetch > CACHE_DURATION) {
           cacheTTL = 0; // Cache expired - fetch fresh data silently
-          console.log('[useGroups] 🔄 Cache expired - silent refresh');
           globalLastFetchTime = Date.now();
         } else {
           // Use cache for subsequent fetches within 1 minute
           cacheTTL = CACHE_DURATION - timeSinceLastFetch;
-          console.log('[useGroups] Loading with cache TTL:', cacheTTL);
         }
       }
 
@@ -85,11 +79,6 @@ export const useGroups = () => {
         cacheTTLMs: cacheTTL
       });
 
-      console.log('[useGroups] ✅ Loaded groups:', {
-        count: groupsData.length,
-        silent,
-        groups: groupsData.map(g => ({ id: g.id, name: g.name }))
-      });
 
       // Update global cache
       globalGroupsCache = groupsData;
@@ -100,7 +89,6 @@ export const useGroups = () => {
       // If in offline mode (session expired), don't show error to user
       // They're still logged in with cached data
       if (err._offlineMode) {
-        console.warn('[useGroups] ⚠️ Offline mode - using cached data');
         // Don't set error message - user is in offline mode
       } else {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load groups';
@@ -116,7 +104,6 @@ export const useGroups = () => {
   useEffect(() => {
     // Clear data when user logs out
     if (authState === 'unauthenticated') {
-      console.log('[useGroups] User logged out - clearing groups');
       setGroups([]);
       setLoading(true);
       setError(null);
@@ -129,34 +116,25 @@ export const useGroups = () => {
 
     // Skip during initialization phase - wait for authenticated state
     if (authState === 'initializing') {
-      console.log('[useGroups] Auth initializing - waiting...');
       return;
     }
 
     // Only load data when authenticated
     if (authState !== 'authenticated') {
-      console.log('[useGroups] Auth not ready, skipping data load. State:', authState);
       return;
     }
 
-    console.log('[useGroups] Auth ready, loading groups...', {
-      hasCache: globalGroupsCache.length > 0,
-      isFirstFetch: globalIsFirstFetch
-    });
     // Load groups immediately - first fetch will bypass cache
     loadGroups();
   }, [authState, loadGroups]);
 
   // Register with DataRefreshCoordinator
   useEffect(() => {
-    console.log('[useGroups] Registering with DataRefreshCoordinator');
     const unregister = DataRefreshCoordinator.register(async () => {
-      console.log('[useGroups] Coordinator triggered refresh');
       await loadGroups({ silent: true }); // Silent - automatic background coordination
     });
 
     return () => {
-      console.log('[useGroups] Unregistering from DataRefreshCoordinator');
       unregister();
     };
   }, [loadGroups]);
@@ -164,13 +142,11 @@ export const useGroups = () => {
   // Listen for group events to refresh when groups are created/updated/deleted from other screens
   useEffect(() => {
     const handleGroupsRefreshNeeded = () => {
-      console.log('[useGroups] Groups refresh needed event received, refreshing...');
       loadGroups({ silent: false }); // Show loader - user action (create/update/delete)
     };
 
     // Listen for token refresh events (backwards compatibility)
     const handleTokenRefreshed = () => {
-      console.log('[useGroups] Token refreshed event received, reloading groups...');
       loadGroups({ silent: true }); // Silent - automatic background event
     };
 
@@ -284,7 +260,6 @@ export const useGroups = () => {
     const checkCacheExpiry = () => {
       const timeSinceLastFetch = Date.now() - globalLastFetchTime;
       if (timeSinceLastFetch > CACHE_DURATION && !globalIsFirstFetch) {
-        console.log('[useGroups] Cache expired - triggering silent refresh');
         loadGroups({ silent: true }); // Silent - automatic cache expiry refresh
       }
     };

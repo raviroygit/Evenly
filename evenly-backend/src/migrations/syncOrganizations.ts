@@ -78,7 +78,6 @@ async function connectAuthServiceDB() {
     }
 
     await mongoose.connect(mongoUri);
-    console.log('✅ Connected to Auth Service MongoDB');
 
     return {
       User: mongoose.model('User', UserSchema),
@@ -86,7 +85,6 @@ async function connectAuthServiceDB() {
       OrganizationMember: mongoose.model('OrganizationMember', OrganizationMemberSchema),
     };
   } catch (error) {
-    console.error('❌ Auth Service MongoDB connection failed:', error);
     throw error;
   }
 }
@@ -97,9 +95,7 @@ async function connectAuthServiceDB() {
 async function disconnectAuthServiceDB() {
   try {
     await mongoose.disconnect();
-    console.log('✅ Disconnected from Auth Service MongoDB');
   } catch (error) {
-    console.error('❌ Auth Service MongoDB disconnection failed:', error);
   }
 }
 
@@ -121,19 +117,16 @@ async function migrateUserOrganization(
     });
 
     if (!authUser) {
-      console.log(`⚠️  No auth service user found for backend user ${backendUser.email || backendUser.id}`);
       return false;
     }
 
     if (!authUser.defaultOrganizationId) {
-      console.log(`⚠️  Auth user ${authUser.email} has no default organization - skipping`);
       return false;
     }
 
     // Fetch organization from auth service
     const authOrg = await authModels.Organization.findById(authUser.defaultOrganizationId);
     if (!authOrg) {
-      console.log(`⚠️  Organization ${authUser.defaultOrganizationId} not found - skipping`);
       return false;
     }
 
@@ -148,7 +141,6 @@ async function migrateUserOrganization(
 
     if (existingOrgs.length > 0) {
       localOrgId = existingOrgs[0].id;
-      console.log(`✓ Organization ${authOrg.slug} already exists in backend`);
     } else {
       // Create organization in backend
       const [newOrg] = await db
@@ -167,7 +159,6 @@ async function migrateUserOrganization(
 
       localOrgId = newOrg.id;
       stats.orgsCreated++;
-      console.log(`✅ Created organization ${authOrg.slug} in backend`);
     }
 
     // Check if membership already exists
@@ -199,7 +190,6 @@ async function migrateUserOrganization(
       });
 
       stats.membershipsCreated++;
-      console.log(`✅ Created membership for user ${backendUser.email} in organization ${authOrg.slug}`);
     }
 
     // Assign user's groups to organization
@@ -224,7 +214,6 @@ async function migrateUserOrganization(
           )
         );
       stats.groupsAssigned += userGroups.length;
-      console.log(`✅ Assigned ${userGroups.length} groups to organization ${authOrg.slug}`);
     }
 
     // Assign user's expenses to organization
@@ -249,7 +238,6 @@ async function migrateUserOrganization(
           )
         );
       stats.expensesAssigned += userExpenses.length;
-      console.log(`✅ Assigned ${userExpenses.length} expenses to organization ${authOrg.slug}`);
     }
 
     // Assign user's khata customers to organization
@@ -274,12 +262,10 @@ async function migrateUserOrganization(
           )
         );
       stats.khataCustomersAssigned += userCustomers.length;
-      console.log(`✅ Assigned ${userCustomers.length} khata customers to organization ${authOrg.slug}`);
     }
 
     return true;
   } catch (error: any) {
-    console.error(`❌ Failed to migrate user ${backendUser.email || backendUser.id}:`, error.message);
     stats.errors.push({
       userId: backendUser.id,
       email: backendUser.email,
@@ -293,9 +279,6 @@ async function migrateUserOrganization(
  * Main migration function
  */
 async function syncOrganizations() {
-  console.log('\n========================================');
-  console.log('🚀 Starting Organization Sync Migration');
-  console.log('========================================\n');
 
   let authModels: any;
 
@@ -307,44 +290,24 @@ async function syncOrganizations() {
     const backendUsers = await db.select().from(users);
     stats.totalUsers = backendUsers.length;
 
-    console.log(`📊 Found ${stats.totalUsers} users in backend\n`);
 
     if (stats.totalUsers === 0) {
-      console.log('✨ No users found in backend. Nothing to migrate!\n');
       return;
     }
 
     // Migrate each user
     for (const backendUser of backendUsers) {
-      console.log(`\n🔄 Processing user: ${backendUser.email || backendUser.id}`);
       await migrateUserOrganization(backendUser, authModels);
     }
 
     // Print summary
-    console.log('\n========================================');
-    console.log('📊 Migration Summary');
-    console.log('========================================');
-    console.log(`Total users processed:         ${stats.totalUsers}`);
-    console.log(`Organizations created:         ${stats.orgsCreated} ✅`);
-    console.log(`Memberships created:           ${stats.membershipsCreated} ✅`);
-    console.log(`Groups assigned:               ${stats.groupsAssigned} 📁`);
-    console.log(`Expenses assigned:             ${stats.expensesAssigned} 💰`);
-    console.log(`Khata customers assigned:      ${stats.khataCustomersAssigned} 📒`);
-    console.log(`Errors:                        ${stats.errors.length} ❌`);
-    console.log('========================================\n');
 
     // Print errors if any
     if (stats.errors.length > 0) {
-      console.log('❌ Migration Errors:\n');
-      stats.errors.forEach((err, idx) => {
-        console.log(`${idx + 1}. User ID: ${err.userId}`);
-        if (err.email) console.log(`   Email: ${err.email}`);
-        console.log(`   Error: ${err.error}\n`);
-      });
+      stats.errors.forEach(() => {});
     }
 
     // Verification
-    console.log('🔍 Running verification...');
 
     const orgsWithoutAssignedData = await db
       .select()
@@ -353,16 +316,11 @@ async function syncOrganizations() {
       .limit(10);
 
     if (orgsWithoutAssignedData.length === 0) {
-      console.log('✅ Verification passed: All groups have organizations!\n');
     } else {
-      console.log(`⚠️  Verification warning: ${orgsWithoutAssignedData.length}+ groups still without organizations\n`);
     }
 
-    console.log('✨ Migration completed successfully!\n');
 
   } catch (error: any) {
-    console.error('\n❌ Migration failed with error:', error.message);
-    console.error(error.stack);
     throw error;
   } finally {
     if (authModels) {
@@ -375,11 +333,9 @@ async function syncOrganizations() {
 if (require.main === module) {
   syncOrganizations()
     .then(() => {
-      console.log('✅ Script completed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('❌ Script failed:', error);
       process.exit(1);
     });
 }

@@ -128,12 +128,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               } else {
                 // Session invalid on backend - but DON'T log out yet
                 // User might be offline - keep them logged in with local data
-                console.warn('[AuthContext] Session validation returned null - keeping user logged in with local data');
               }
             })
             .catch((error) => {
               // Network error - DON'T log out! User might be offline
-              console.error('[AuthContext] Failed to validate session (network error) - keeping user logged in:', error);
               // User stays logged in with local data
             });
         } else {
@@ -141,7 +139,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setAuthState('unauthenticated');
         }
       } catch (error) {
-        console.error('[AuthContext] Auth initialization error:', error);
         // Even on error, try to stay logged in if we have stored data
         const authData = await AuthStorage.getAuthData();
         if (authData?.user) {
@@ -171,16 +168,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Skip validation if validated recently
     if (timeSinceLastValidation < VALIDATION_INTERVAL) {
-      console.log(`[AuthContext] Skipping validation - validated ${Math.floor(timeSinceLastValidation / 1000)}s ago`);
       return;
     }
 
     try {
-      console.log('[AuthContext] Validating session on foreground (mobile tokens never expire)');
 
       const authData = await AuthStorage.getAuthData();
       if (!authData?.accessToken) {
-        console.log('[AuthContext] No access token found');
         return;
       }
 
@@ -221,15 +215,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           authData.accessToken,
           currentUser.organizations
         );
-        console.log('[AuthContext] Session validated successfully');
       } else {
         // Session returned null - but DON'T log out
         // User might be offline or backend issue - keep them logged in
-        console.warn('[AuthContext] Session validation returned null - keeping user logged in');
         lastValidation.current = now; // Mark as validated to avoid spamming
       }
     } catch (error) {
-      console.error('[AuthContext] Session validation error - keeping user logged in:', error);
       // NEVER log out on network errors - user might be offline
       lastValidation.current = now; // Mark as validated to avoid spamming retries
     }
@@ -240,7 +231,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       // When app comes to foreground
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('[AuthContext] App has come to foreground - validating session');
         validateSessionOnForeground();
       }
 
@@ -264,12 +254,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // If auth data was cleared but user is still set, update user state
         if (!authData && user) {
-          console.log('[AuthContext] Auth data cleared - logging out user');
           setUser(null);
           // Router will automatically redirect to login
         }
       } catch (error) {
-        console.error('[AuthContext] Error checking auth storage:', error);
       }
     };
 
@@ -290,19 +278,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Switch to a different organization
   const switchOrganization = useCallback(async (orgId: string) => {
     try {
-      console.log('[AuthContext] Switching to organization:', orgId);
       const response = await authService.switchOrganization(orgId);
 
       if (response.success && response.organization) {
         setCurrentOrganization(response.organization);
         await AuthStorage.setCurrentOrganizationId(orgId);
         evenlyApiClient.setOrganizationId(orgId);
-        console.log('[AuthContext] Successfully switched to:', response.organization.name);
 
         // Screens will automatically reload when organization changes
       }
     } catch (error) {
-      console.error('[AuthContext] Failed to switch organization:', error);
       throw error;
     }
   }, [authService]);
@@ -310,7 +295,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Refresh the list of organizations by fetching current user
   const refreshOrganizations = useCallback(async () => {
     try {
-      console.log('[AuthContext] Refreshing organizations via /auth/me...');
       const currentUser = await authService.getCurrentUser();
 
       if (currentUser && currentUser.organizations) {
@@ -325,7 +309,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('[AuthContext] Failed to refresh organizations:', error);
     }
   }, [authService, currentOrganization]);
 
@@ -336,26 +319,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If login was successful and we have user data, use it directly
       if (result.success && result.user) {
         // Update organizations if received from login
-        console.log('[AuthContext] Login result user:', result.user);
-        console.log('[AuthContext] User organizations:', result.user.organizations);
-        console.log('[AuthContext] User currentOrganization:', result.user.currentOrganization);
 
         if (result.user.organizations) {
           setOrganizations(result.user.organizations);
           if (result.user.currentOrganization) {
-            console.log('[AuthContext] Setting organization from currentOrganization:', result.user.currentOrganization.id);
             setCurrentOrganization(result.user.currentOrganization);
             await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
             evenlyApiClient.setOrganizationId(result.user.currentOrganization.id);
           } else if (result.user.organizations.length > 0) {
             // Set first organization as current if not specified
-            console.log('[AuthContext] Setting organization from first org:', result.user.organizations[0].id);
             setCurrentOrganization(result.user.organizations[0]);
             await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
             evenlyApiClient.setOrganizationId(result.user.organizations[0].id);
           }
         } else {
-          console.warn('[AuthContext] ⚠️ No organizations in login result!');
         }
 
         // IMPORTANT: Save auth data BEFORE setting user state
@@ -373,7 +350,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(result.user);
 
         // Mobile tokens never expire (10 years) - no refresh needed
-        console.log('[AuthContext] ✅ Login successful - mobile token never expires');
 
         // Screens will load fresh data when they mount
 
@@ -407,11 +383,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      console.log('[AuthContext] Logging out - clearing all data...');
 
       // Clear cache FIRST to prevent race conditions
       await CacheManager.invalidateAllData();
-      console.log('[AuthContext] ✅ Cache cleared');
 
       // Call backend logout
       await authService.logout();
@@ -426,9 +400,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
 
-      console.log('[AuthContext] ✅ Logout complete - all data cleared');
     } catch (error) {
-      console.error('[AuthContext] Logout error:', error);
 
       // Even if logout fails, clear everything locally
       await CacheManager.invalidateAllData();
@@ -439,7 +411,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
 
-      console.log('[AuthContext] ✅ Logout complete (with errors) - all data cleared');
     }
   }, [authService]);
 
@@ -472,12 +443,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         );
       } else {
         // NEVER auto-logout - keep user logged in with local data
-        console.warn('[AuthContext] refreshUser returned null - keeping user logged in with cached data');
         // Do NOT clear auth data or set user to null
       }
     } catch (error) {
       // NEVER auto-logout on network errors - keep user logged in
-      console.warn('[AuthContext] refreshUser failed - keeping user logged in with cached data');
     }
   }, [authService]);
 

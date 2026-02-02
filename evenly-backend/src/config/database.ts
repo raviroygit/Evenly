@@ -20,11 +20,8 @@ export const testConnection = async (timeoutMs: number = 5000): Promise<boolean>
       sql`SELECT NOW()`,
       timeoutPromise
     ]);
-    
-    console.log('✅ Database connected successfully');
     return true;
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
+  } catch {
     return false;
   }
 };
@@ -33,8 +30,7 @@ export const testConnection = async (timeoutMs: number = 5000): Promise<boolean>
 export const closePool = async (): Promise<void> => {
   try {
     // Neon serverless doesn't need explicit connection closing
-    console.log('✅ Database connection closed');
-  } catch (error) {
-    console.error('❌ Error closing database connection:', error);
+  } catch {
+    // Ignore
   }
 };

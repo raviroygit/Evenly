@@ -25,11 +25,6 @@ export class UserService {
     phoneNumber?: string;
   }): Promise<User> {
     try {
-      console.log('🔍 Checking if user exists in evenly database:', {
-        authServiceId: userData.id,
-        email: userData.email
-      });
-
       // Check if user exists by auth service ID
       const existingUser = await db
         .select()
@@ -39,15 +34,6 @@ export class UserService {
 
       if (existingUser.length > 0) {
         // Update existing user
-        console.log('🔄 Updating existing user in evenly database:', {
-          evenlyId: existingUser[0].id,
-          authServiceId: userData.id,
-          oldEmail: existingUser[0].email,
-          newEmail: userData.email,
-          oldName: existingUser[0].name,
-          newName: userData.name
-        });
-
         const [updatedUser] = await db
           .update(users)
           .set({
@@ -59,20 +45,10 @@ export class UserService {
           })
           .where(eq(users.authServiceId, userData.id))
           .returning();
-
-        console.log('✅ User updated successfully in evenly database');
         return updatedUser;
       } else {
         // Create new user with generated UUID
         const newEvenlyId = UUIDUtils.generateForDB();
-        console.log('🆕 Creating new user in evenly database:', {
-          newEvenlyId: newEvenlyId,
-          authServiceId: userData.id,
-          email: userData.email,
-          name: userData.name,
-          avatar: userData.avatar
-        });
-
         const [createdUser] = await db
           .insert(users)
           .values({
@@ -84,12 +60,9 @@ export class UserService {
             phoneNumber: userData.phoneNumber,
           })
           .returning();
-
-        console.log('✅ New user created successfully in evenly database');
         return createdUser;
       }
     } catch (error) {
-      console.error('Error creating/updating user:', error);
       throw new DatabaseError('Failed to create or update user');
     }
   }
@@ -107,7 +80,6 @@ export class UserService {
 
       return user || null;
     } catch (error) {
-      console.error('Error fetching user:', error);
       throw new DatabaseError('Failed to fetch user');
     }
   }
@@ -125,7 +97,6 @@ export class UserService {
 
       return user || null;
     } catch (error) {
-      console.error('Error fetching user by email:', error);
       throw new DatabaseError('Failed to fetch user by email');
     }
   }
@@ -144,7 +115,6 @@ export class UserService {
 
       return usersList;
     } catch (error) {
-      console.error('Error fetching users by IDs:', error);
       throw new DatabaseError('Failed to fetch users');
     }
   }
@@ -175,7 +145,6 @@ export class UserService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error updating user:', error);
       throw new DatabaseError('Failed to update user');
     }
   }
@@ -198,7 +167,6 @@ export class UserService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      console.error('Error syncing user with auth service:', error);
       throw new DatabaseError('Failed to sync user with auth service');
     }
   }
@@ -211,7 +179,6 @@ export class UserService {
       const user = await this.getUserById(userId);
       return user !== null;
     } catch (error) {
-      console.error('Error checking user existence:', error);
       return false;
     }
   }
@@ -235,7 +202,6 @@ export class UserService {
         totalOwing: 0,
       };
     } catch (error) {
-      console.error('Error fetching user stats:', error);
       throw new DatabaseError('Failed to fetch user statistics');
     }
   }
