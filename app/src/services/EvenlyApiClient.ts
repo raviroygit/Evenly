@@ -14,7 +14,7 @@ class EvenlyApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: ENV.EVENLY_BACKEND_URL,
-      timeout: 30000, // Increased from 10000 to 30000ms (30 seconds)
+      timeout: 120000, // 120 seconds (2 minutes) for image uploads
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -72,6 +72,8 @@ class EvenlyApiClient {
             if (config.headers) {
               delete (config.headers as any)['Content-Type'];
             }
+            console.log(`[${Platform.OS}] 📤 Detected FormData - removed Content-Type header (axios will set multipart/form-data with boundary)`);
+            console.log(`[${Platform.OS}] ⏱️ Request timeout: ${config.timeout || 120000}ms`);
           }
 
           // Get auth data from storage
