@@ -285,6 +285,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
         visible={showMembersModal}
         onClose={() => setShowMembersModal(false)}
         groupId={groupId}
+        groupName={group?.name}
       />
     </Modal>
   );

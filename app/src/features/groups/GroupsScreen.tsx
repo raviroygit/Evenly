@@ -9,6 +9,7 @@ import { InvitationsModal } from '../../components/modals/InvitationsModal';
 import { SearchModal } from '../../components/modals/SearchModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
+import { MemberSelectionModal } from '../../components/modals/MemberSelectionModal';
 import { useGroupInvitations } from '../../hooks/useGroupInvitations';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SkeletonGroupList } from '../../components/ui/SkeletonLoader';
@@ -89,6 +90,8 @@ export const GroupsScreen: React.FC = () => {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState<{ id: string; name: string } | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedGroupForShare, setSelectedGroupForShare] = useState<{ id: string; name: string } | null>(null);
 
   // Note: Removed useFocusEffect to prevent infinite loops
   // Groups will refresh via pull-to-refresh
@@ -160,12 +163,17 @@ export const GroupsScreen: React.FC = () => {
     console.log('GroupId:', groupId, 'GroupName:', groupName);
     console.log('Before setState - showInviteModal:', showInviteModal);
     console.log('Before setState - selectedGroupForInvite:', selectedGroupForInvite);
-    
+
     setSelectedGroupForInvite({ id: groupId, name: groupName });
     setShowInviteModal(true);
-    
+
     console.log('After setState calls');
     console.log('=== GroupsScreen: handleInviteUser completed ===');
+  };
+
+  const handleShareBalance = (groupId: string, groupName: string) => {
+    setSelectedGroupForShare({ id: groupId, name: groupName });
+    setShowShareModal(true);
   };
 
   const handleSendInvitation = async (email: string) => {
@@ -295,12 +303,13 @@ export const GroupsScreen: React.FC = () => {
     };
 
     return (
-      <GroupItem 
-        key={group.id} 
-        group={group} 
+      <GroupItem
+        key={group.id}
+        group={group}
         onInviteUser={handleInviteUser}
         onEditGroup={handleEditGroup}
         onDeleteGroup={handleDeleteGroup}
+        onShareBalance={handleShareBalance}
         onActionExecuted={() => {
           console.log('GroupItem action executed, closing swipe actions with animation frames');
           // Use requestAnimationFrame to ensure modal has time to render
@@ -408,6 +417,17 @@ export const GroupsScreen: React.FC = () => {
           onConfirm={confirmDeleteGroup}
           title="Delete Group"
           description={`Are you sure you want to delete "${deletingGroup?.name}"? This will also delete all expenses in this group. This action cannot be undone.`}
+        />
+
+        {/* Member Selection Modal for Sharing */}
+        <MemberSelectionModal
+          visible={showShareModal}
+          onClose={() => {
+            setShowShareModal(false);
+            setSelectedGroupForShare(null);
+          }}
+          groupId={selectedGroupForShare?.id || null}
+          groupName={selectedGroupForShare?.name || 'Group'}
         />
       </View>
 

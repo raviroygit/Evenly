@@ -129,8 +129,10 @@ export interface Group {
 
 export interface GroupMember {
   id: string;
+  userId?: string; // Actual user ID for matching with debts
   name: string;
   email: string;
+  phone?: string; // Phone number for sharing
   avatar?: string;
   role: 'admin' | 'member';
 }

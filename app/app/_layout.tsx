@@ -42,7 +42,31 @@ export default function RootLayout() {
           }
         }
 
-        // Handle group deep links
+        // Handle tabs/groups deep links (new format)
+        // Format: evenly://tabs/groups/groupId or evenly://tabs/groups
+        else if (hostname === 'tabs' && path?.includes('/groups')) {
+          if (path?.match(/\/groups\/([a-f0-9-]+)/)) {
+            // Specific group: evenly://tabs/groups/groupId
+            const groupId = path.match(/\/groups\/([a-f0-9-]+)/)?.[1];
+            if (groupId) {
+              console.log('Navigating to group:', groupId);
+              router.push(`/tabs/groups/${groupId}`);
+            }
+          } else if (path === '/groups') {
+            // Groups list: evenly://tabs/groups
+            console.log('Navigating to groups tab');
+            router.push('/tabs/groups');
+          }
+        }
+
+        // Handle tabs/books deep links (new format)
+        // Format: evenly://tabs/books
+        else if (hostname === 'tabs' && path?.includes('/books')) {
+          console.log('Navigating to Books/Khata');
+          router.push('/tabs/books');
+        }
+
+        // Legacy group deep links (backward compatibility)
         // Format: evenly://group/groupId123 or https://evenly.app/group/groupId123
         else if (hostname === 'group' || path?.startsWith('/group')) {
           let groupId = '';
@@ -56,17 +80,15 @@ export default function RootLayout() {
           }
 
           if (groupId) {
-            console.log('Navigating to group:', groupId);
-            // Navigate to group details screen
+            console.log('Navigating to group (legacy):', groupId);
             router.push(`/tabs/groups/${groupId}`);
           }
         }
 
-        // Handle Khata deep links
+        // Legacy Khata deep links (backward compatibility)
         // Format: evenly://khata or https://evenly.app/khata
         else if (hostname === 'khata' || path === '/khata') {
-          console.log('Navigating to Khata');
-          // Navigate to Khata tab (you may need to create this screen)
+          console.log('Navigating to Khata (legacy)');
           router.push('/tabs/books');
         }
       } catch (error) {

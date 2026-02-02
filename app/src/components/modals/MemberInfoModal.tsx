@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -9,26 +9,65 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ShareBalanceModal } from './ShareBalanceModal';
+import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
 
 interface MemberInfoModalProps {
   visible: boolean;
   onClose: () => void;
   member: {
+    id: string;
     name: string;
     email: string;
   } | null;
+  groupName?: string;
+  groupId?: string;
+  simplifiedDebts?: any[];
 }
 
 export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
   visible,
   onClose,
   member,
+  groupName = 'Group',
+  groupId,
+  simplifiedDebts = [],
 }) => {
   const { colors, theme } = useTheme();
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleClose = () => {
     onClose();
   };
+
+  // Calculate member-specific debts and credits
+  const { memberDebts, memberCredits } = useMemo(() => {
+    if (!member || !simplifiedDebts.length) {
+      return { memberDebts: [], memberCredits: [] };
+    }
+
+    const debts: SimplifiedDebt[] = [];
+    const credits: SimplifiedDebt[] = [];
+
+    simplifiedDebts.forEach((debt: any) => {
+      // If this member owes money (fromUserId is the debtor)
+      if (debt.fromUserId === member.id) {
+        debts.push({
+          owesTo: debt.toUser?.name || 'Unknown',
+          amount: debt.amount?.toString() || '0',
+        });
+      }
+      // If this member is owed money (toUserId is the creditor)
+      if (debt.toUserId === member.id) {
+        credits.push({
+          owesTo: debt.fromUser?.name || 'Unknown',
+          amount: debt.amount?.toString() || '0',
+        });
+      }
+    });
+
+    return { memberDebts: debts, memberCredits: credits };
+  }, [member, simplifiedDebts]);
 
   if (!visible || !member) {
     return null;
@@ -90,7 +129,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
                       {member.name}
                     </Text>
                   </View>
-                  
+
                   <View style={styles.infoRow}>
                     <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
                       Email
@@ -100,11 +139,40 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
                     </Text>
                   </View>
                 </View>
+
+                {/* Share Balance Button */}
+                <TouchableOpacity
+                  style={[styles.shareButton, {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.border
+                  }]}
+                  onPress={() => setShowShareModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+                  <Text style={styles.shareButtonText}>Share Balance</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
         </View>
       </View>
+
+      {/* Share Balance Modal */}
+      {member && (
+        <ShareBalanceModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          message={generateGroupBalanceMessage(
+            member.name,
+            groupName,
+            memberDebts,
+            memberCredits,
+            groupId
+          )}
+          recipientName={member.name}
+        />
+      )}
     </Modal>
   );
 };
@@ -176,6 +244,22 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginTop: 16,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatHumanDateTime } from '../../../utils/date';
@@ -14,22 +15,31 @@ interface GroupItemProps {
   onInviteUser?: (groupId: string, groupName: string) => void;
   onEditGroup?: (group: Group) => void;
   onDeleteGroup?: (groupId: string, groupName: string) => void;
+  onShareBalance?: (groupId: string, groupName: string) => void;
   onActionExecuted?: () => void;
 }
 
-export const GroupItem: React.FC<GroupItemProps> = ({ 
-  group, 
-  onPress, 
-  onInviteUser, 
-  onEditGroup, 
+export const GroupItem: React.FC<GroupItemProps> = ({
+  group,
+  onPress,
+  onInviteUser,
+  onEditGroup,
   onDeleteGroup,
+  onShareBalance,
   onActionExecuted
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const preventNavigationRef = React.useRef(false);
 
   const handlePress = () => {
+    // Check if we should prevent navigation (share button was clicked)
+    if (preventNavigationRef.current) {
+      preventNavigationRef.current = false;
+      return;
+    }
+
     console.log('GroupItem handlePress called for group:', group.name, group.id);
     if (onPress) {
       console.log('Calling custom onPress handler');
@@ -42,6 +52,22 @@ export const GroupItem: React.FC<GroupItemProps> = ({
       } catch (error) {
         console.error('Navigation error:', error);
       }
+    }
+  };
+
+  const handleSharePressIn = () => {
+    // Set flag BEFORE the parent's onPress fires
+    preventNavigationRef.current = true;
+  };
+
+  const handleSharePress = () => {
+    // Reset flag after a short delay
+    setTimeout(() => {
+      preventNavigationRef.current = false;
+    }, 200);
+
+    if (onShareBalance) {
+      onShareBalance(group.id, group.name);
     }
   };
 
@@ -148,6 +174,22 @@ export const GroupItem: React.FC<GroupItemProps> = ({
           )}
         </View>
         <View style={styles.amount}>
+          <View style={styles.rightActions}>
+            {onShareBalance && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.shareButton,
+                  { backgroundColor: colors.primary + '20' },
+                  pressed && { opacity: 0.7 }
+                ]}
+                onPressIn={handleSharePressIn}
+                onPress={handleSharePress}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.primary} />
+              </Pressable>
+            )}
+          </View>
           <Text style={[styles.amountText, { color: colors.foreground }]}>
             {group.defaultSplitType}
           </Text>
@@ -231,6 +273,18 @@ const styles = StyleSheet.create({
   amount: {
     alignItems: 'flex-end',
     gap: 4,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  shareButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   amountText: {
     fontSize: 16,

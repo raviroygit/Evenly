@@ -32,7 +32,15 @@
         "applinks:evenly.app",
         "applinks:www.evenly.app",
         "applinks:evenlysplit.nxtgenaidev.com"
-      ]
+      ],
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "whatsapp",
+          "sms",
+          "tel"
+        ]
+      },
+      "appleTeamId": "3ZGW2224V2"
     },
     "android": {
       "versionCode": 5,
@@ -54,7 +62,10 @@
               "scheme": "evenly"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -71,7 +82,10 @@
               "pathPrefix": "/invitation"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },

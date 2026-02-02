@@ -10,6 +10,7 @@ import { ExpenseSummary } from '../../components/features/expenses/ExpenseSummar
 import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
+import { MemberSelectionModal } from '../../components/modals/MemberSelectionModal';
 import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { SkeletonExpenseList, SkeletonLoader, SkeletonExpenseSummary, SkeletonExpenseItem } from '../../components/ui/SkeletonLoader';
 import { EnhancedExpense } from '../../types';
@@ -36,6 +37,7 @@ export const GroupDetailsScreen: React.FC = () => {
   const [isUpdatingExpense, setIsUpdatingExpense] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingExpense, setDeletingExpense] = useState<{ id: string; title: string } | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const group = groups.find(g => g.id === groupId);
 
@@ -230,12 +232,20 @@ export const GroupDetailsScreen: React.FC = () => {
               {expenses.length} {expenses.length === 1 ? 'transaction' : 'transactions'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.infoButton}
-            onPress={() => setShowGroupInfoModal(true)}
-          >
-            <Ionicons name="eye-outline" size={24} color={colors.foreground} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerActionButton}
+              onPress={() => setShowShareModal(true)}
+            >
+              <Ionicons name="share-outline" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.infoButton}
+              onPress={() => setShowGroupInfoModal(true)}
+            >
+              <Ionicons name="eye-outline" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -445,6 +455,14 @@ export const GroupDetailsScreen: React.FC = () => {
         description={`Are you sure you want to delete "${deletingExpense?.title}"? This action cannot be undone.`}
       />
 
+      {/* Member Selection Modal for Sharing */}
+      <MemberSelectionModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        groupId={groupId || null}
+        groupName={group?.name || 'Group'}
+      />
+
       {/* Floating Action Button */}
       <FloatingActionButton
         actions={[
@@ -506,6 +524,13 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     marginTop: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerActionButton: {
+    padding: 8,
   },
   infoButton: {
     padding: 8,

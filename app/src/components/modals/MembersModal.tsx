@@ -18,29 +18,33 @@ interface MembersModalProps {
   visible: boolean;
   onClose: () => void;
   groupId: string | null;
+  groupName?: string;
 }
 
 export const MembersModal: React.FC<MembersModalProps> = ({
   visible,
   onClose,
   groupId,
+  groupName,
 }) => {
   const { colors, theme } = useTheme();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string } | null>(null);
+  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string; id: string } | null>(null);
   const [showMemberModal, setShowMemberModal] = useState(false);
+  const [simplifiedDebts, setSimplifiedDebts] = useState<any[]>([]);
 
   useEffect(() => {
     if (visible && groupId) {
       loadMembers();
+      loadSimplifiedDebts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, groupId]);
 
   const loadMembers = async () => {
     if (!groupId) return;
-    
+
     try {
       setLoadingMembers(true);
       const membersData = await EvenlyBackendService.getGroupMembers(groupId);
@@ -58,12 +62,25 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     }
   };
 
+  const loadSimplifiedDebts = async () => {
+    if (!groupId) return;
+
+    try {
+      const debtsData = await EvenlyBackendService.getSimplifiedDebts(groupId);
+      setSimplifiedDebts(debtsData);
+    } catch (error) {
+      console.error('Error loading simplified debts:', error);
+      setSimplifiedDebts([]);
+    }
+  };
+
   const handleClose = () => {
     onClose();
   };
 
   const handleMemberPress = (member: GroupMember) => {
     setSelectedMember({
+      id: member.id,
       name: member.name,
       email: member.email,
     });
@@ -195,6 +212,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
           setSelectedMember(null);
         }}
         member={selectedMember}
+        groupName={groupName || 'Group'}
+        groupId={groupId || undefined}
+        simplifiedDebts={simplifiedDebts}
       />
     </>
   );

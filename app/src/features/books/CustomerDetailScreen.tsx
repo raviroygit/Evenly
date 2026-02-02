@@ -18,6 +18,7 @@ import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmat
 import { TransactionDetailModal } from '../../components/modals/TransactionDetailModal';
 import { ImageViewer } from '../../components/ui/ImageViewer';
 import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
+import { ShareBalanceModal } from '../../components/modals/ShareBalanceModal';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { SkeletonTransactionList } from '../../components/ui/SkeletonLoader';
 import { AppCache } from '../../utils/cache';
@@ -26,6 +27,7 @@ import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScroll
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
+import { generateKhataBalanceMessage } from '../../utils/messageTemplates';
 
 interface Transaction {
   id: string;
@@ -68,6 +70,7 @@ export const CustomerDetailScreen: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const getInitials = (name: string): string => {
     return name
@@ -393,8 +396,11 @@ export const CustomerDetailScreen: React.FC = () => {
               <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>View details</Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerActionButton}>
-                <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
+              <TouchableOpacity
+                style={styles.headerActionButton}
+                onPress={() => setShowShareModal(true)}
+              >
+                <Ionicons name="share-outline" size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
           </View>
@@ -621,6 +627,21 @@ export const CustomerDetailScreen: React.FC = () => {
           onClose={() => setShowCustomerInfoModal(false)}
           customer={customer}
         />
+
+        {/* Share Balance Modal */}
+        {customer && (
+          <ShareBalanceModal
+            visible={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            message={generateKhataBalanceMessage({
+              name: customer.name,
+              amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
+              type: customer.type,
+            })}
+            phoneNumber={customer.phone}
+            recipientName={customer.name}
+          />
+        )}
       </View>
     </>
   );
