@@ -22,3 +22,6 @@ web-build/
 .metro-health-check*
 
 .env
+
+# Android release signing (do not commit passwords)
+keystore.properties
