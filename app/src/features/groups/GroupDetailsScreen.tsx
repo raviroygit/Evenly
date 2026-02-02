@@ -9,7 +9,9 @@ import { ExpenseItem } from '../../components/features/expenses/ExpenseItem';
 import { ExpenseSummary } from '../../components/features/expenses/ExpenseSummary';
 import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
+import { ExpenseDetailModal } from '../../components/modals/ExpenseDetailModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
+import { ImageViewer } from '../../components/ui/ImageViewer';
 import { MemberSelectionModal } from '../../components/modals/MemberSelectionModal';
 import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { SkeletonExpenseList, SkeletonLoader, SkeletonExpenseSummary, SkeletonExpenseItem } from '../../components/ui/SkeletonLoader';
@@ -38,6 +40,9 @@ export const GroupDetailsScreen: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingExpense, setDeletingExpense] = useState<{ id: string; title: string } | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [detailExpense, setDetailExpense] = useState<EnhancedExpense | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
 
   const group = groups.find(g => g.id === groupId);
 
@@ -216,11 +221,25 @@ export const GroupDetailsScreen: React.FC = () => {
     }
   };
 
+  const handleExpenseDetailImagePress = () => {
+    setShowDetailModal(false);
+    setTimeout(() => setShowImageViewer(true), 300);
+  };
+
+  const handleExpenseDetailImageViewerClose = () => {
+    setShowImageViewer(false);
+    setTimeout(() => setShowDetailModal(true), 300);
+  };
+
   const renderExpenseItem = ({ item }: { item: EnhancedExpense }) => (
     <ExpenseItem
       key={item.id}
       item={item}
       groupName={group?.name}
+      onPress={() => {
+        setDetailExpense(item);
+        setShowDetailModal(true);
+      }}
       onEditExpense={setEditingExpense}
       onDeleteExpense={handleDeleteExpense}
       onActionExecuted={() => {
@@ -460,6 +479,26 @@ export const GroupDetailsScreen: React.FC = () => {
           onUpdateExpense={handleUpdateExpense}
           currentUserId={user.id}
           editExpense={editingExpense}
+        />
+      )}
+
+      {/* Expense Detail Modal */}
+      <ExpenseDetailModal
+        visible={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setDetailExpense(null);
+        }}
+        expense={detailExpense}
+        onImagePress={detailExpense?.receipt ? handleExpenseDetailImagePress : undefined}
+      />
+
+      {/* Image Viewer (full-screen receipt) */}
+      {detailExpense?.receipt && (
+        <ImageViewer
+          visible={showImageViewer}
+          imageUrl={detailExpense.receipt}
+          onClose={handleExpenseDetailImageViewerClose}
         />
       )}
 
