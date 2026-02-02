@@ -182,6 +182,7 @@ export class EvenlyBackendService {
     options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[]; transformRequest?: any } = {},
     retryCount: number = 0
   ): Promise<ApiResponse<T>> {
+    const methodUpper = (options.method || 'GET').toUpperCase();
     try {
       // Convert RequestInit to Axios config
       const axiosConfig: any = {
@@ -205,7 +206,6 @@ export class EvenlyBackendService {
       }
 
       // Optional GET cache lookup
-      const methodUpper = (axiosConfig.method || 'GET').toUpperCase();
       const cacheTTLMs = options.cacheTTLMs;
       const bodyForKey = options.body
         ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body)

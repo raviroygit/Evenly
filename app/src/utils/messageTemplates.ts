@@ -1,3 +1,11 @@
+import { ENV } from '../config/env';
+
+// Use backend download URL so WhatsApp/SMS link preview shows app logo (og:image) instead of App Store screenshot
+const getAppDownloadUrl = (): string => {
+  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
+  return base ? `${base}/api/app/download` : 'https://apps.apple.com/app/id6756101586';
+};
+
 export interface CustomerBalanceData {
   name: string;
   amount: string;
@@ -15,7 +23,8 @@ export interface MemberBalanceData {
 export const generateKhataBalanceMessage = (data: CustomerBalanceData): string => {
   const { name, amount, type, businessName = 'Evenly' } = data;
 
-  const appLink = `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/books\n\nDownload:\nhttps://apps.apple.com/app/id6756101586`;
+  const downloadUrl = getAppDownloadUrl();
+  const appLink = `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/books\n\nDownload:\n${downloadUrl}`;
 
   if (type === 'settled') {
     return `Hi ${name},\n\nYour account with ${businessName} is settled.\n\nThank you for your business!${appLink}`;
@@ -42,10 +51,11 @@ export const generateGroupBalanceMessage = (
   credits: SimplifiedDebt[],
   groupId?: string
 ): string => {
-  // Use deep link to open group directly in app
+  // Use deep link to open group directly in app; download URL uses backend so link preview shows app logo
+  const downloadUrl = getAppDownloadUrl();
   const appLink = groupId
-    ? `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups/${groupId}\n\nDownload:\nhttps://apps.apple.com/app/id6756101586`
-    : `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups\n\nDownload:\nhttps://apps.apple.com/app/id6756101586`;
+    ? `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups/${groupId}\n\nDownload:\n${downloadUrl}`
+    : `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups\n\nDownload:\n${downloadUrl}`;
 
   // If no debts or credits, user is settled
   if (debts.length === 0 && credits.length === 0) {
