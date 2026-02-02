@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 /**
- * Patches android/app/build.gradle so release builds always use the correct
- * keystore and never fall back to debug (avoids Play Console "wrong key" error).
- * Run after expo prebuild so signing is applied. Safe to run multiple times (idempotent).
+ * Auto-patches android/app/build.gradle after prebuild. Do not manually edit any
+ * file in android/ — run only "npm run prebuild" and this script applies all
+ * release-signing changes.
  *
- * Injects:
- * - App root from projectDir (reliable path), release keystore + keystore.properties
- * - Play expected SHA1 (03:33:93:...) for verification
- * - Release build FAILS if keystore missing (no silent debug fallback)
- * - checkReleaseSigning task to print keystore SHA1 vs Play's expected
- *
- * Usage: node scripts/android-release-signing.js
- * (Run from app root; prebuild script runs this automatically.)
+ * Injects: app root from projectDir, release keystore + keystore.properties,
+ * Play expected SHA1, release build fail-if-missing, checkReleaseSigning task.
+ * Safe to run multiple times (idempotent).
  */
 
 const fs = require('fs');
@@ -67,9 +62,11 @@ const RELEASE_BUILD_TYPE = `        release {
 
 const DEFAULT_SIGNING_CONFIGS = /    signingConfigs \{\s*\n        debug \{\s*\n            storeFile file\('debug\.keystore'\)\s*\n            storePassword 'android'\s*\n            keyAlias 'androiddebugkey'\s*\n            keyPassword 'android'\s*\n        \}\s*\n    \}/;
 
-// release { signingConfig signingConfigs.debug ... -> our release block
-const DEFAULT_RELEASE_BLOCK = /        release \{\s*\n            signingConfig signingConfigs\.debug\s*\n            def enableShrinkResources/;
-const PATCHED_RELEASE_BLOCK = RELEASE_BUILD_TYPE + '\n            def enableShrinkResources';
+// Match only the buildTypes.release block (must include "debug { signingConfig ... }" before it so we don't match signingConfigs.release)
+// Expo adds comments between "release {" and "signingConfig", so match any chars in between
+const DEFAULT_BUILDTYPES_RELEASE =
+  /(    buildTypes \{\s*\n        debug \{\s*\n            signingConfig signingConfigs\.debug\s*\n        \}\s*\n)        release \{\s*\n[\s\S]*?signingConfig signingConfigs\.debug\s*\n\s*def enableShrinkResources = [^\n]+/;
+const PATCHED_BUILDTYPES_RELEASE = '$1' + RELEASE_BUILD_TYPE;
 
 // Insert variables after projectRoot line (only if not already present)
 const PROJECT_ROOT_LINE = /(def projectRoot = rootDir\.getAbsoluteFile\(\)\.getParentFile\(\)\.getAbsolutePath\(\)\n)/;
@@ -129,6 +126,16 @@ function main() {
 
   let content = fs.readFileSync(BUILD_GRADLE, 'utf8');
 
+  // If already patched but buildTypes.release still uses debug (e.g. Expo overwrote only part), fix release block
+  if (content.includes(MARKER) && content.includes('signingConfig signingConfigs.debug')) {
+    if (DEFAULT_BUILDTYPES_RELEASE.test(content)) {
+      content = content.replace(DEFAULT_BUILDTYPES_RELEASE, PATCHED_BUILDTYPES_RELEASE);
+      fs.writeFileSync(BUILD_GRADLE, content, 'utf8');
+      console.log('Android release signing: fixed buildTypes.release block (was still using debug).');
+    }
+    process.exit(0);
+    return;
+  }
   if (content.includes(MARKER)) {
     console.log('Android release signing already applied.');
     process.exit(0);
@@ -147,11 +154,11 @@ function main() {
   // 2) Replace signingConfigs with our block (includes release)
   content = content.replace(DEFAULT_SIGNING_CONFIGS, RELEASE_SIGNING_CONFIGS);
 
-  // 3) Replace release buildType: fail if !useReleaseSigning, use signingConfigs.release
-  if (!DEFAULT_RELEASE_BLOCK.test(content)) {
-    console.warn('Could not find release block with signingConfig signingConfigs.debug. Skipping release block patch.');
+  // 3) Replace buildTypes.release: fail if !useReleaseSigning, use signingConfigs.release (match only buildTypes, not signingConfigs)
+  if (!DEFAULT_BUILDTYPES_RELEASE.test(content)) {
+    console.warn('Could not find buildTypes.release block with signingConfig signingConfigs.debug. Skipping release block patch.');
   } else {
-    content = content.replace(DEFAULT_RELEASE_BLOCK, PATCHED_RELEASE_BLOCK);
+    content = content.replace(DEFAULT_BUILDTYPES_RELEASE, PATCHED_BUILDTYPES_RELEASE);
   }
 
   // 4) Append checkReleaseSigning task if not present
@@ -160,8 +167,7 @@ function main() {
   }
 
   fs.writeFileSync(BUILD_GRADLE, content, 'utf8');
-  console.log('Android release signing applied to android/app/build.gradle');
-  console.log('  - App root from projectDir; release fails if keystore missing; checkReleaseSigning task added.');
+  console.log('Android release signing applied (do not edit android/ manually; use only npm run prebuild).');
 }
 
 main();

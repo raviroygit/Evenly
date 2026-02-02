@@ -129,9 +129,13 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (!useReleaseSigning) {
+                throw new GradleException(
+                    "Release signing is not configured. Place evenlysplit-release-key.keystore and keystore.properties in the app root (" + appRoot.absolutePath + "). " +
+                    "Play Console expects SHA1: " + PLAY_EXPECTED_SHA1 + ". Do not use the debug keystore for release."
+                )
+            }
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
