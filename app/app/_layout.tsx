@@ -34,8 +34,8 @@ export default function RootLayout() {
           let token = '';
 
           if (hostname === 'invitation' && path) {
-            // Custom scheme: evenly://invitation/token123
-            token = path.substring(1); // Remove leading slash
+            // Custom scheme: evenly://invitation/token123 (path may be '/token123' or 'token123')
+            token = path.replace(/^\//, '');
           } else if (path?.startsWith('/invitation/')) {
             // Universal link: https://evenly.app/invitation/token123
             token = path.substring('/invitation/'.length);
@@ -43,24 +43,24 @@ export default function RootLayout() {
 
           if (token) {
             console.log('Navigating to invitation:', token);
-            router.push(`/invitations/accept?token=${token}`);
+            router.replace(`/invitations/accept?token=${token}`);
           }
         }
 
         // Handle tabs/groups deep links (new format)
-        // Format: evenly://tabs/groups/groupId or evenly://tabs/groups
-        else if (hostname === 'tabs' && path?.includes('/groups')) {
+        // Format: evenly://tabs/groups/groupId or evenly://tabs/groups or https://evenly.app/tabs/groups/...
+        else if ((hostname === 'tabs' && path?.includes('/groups')) || path?.startsWith('/tabs/groups')) {
           if (path?.match(/\/groups\/([a-f0-9-]+)/)) {
-            // Specific group: evenly://tabs/groups/groupId
+            // Specific group: evenly://tabs/groups/groupId or https://evenly.app/tabs/groups/groupId
             const groupId = path.match(/\/groups\/([a-f0-9-]+)/)?.[1];
             if (groupId) {
               console.log('Navigating to group:', groupId);
-              router.push(`/tabs/groups/${groupId}`);
+              router.replace(`/tabs/groups/${groupId}`);
             }
-          } else if (path === '/groups') {
-            // Groups list: evenly://tabs/groups
+          } else if (path === '/groups' || path === '/tabs/groups') {
+            // Groups list: evenly://tabs/groups or https://evenly.app/tabs/groups
             console.log('Navigating to groups tab');
-            router.push('/tabs/groups');
+            router.replace('/tabs/groups');
           }
         }
 
@@ -68,7 +68,7 @@ export default function RootLayout() {
         // Format: evenly://tabs/books
         else if (hostname === 'tabs' && path?.includes('/books')) {
           console.log('Navigating to Books/Khata');
-          router.push('/tabs/books');
+          router.replace('/tabs/books');
         }
 
         // Legacy group deep links (backward compatibility)
@@ -77,8 +77,8 @@ export default function RootLayout() {
           let groupId = '';
 
           if (hostname === 'group' && path) {
-            // Custom scheme: evenly://group/groupId123
-            groupId = path.substring(1); // Remove leading slash
+            // Custom scheme: evenly://group/groupId123 (path may be '/groupId' or 'groupId')
+            groupId = path.replace(/^\//, '');
           } else if (path?.startsWith('/group/')) {
             // Universal link: https://evenly.app/group/groupId123
             groupId = path.substring('/group/'.length);
@@ -86,15 +86,15 @@ export default function RootLayout() {
 
           if (groupId) {
             console.log('Navigating to group (legacy):', groupId);
-            router.push(`/tabs/groups/${groupId}`);
+            router.replace(`/tabs/groups/${groupId}`);
           }
         }
 
         // Legacy Khata deep links (backward compatibility)
-        // Format: evenly://khata or https://evenly.app/khata
-        else if (hostname === 'khata' || path === '/khata') {
-          console.log('Navigating to Khata (legacy)');
-          router.push('/tabs/books');
+        // Format: evenly://khata or https://evenly.app/khata or https://evenly.app/books
+        else if (hostname === 'khata' || path === '/khata' || path === '/books' || path === '/tabs/books') {
+          console.log('Navigating to Khata/Books');
+          router.replace('/tabs/books');
         }
       } catch (error) {
         console.error('Error handling deep link:', error);

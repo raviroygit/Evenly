@@ -58,7 +58,7 @@ export async function sendEmail(to: string, subject: string, htmlBody: string): 
     });
 
     const mailOptions = {
-      from: `"Evenly" <${config.email.auth.user}>`,
+      from: `"EvenlySplit" <${config.email.auth.user}>`,
       to,
       subject,
       html: htmlBody
@@ -138,8 +138,8 @@ export async function sendGroupInvitationEmail(
     });
 
     const subject = isExistingUser
-      ? `You've been invited to join "${groupName}" on Evenly`
-      : `Join "${groupName}" on Evenly - Expense Sharing Made Easy`;
+      ? `You've been invited to join "${groupName}" on EvenlySplit`
+      : `Join "${groupName}" on EvenlySplit - Expense Sharing Made Easy`;
 
     await sendEmail(email, subject, htmlBody);
   } catch (error: any) {
@@ -347,7 +347,7 @@ async function sendSupportConfirmationEmail(
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Support Request Confirmation - Evenly</title>
+        <title>Support Request Confirmation - EvenlySplit</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -366,7 +366,7 @@ async function sendSupportConfirmationEmail(
       <body>
         <div class="header">
           <h2>✅ Support Request Received</h2>
-          <p>Thank you for contacting Evenly support!</p>
+          <p>Thank you for contacting EvenlySplit support!</p>
         </div>
         
         <div class="content">
@@ -413,8 +413,8 @@ async function sendSupportConfirmationEmail(
             <p>Our support team will review your request and respond within 24-48 hours.</p>
             <p>For urgent issues, please contact us directly at support@evenly.com</p>
             <br>
-            <p>Thank you for using Evenly! 🎉</p>
-            <p>© ${new Date().getFullYear()} Evenly. All rights reserved.</p>
+            <p>Thank you for using EvenlySplit! 🎉</p>
+            <p>© ${new Date().getFullYear()} EvenlySplit. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -508,8 +508,8 @@ export async function sendKhataTransactionEmail(
           <div class="balance">${balanceType}: ₹${Math.abs(balanceNum).toFixed(2)}</div>
           
           <div class="footer">
-            <p>This is an automated notification from Evenly Khata.</p>
-            <p>© ${new Date().getFullYear()} Evenly. All rights reserved.</p>
+            <p>This is an automated notification from EvenlySplit Khata.</p>
+            <p>© ${new Date().getFullYear()} EvenlySplit. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -665,7 +665,7 @@ export async function sendCustomerAddedEmail(
     });
     console.log('✅ Template rendered successfully');
 
-    const subject = `You've been added to ${userName}'s Khata on Evenly`;
+    const subject = `You've been added to ${userName}'s Khata on EvenlySplit`;  
 
     console.log('📤 Sending customer added email...');
     await sendEmail(customerEmail, subject, htmlBody);

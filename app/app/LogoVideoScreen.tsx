@@ -1,7 +1,7 @@
-import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useCallback, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 const LOGO_VIDEO = require('../assets/logo-animation.mp4.mp4');
 
@@ -18,28 +18,37 @@ export default function LogoVideoScreen({ onFinish }: LogoVideoScreenProps) {
     SplashScreen.hideAsync().catch(() => {});
   }, []);
 
-  const onPlaybackStatusUpdate = useCallback(
-    (status: AVPlaybackStatus) => {
-      if (!status.isLoaded) return;
-      if (status.didJustFinish && !status.isLooping) {
-        onFinish();
-      }
-    },
-    [onFinish]
-  );
+  const player = useVideoPlayer(LOGO_VIDEO, (p) => {
+    p.loop = false;
+    p.muted = false; // play with audio (was true for silent logo)
+    p.play();
+  });
+
+  useEffect(() => {
+    const sub = player.addListener('playToEnd', onFinish);
+    return () => sub.remove();
+  }, [player, onFinish]);
+
+  useEffect(() => {
+    const sub = player.addListener('sourceLoad', hideSplashOnce);
+    return () => sub.remove();
+  }, [player, hideSplashOnce]);
+
+  useEffect(() => {
+    const sub = player.addListener('statusChange', (payload) => {
+      if (payload.status === 'error') onFinish();
+    });
+    return () => sub.remove();
+  }, [player, onFinish]);
 
   return (
     <View style={styles.logoContainer}>
-      <Video
-        source={LOGO_VIDEO}
+      <VideoView
         style={styles.video}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay
-        isLooping={false}
-        onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-        onLoad={hideSplashOnce}
-        onReadyForDisplay={hideSplashOnce}
-        onError={() => onFinish()}
+        player={player}
+        contentFit="contain"
+        nativeControls={false}
+        allowsFullscreen={false}
       />
     </View>
   );
@@ -55,6 +64,5 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     height: '100%',
-    ...(Platform.OS === 'web' ? { objectFit: 'contain' as const } : {}),
   },
 });

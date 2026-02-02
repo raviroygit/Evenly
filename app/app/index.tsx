@@ -1,6 +1,6 @@
 import React, { useState, useCallback, Suspense } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
@@ -33,6 +33,7 @@ function IndexScreen() {
   const { isAuthenticated, isLoading } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const pathname = usePathname();
   const [showLogoAnimation, setShowLogoAnimation] = useState(true);
 
   const finishLogoAnimation = useCallback(() => {
@@ -46,7 +47,7 @@ function IndexScreen() {
   }, [showLogoAnimation, finishLogoAnimation]);
 
   React.useEffect(() => {
-    if (!showLogoAnimation && !isLoading) {
+    if (!showLogoAnimation && !isLoading && pathname === '/') {
       const timer = setTimeout(() => {
         if (isAuthenticated) {
           router.replace('/tabs');
@@ -56,7 +57,7 @@ function IndexScreen() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [showLogoAnimation, isAuthenticated, isLoading, router]);
+  }, [showLogoAnimation, isAuthenticated, isLoading, router, pathname]);
 
   if (showLogoAnimation) {
     return (

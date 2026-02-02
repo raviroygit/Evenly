@@ -4,10 +4,14 @@ import {
   openGroupRedirect,
   openExpenseRedirect,
   openKhataRedirect,
-  getDeviceInfo
+  getDeviceInfo,
+  serveLogo,
 } from '../controllers/appRedirectController';
 
 export default async function appRedirectRoutes(fastify: FastifyInstance) {
+  // App logo for link previews (WhatsApp/SMS) - show app logo instead of App Store screenshot
+  fastify.get('/app/logo', serveLogo);
+
   // Smart app download redirect - detects device and redirects to appropriate store
   fastify.get('/app/download', appDownloadRedirect);
 

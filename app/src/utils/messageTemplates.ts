@@ -1,9 +1,20 @@
 import { ENV } from '../config/env';
 
-// Use backend download URL so WhatsApp/SMS link preview shows app logo (og:image) instead of App Store screenshot
+// EVENLY_BACKEND_URL already includes /api (e.g. https://xxx.run.app/api) – append /app/... only
 const getAppDownloadUrl = (): string => {
   const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
-  return base ? `${base}/api/app/download` : 'https://apps.apple.com/app/id6756101586';
+  return base ? `${base}/app/download` : 'https://apps.apple.com/app/id6756101586';
+};
+
+// Backend "open" URLs: tappable in WhatsApp/SMS – open app or redirect to store
+const getAppOpenKhataUrl = (): string => {
+  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
+  return base ? `${base}/app/open/khata` : getAppDownloadUrl();
+};
+
+const getAppOpenGroupUrl = (groupId: string): string => {
+  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
+  return base ? `${base}/app/open/group/${groupId}` : getAppDownloadUrl();
 };
 
 export interface CustomerBalanceData {
@@ -24,7 +35,8 @@ export const generateKhataBalanceMessage = (data: CustomerBalanceData): string =
   const { name, amount, type, businessName = 'Evenly' } = data;
 
   const downloadUrl = getAppDownloadUrl();
-  const appLink = `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/books\n\nDownload:\n${downloadUrl}`;
+  const openKhataUrl = getAppOpenKhataUrl();
+  const appLink = `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\n${openKhataUrl}\n\nDownload:\n${downloadUrl}`;
 
   if (type === 'settled') {
     return `Hi ${name},\n\nYour account with ${businessName} is settled.\n\nThank you for your business!${appLink}`;
@@ -51,11 +63,11 @@ export const generateGroupBalanceMessage = (
   credits: SimplifiedDebt[],
   groupId?: string
 ): string => {
-  // Use deep link to open group directly in app; download URL uses backend so link preview shows app logo
+  // Use backend open URL so link is tappable in WhatsApp/SMS – opens app or store
   const downloadUrl = getAppDownloadUrl();
   const appLink = groupId
-    ? `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups/${groupId}\n\nDownload:\n${downloadUrl}`
-    : `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\nevenly://tabs/groups\n\nDownload:\n${downloadUrl}`;
+    ? `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\n${getAppOpenGroupUrl(groupId)}\n\nDownload:\n${downloadUrl}`
+    : `\n\n━━━━━━━━━━━━━━━━━━━━\nView in EvenlySplit:\n${downloadUrl}\n\nDownload:\n${downloadUrl}`;
 
   // If no debts or credits, user is settled
   if (debts.length === 0 && credits.length === 0) {

@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opening Evenly...</title>
+    <title>__OG_TITLE__</title>
+    <!-- Open Graph: show app logo in WhatsApp/SMS link previews instead of App Store screenshot -->
+    <meta property="og:image" content="__OG_IMAGE_URL__">
+    <meta property="og:title" content="__OG_TITLE__">
+    <meta property="og:description" content="Download EvenlySplit - Split expenses, share memories.">
+    <meta property="og:url" content="__OG_URL__">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="__OG_IMAGE_URL__">
     <style>
         * {
             margin: 0;
@@ -180,92 +188,49 @@
             }
         }
 
+        // Function to redirect to store (so user is never stuck)
+        function redirectToStore() {
+            if (appOpened) return;
+            appOpened = true; // prevent double redirect
+            if (device === 'android') {
+                updateUI('Open in Play Store', 'Redirecting to download Evenly...', 'Opening Play Store...', true);
+                window.location.href = PLAY_STORE;
+            } else if (device === 'ios') {
+                updateUI('Open in App Store', 'Redirecting to download Evenly...', 'Opening App Store...', true);
+                window.location.href = APP_STORE;
+            }
+        }
+
         // Function to try opening the app
         function tryOpenApp() {
-            console.log('Attempting to open app...');
-            console.log('Device:', device);
-            console.log('Invitation Token:', invitationToken);
+            console.log('Attempting to open app...', 'Device:', device);
 
-            // Set up visibility change detection (if app opens, page will be hidden)
+            // Set up detection: if app opens, page will be hidden – clear store redirect
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
                     appOpened = true;
-                    console.log('App opened successfully!');
                     clearTimeout(redirectTimeout);
                 }
             });
-
-            // Set up page blur detection (another way to detect app opened)
             window.addEventListener('blur', function() {
                 appOpened = true;
-                console.log('App opened (blur detected)');
                 clearTimeout(redirectTimeout);
             });
-
-            // Set up pagehide detection (iOS)
             window.addEventListener('pagehide', function() {
                 appOpened = true;
-                console.log('App opened (pagehide detected)');
                 clearTimeout(redirectTimeout);
             });
 
             if (device === 'android') {
-                // Android: Try deep link
-                console.log('Trying Android deep link:', ANDROID_DEEP_LINK);
-
-                // Try to open app via intent
+                // Schedule fallback FIRST so it always runs (timers can be throttled after location change)
+                redirectTimeout = setTimeout(redirectToStore, 2500);
+                // Then try to open app
                 window.location.href = ANDROID_DEEP_LINK;
 
-                // Fallback to Play Store after 2.5 seconds if app didn't open
-                redirectTimeout = setTimeout(function() {
-                    if (!appOpened) {
-                        console.log('App not installed, redirecting to Play Store');
-                        updateUI(
-                            'App Not Installed',
-                            'Redirecting you to Play Store to download Evenly...',
-                            'Opening Play Store...',
-                            false
-                        );
-
-                        // Redirect to Play Store
-                        setTimeout(function() {
-                            window.location.href = PLAY_STORE;
-                        }, 1000);
-                    }
-                }, 2500);
-
             } else if (device === 'ios') {
-                // iOS: Try universal link first, then custom scheme
-                console.log('Trying iOS universal link:', IOS_UNIVERSAL_LINK);
-
-                // Try universal link first (preferred on iOS 9+)
-                window.location.href = IOS_UNIVERSAL_LINK;
-
-                // Fallback to custom scheme after 1 second
-                setTimeout(function() {
-                    if (!appOpened) {
-                        console.log('Trying iOS custom scheme:', IOS_CUSTOM_SCHEME);
-                        window.location.href = IOS_CUSTOM_SCHEME;
-                    }
-                }, 1000);
-
-                // Fallback to App Store after 3 seconds if app didn't open
-                redirectTimeout = setTimeout(function() {
-                    if (!appOpened) {
-                        console.log('App not installed, redirecting to App Store');
-                        updateUI(
-                            'App Not Installed',
-                            'Redirecting you to App Store to download Evenly...',
-                            'Opening App Store...',
-                            false
-                        );
-
-                        // Redirect to App Store
-                        setTimeout(function() {
-                            window.location.href = APP_STORE;
-                        }, 1000);
-                    }
-                }, 3000);
+                // Use custom scheme only so we stay on this page and timeout can fire (universal link would navigate away)
+                redirectTimeout = setTimeout(redirectToStore, 3000);
+                window.location.href = IOS_CUSTOM_SCHEME;
 
             } else {
                 // Desktop or unknown device
@@ -304,15 +269,11 @@
         // Wait a bit for page to load, then try to open app
         setTimeout(tryOpenApp, 500);
 
-        // Show manual button after 5 seconds as last resort
+        // Show "Open in Store" button after 2s so user is never stuck
         setTimeout(function() {
             if (!appOpened) {
-                updateUI(
-                    'Having Trouble?',
-                    'Click the button below to continue manually.',
-                    '',
-                    true
-                );
+                fallbackBtn.classList.add('show');
+                spinner.style.display = 'none';
                 if (device === 'android') {
                     fallbackBtn.textContent = 'Open Play Store';
                 } else if (device === 'ios') {
@@ -321,7 +282,7 @@
                     fallbackBtn.textContent = 'Visit Website';
                 }
             }
-        }, 5000);
+        }, 2000);
     </script>
 </body>
 </html>

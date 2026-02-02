@@ -12,7 +12,8 @@
     "scheme": "evenly",
     "plugins": [
       "expo-asset",
-      "expo-router"
+      "expo-router",
+      "expo-video"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",

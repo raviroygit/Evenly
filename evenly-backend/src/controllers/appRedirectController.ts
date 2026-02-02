@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as fs from 'fs';
 import * as path from 'path';
+import { config } from '../config/config';
 
 /**
  * App Store URLs
@@ -45,8 +46,16 @@ function serveSmartRedirect(
     const templatePath = path.join(__dirname, '..', 'templates', 'appRedirect.html');
     let html = fs.readFileSync(templatePath, 'utf-8');
 
+    const baseUrl = (config.app?.baseUrl || '').replace(/\/$/, '');
+    const ogImageUrl = baseUrl ? `${baseUrl}/api/app/logo` : '';
+    const ogUrl = baseUrl ? `${baseUrl}/api/app/download` : APP_STORE_URL;
+    const ogTitle = 'EvenlySplit - Split expenses, share memories';
+
+    html = html.replace(/__OG_IMAGE_URL__/g, ogImageUrl);
+    html = html.replace(/__OG_TITLE__/g, ogTitle);
+    html = html.replace(/__OG_URL__/g, ogUrl);
+
     // Inject context data into HTML
-    const contextJson = JSON.stringify(context).replace(/'/g, "\\'");
     html = html.replace(
       '<script>',
       `<script>
@@ -183,6 +192,21 @@ export async function openKhataRedirect(
   return serveSmartRedirect(reply, device, 'evenly://khata', {
     type: 'khata'
   });
+}
+
+/**
+ * Serve app logo for Open Graph / link previews (WhatsApp, SMS)
+ * GET /app/logo
+ */
+export async function serveLogo(
+  _request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const logoPath = path.join(__dirname, '..', 'templates', 'logo.png');
+  if (!fs.existsSync(logoPath)) {
+    return reply.status(404).send({ error: 'Logo not found. Add templates/logo.png (copy from app/assets/icon.png).' });
+  }
+  return reply.type('image/png').send(fs.readFileSync(logoPath));
 }
 
 /**
