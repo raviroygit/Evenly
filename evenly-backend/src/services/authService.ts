@@ -30,7 +30,7 @@ export class AuthService {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Organization-Id': config.auth.organizationId,
+        'X-Organization-Id': config.auth.evenlyOrganizationId,
       };
       if (isMobile) headers['x-client-type'] = 'mobile';
 
@@ -71,7 +71,7 @@ export class AuthService {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Organization-Id': config.auth.organizationId,
+        'X-Organization-Id': config.auth.evenlyOrganizationId,
       };
       if (isMobile) headers['x-client-type'] = 'mobile';
 
@@ -139,7 +139,7 @@ export class AuthService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'X-Organization-Id': config.auth.organizationId,
+          'X-Organization-Id': config.auth.evenlyOrganizationId,
         },
         timeout: 30000, // Increased timeout to 30 seconds
       });
@@ -167,7 +167,7 @@ export class AuthService {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Organization-Id': config.auth.organizationId,
+        'X-Organization-Id': config.auth.evenlyOrganizationId,
       };
 
       // Forward mobile client header to shared auth system
@@ -215,7 +215,7 @@ export class AuthService {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-Organization-Id': config.auth.organizationId,
+        'X-Organization-Id': config.auth.evenlyOrganizationId,
       };
 
       // Forward mobile client header to shared auth system

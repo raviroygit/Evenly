@@ -36,6 +36,7 @@ gcloud run deploy $SERVICE_NAME \
   --set-env-vars="DOMAIN=https://evenly-backend-374738393915.us-central1.run.app" \
   --set-env-vars="ORIGIN1=http://localhost:3000" \
   --set-env-vars="ORIGIN2=https://www.evenly.app" \
+  --set-env-vars="EVENLY_ORGANIZATION_ID=696fc87397e67400b0335682" \
   --update-secrets="EVENLY_DATABASE_URL=EVENLY_DATABASE_URL:latest" \
   --update-secrets="AUTH_SERVICE_API_KEY=AUTH_SERVICE_API_KEY:latest" \
   --update-secrets="JWT_SECRET=JWT_SECRET:latest" \

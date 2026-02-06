@@ -5,6 +5,8 @@ export const ENV = {
   EVENLY_BACKEND_URL: process.env.EXPO_PUBLIC_EVENLY_BACKEND_URL,
   VOAGENTS_API_URL: process.env.EXPO_PUBLIC_VOAGENTS_API_URL,
   VOAGENTS_AGENT_ID: process.env.EXPO_PUBLIC_VOAGENTS_AGENT_ID,
+  // Optional: force org context header if storage not ready yet (dev only)
+  ORGANIZATION_ID: process.env.EXPO_PUBLIC_ORGANIZATION_ID,
 
   // App configuration
   APP_NAME: process.env.EXPO_PUBLIC_APP_NAME || 'Evenly',

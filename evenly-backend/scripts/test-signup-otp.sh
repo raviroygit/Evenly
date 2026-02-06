@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test signup-with-OTP (curl). Backend default: localhost:3002, Auth: localhost:8080.
 #
-# Prereqs: Auth at :8080, backend at :3002. Backend .env: AUTH_SERVICE_URL=http://localhost:8080/api/v1/auth, ORGANIZATION_ID.
+# Prereqs: Auth at :8080, backend at :3002. Backend .env: AUTH_SERVICE_URL, EVENLY_ORGANIZATION_ID (optional; has default).
 #
 # Usage:
 #   ./scripts/test-signup-otp.sh                     # via backend (3002)

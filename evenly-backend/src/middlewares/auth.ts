@@ -4,7 +4,7 @@ import { UserService } from '../services/userService';
 import { OrganizationService } from '../services/organizationService';
 import { UnauthorizedError, AuthServiceError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types';
-// Removed unused imports - no longer needed after removing temporary user logic
+import { config } from '../config/config';
 
 export const authenticateToken = async (
   request: FastifyRequest,
@@ -12,10 +12,13 @@ export const authenticateToken = async (
 ): Promise<void> => {
   void _reply;
   try {
-    // Extract token from cookies (sso_token)
+    // Extract token: cookies (sso_token) for web, or Authorization Bearer for mobile
     const cookies = request.cookies;
     let token = cookies?.sso_token;
-
+    if (!token) {
+      const bearer = AuthService.extractToken(request.headers.authorization);
+      if (bearer) token = bearer;
+    }
 
     // Handle duplicate sso_token issue from iOS
     if (typeof token === 'string' && token.includes(',')) {
@@ -152,8 +155,9 @@ async function extractOrganizationContext(
   userId: string
 ): Promise<void> {
   try {
-    // Get organization ID from header
-    const authServiceOrgId = request.headers['x-organization-id'] as string;
+    // Organization ID: header from client, then env, then fixed Evenly org (always available)
+    const headerOrgId = (request.headers['x-organization-id'] as string)?.trim();
+    const authServiceOrgId = headerOrgId || config.auth.evenlyOrganizationId || '';
 
     if (!authServiceOrgId) {
       return;
@@ -164,13 +168,22 @@ async function extractOrganizationContext(
     let localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
 
     if (!localOrg) {
-      // Sync from auth service
       const localOrgId = await OrganizationService.syncOrganizationFromAuthService(
         authServiceOrgId,
         ssoToken,
         userId
       );
+      if (localOrgId) {
+        localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+      }
+    }
 
+    // Fallback: if still no local org (e.g. mobile token, sync failed), ensure minimal org exists so every API has org context
+    if (!localOrg) {
+      const localOrgId = await OrganizationService.ensureOrganizationExistsForAuthServiceId(
+        authServiceOrgId,
+        userId
+      );
       if (localOrgId) {
         localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
       }
@@ -180,16 +193,13 @@ async function extractOrganizationContext(
       return;
     }
 
-    // Verify user is a member
     const isMember = await OrganizationService.isMember(localOrg.id, userId);
     if (!isMember) {
       return;
     }
 
-    // Get membership details
     const membership = await OrganizationService.getUserMembership(localOrg.id, userId);
 
-    // Attach to request
     (request as any).organizationId = localOrg.id;
     (request as any).authServiceOrgId = authServiceOrgId;
     (request as any).organizationRole = membership?.role;

@@ -274,4 +274,52 @@ export class OrganizationService {
     const membership = await this.getUserMembership(organizationId, userId);
     return !!membership;
   }
+
+  /**
+   * Ensure organization exists in local DB for the given auth-service org id, and user is a member.
+   * Used as fallback when sync from auth service fails (e.g. mobile token). Creates minimal org if missing.
+   * Returns local organization id or null.
+   */
+  static async ensureOrganizationExistsForAuthServiceId(
+    authServiceOrgId: string,
+    userId: string
+  ): Promise<string | null> {
+    try {
+      let localOrg = await this.getOrganizationByAuthServiceId(authServiceOrgId);
+      if (localOrg) {
+        const isMember = await this.isMember(localOrg.id, userId);
+        if (!isMember) {
+          await db.insert(organizationMembers).values({
+            organizationId: localOrg.id,
+            userId,
+            role: 'member',
+            status: 'active',
+          }).onConflictDoNothing();
+        }
+        return localOrg.id;
+      }
+      const slug = `org-${authServiceOrgId}`.slice(0, 255);
+      const [newOrg] = await db
+        .insert(organizations)
+        .values({
+          authServiceOrgId,
+          name: 'Default',
+          slug,
+          displayName: 'Default',
+          plan: 'free',
+          maxMembers: 10,
+          createdBy: userId,
+        })
+        .returning();
+      await db.insert(organizationMembers).values({
+        organizationId: newOrg.id,
+        userId,
+        role: 'owner',
+        status: 'active',
+      }).onConflictDoNothing();
+      return newOrg.id;
+    } catch (error: any) {
+      return null;
+    }
+  }
 }

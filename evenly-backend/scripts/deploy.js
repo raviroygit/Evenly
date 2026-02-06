@@ -58,6 +58,10 @@ if (!allEnvVars.HOST) {
 if (!allEnvVars.NODE_ENV) {
   regularEnvVars.push('NODE_ENV=production');
 }
+// Evenly org id (Cloud Run): use new name; fallback from old ORGANIZATION_ID or default
+if (!allEnvVars.EVENLY_ORGANIZATION_ID) {
+  regularEnvVars.push(`EVENLY_ORGANIZATION_ID=${allEnvVars.ORGANIZATION_ID || '696fc87397e67400b0335682'}`);
+}
 
 // Remove duplicates
 const uniqueEnvVars = [...new Set(regularEnvVars)];

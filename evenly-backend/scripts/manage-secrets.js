@@ -42,7 +42,8 @@ const EXCLUDE_PATTERNS = [
   /^RATE_LIMIT/,
   /^SWAGGER/,
   /^APP_BASE_URL$/,
-  /EXPIRES_IN$/
+  /EXPIRES_IN$/,
+  /^EVENLY_ORGANIZATION_ID$/
 ];
 
 // Parse .env file and extract all variables

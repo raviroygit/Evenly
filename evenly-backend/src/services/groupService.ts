@@ -18,7 +18,7 @@ export class GroupService {
   ): Promise<Group> {
     try {
       // Validate organizationId is provided
-      if (!organizationId) {
+      if (!organizationId || !process.env.EVENLY_ORGANIZATION_ID) {
         throw new ValidationError('Organization ID is required');
       }
 
@@ -29,7 +29,7 @@ export class GroupService {
         currency: 'INR', // Default to INR
         defaultSplitType: groupData.defaultSplitType || 'equal',
         createdBy,
-        organizationId,
+        organizationId: organizationId || process.env.EVENLY_ORGANIZATION_ID,
       };
 
       const [createdGroup] = await db

@@ -86,12 +86,25 @@ class EvenlyApiClient {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
           }
 
-          // Add organization context header from in-memory storage
-          // Backend requires this to filter data by organization
-          if (this.currentOrganizationId) {
+          // Always send org id: backend needs x-organization-id for groups/khata.
+          // Resolve on every request so we never miss (storage/auth may load after first request).
+          let orgId = this.currentOrganizationId;
+          if (!orgId) {
+            orgId = await AuthStorage.getCurrentOrganizationId();
+            if (orgId) this.currentOrganizationId = orgId;
+          }
+          if (!orgId && authData?.user) {
+            const u = authData.user;
+            orgId = u.currentOrganization?.id || u.organizations?.[0]?.id || null;
+            if (orgId) this.currentOrganizationId = orgId;
+          }
+          if (!orgId && ENV.ORGANIZATION_ID) {
+            orgId = ENV.ORGANIZATION_ID;
+            this.currentOrganizationId = orgId;
+          }
+          if (orgId) {
             config.headers = config.headers || {};
-            config.headers['x-organization-id'] = this.currentOrganizationId;
-          } else {
+            config.headers['x-organization-id'] = orgId;
           }
 
           return config;

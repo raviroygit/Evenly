@@ -18,7 +18,8 @@ export const config = {
     apiKey: process.env.AUTH_SERVICE_API_KEY || '',
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    organizationId: process.env.ORGANIZATION_ID || '',
+    /** Evenly app org id – fixed for EvenlySplit (env EVENLY_ORGANIZATION_ID or default) */
+    evenlyOrganizationId: process.env.EVENLY_ORGANIZATION_ID || '696fc87397e67400b0335682',
   },
   cors: {
     origin: process.env.CORS_ORIGIN || '',
