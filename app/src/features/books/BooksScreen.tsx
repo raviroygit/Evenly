@@ -213,8 +213,10 @@ export const BooksScreen: React.FC = () => {
 
       setCustomers(formattedCustomers);
       setSummary(summaryData);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update customer. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to update customer. Please try again.');
+      Alert.alert('Error', message);
     }
   };
 
@@ -259,10 +261,12 @@ export const BooksScreen: React.FC = () => {
 
       // Modal will close automatically, show success alert
       Alert.alert('Success', `"${deletingCustomer.name}" and all their transactions have been deleted successfully`);
-    } catch (error) {
+    } catch (err: unknown) {
       setLoading(false);
-      Alert.alert('Error', 'Failed to delete customer. Please try again.');
-      throw error; // Re-throw to prevent modal from closing
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to delete customer. Please try again.');
+      Alert.alert('Error', message);
+      throw err;
     }
   };
 

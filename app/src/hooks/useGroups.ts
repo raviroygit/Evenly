@@ -12,6 +12,7 @@ let globalIsFirstFetch = true;
 let globalLastFetchTime = 0;
 let globalIsLoading = false; // Track if any instance is currently loading
 let globalGroupsCache: Group[] = []; // Cache loaded groups
+let globalFetchPromise: Promise<void> | null = null; // Share fetch promise across instances
 const CACHE_DURATION = 60000; // 1 minute
 
 export const useGroups = () => {
@@ -24,67 +25,74 @@ export const useGroups = () => {
     try {
       const { silent = false } = options;
 
-      // If another instance is already loading, wait and use cached data
-      if (globalIsLoading && !globalIsFirstFetch) {
-
-        // Wait for the other instance to finish loading (max 5 seconds)
-        let attempts = 0;
-        while (globalIsLoading && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-
-        // Use the cached data that was just loaded
-        if (globalGroupsCache.length > 0) {
-          setGroups(globalGroupsCache);
-        } else {
-          // Cache is still empty, don't skip - continue to load below
-        }
+      // If there's already a fetch in progress, wait for it instead of starting a new one
+      if (globalFetchPromise) {
+        console.log('🔄 [useGroups] Waiting for existing fetch to complete...');
+        await globalFetchPromise;
+        setGroups([...globalGroupsCache]);
         setLoading(false);
-
-        // Only return if we have cache data, otherwise continue to load
-        if (globalGroupsCache.length > 0) {
-          return;
-        }
+        return;
       }
 
-      // Only show loader for non-silent refreshes AND if this is the first instance loading
-      if (!silent && !globalIsLoading) {
+      // If we have recent cache data (< 5 seconds old), use it immediately
+      const timeSinceLastFetch = Date.now() - globalLastFetchTime;
+      if (globalGroupsCache.length >= 0 && timeSinceLastFetch < 5000 && !globalIsFirstFetch) {
+        console.log('⚡ [useGroups] Using recent cache (age: ' + Math.round(timeSinceLastFetch/1000) + 's)');
+        setGroups([...globalGroupsCache]);
+        setLoading(false);
+        return;
+      }
+
+      // Only show loader for non-silent refreshes
+      if (!silent) {
         setLoading(true);
       }
       setError(null);
-      globalIsLoading = true; // Mark as loading globally
 
-      // Always bypass cache on first fetch to ensure fresh data on app reopen
-      // After first fetch, use cache for better performance
-      let cacheTTL: number;
-      if (globalIsFirstFetch) {
-        cacheTTL = 0; // Bypass cache - force fresh fetch
-        globalIsFirstFetch = false;
-        globalLastFetchTime = Date.now();
-      } else {
-        // Check if cache has expired (1 minute)
-        const timeSinceLastFetch = Date.now() - globalLastFetchTime;
-        if (timeSinceLastFetch > CACHE_DURATION) {
-          cacheTTL = 0; // Cache expired - fetch fresh data silently
+      // Create a shared fetch promise to prevent duplicate fetches
+      globalFetchPromise = (async () => {
+        try {
+          globalIsLoading = true;
+
+          // Always bypass cache on first fetch to ensure fresh data on app reopen
+          // After first fetch, use cache for better performance
+          let cacheTTL: number;
+          if (globalIsFirstFetch) {
+            cacheTTL = 0; // Bypass cache - force fresh fetch
+            globalIsFirstFetch = false;
+            globalLastFetchTime = Date.now();
+          } else {
+            // Check if cache has expired (1 minute)
+            const timeSinceLastFetch = Date.now() - globalLastFetchTime;
+            if (timeSinceLastFetch > CACHE_DURATION) {
+              cacheTTL = 0; // Cache expired - fetch fresh data silently
+              globalLastFetchTime = Date.now();
+            } else {
+              // Use cache for subsequent fetches within 1 minute
+              cacheTTL = CACHE_DURATION - timeSinceLastFetch;
+            }
+          }
+
+          // Fetch groups with cache TTL (0 = bypass, >0 = use cache)
+          const groupsData = await EvenlyBackendService.getGroups({
+            cacheTTLMs: cacheTTL
+          });
+
+          console.log('✅ [useGroups] Fetched groups:', groupsData?.length || 0, 'groups');
+
+          // Update global cache
+          globalGroupsCache = groupsData;
           globalLastFetchTime = Date.now();
-        } else {
-          // Use cache for subsequent fetches within 1 minute
-          cacheTTL = CACHE_DURATION - timeSinceLastFetch;
+
+          // Force update by replacing the entire array - this ensures React detects the change
+          setGroups(() => [...groupsData]);
+        } finally {
+          globalIsLoading = false;
+          globalFetchPromise = null; // Clear the promise
         }
-      }
+      })();
 
-      // Fetch groups with cache TTL (0 = bypass, >0 = use cache)
-      const groupsData = await EvenlyBackendService.getGroups({
-        cacheTTLMs: cacheTTL
-      });
-
-
-      // Update global cache
-      globalGroupsCache = groupsData;
-
-      // Force update by replacing the entire array - this ensures React detects the change
-      setGroups(() => [...groupsData]);
+      await globalFetchPromise;
     } catch (err: any) {
       // If in offline mode (session expired), don't show error to user
       // They're still logged in with cached data
@@ -95,7 +103,6 @@ export const useGroups = () => {
         setError(errorMessage);
       }
     } finally {
-      globalIsLoading = false; // Clear loading flag
       setLoading(false);
     }
   }, []);

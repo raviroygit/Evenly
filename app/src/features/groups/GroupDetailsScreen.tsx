@@ -154,10 +154,11 @@ export const GroupDetailsScreen: React.FC = () => {
 
       // Show success message
       Alert.alert('Success', 'Expense added successfully!');
-    } catch (error: any) {
-      // Don't show alert here - let the modal handle error display
-      // Re-throw so modal can handle it and keep modal open
-      throw error;
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to add expense. Please try again.');
+      Alert.alert('Error', message);
+      throw err;
     } finally {
       // Hide skeleton loader after everything is done
       setIsAddingExpense(false);
@@ -189,8 +190,10 @@ export const GroupDetailsScreen: React.FC = () => {
       setEditingExpense(null);
       // Reload expenses to show updated data
       await loadExpenses();
-    } catch {
-      Alert.alert('Error', 'Failed to update expense. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to update expense. Please try again.');
+      Alert.alert('Error', message);
     } finally {
       setIsUpdatingExpense(false);
     }
@@ -211,9 +214,11 @@ export const GroupDetailsScreen: React.FC = () => {
 
       // Modal will close automatically, show success alert
       Alert.alert('Success', `"${deletingExpense.title}" has been deleted successfully`);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to delete expense. Please try again.');
-      throw err; // Re-throw to prevent modal from closing
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to delete expense. Please try again.');
+      Alert.alert('Error', message);
+      throw err;
     }
   };
 

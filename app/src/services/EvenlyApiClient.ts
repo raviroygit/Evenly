@@ -12,8 +12,12 @@ class EvenlyApiClient {
   private currentOrganizationId: string | null = null;
 
   constructor() {
+    // Ensure base URL ends with /api so paths like /auth/signup/otp resolve to .../api/auth/signup/otp
+    const base = (ENV.EVENLY_BACKEND_URL || '').replace(/\/+$/, '');
+    const baseURL = base.endsWith('/api') ? base : `${base}/api`;
+
     this.client = axios.create({
-      baseURL: ENV.EVENLY_BACKEND_URL,
+      baseURL,
       timeout: 120000, // 120 seconds (2 minutes) for image uploads
       headers: {
         'Content-Type': 'application/json',
@@ -166,6 +170,11 @@ class EvenlyApiClient {
   // Get the underlying axios instance for advanced usage
   getInstance(): AxiosInstance {
     return this.client;
+  }
+
+  /** Base URL used for API requests (e.g. https://xxx.run.app/api). Useful for debugging. */
+  getBaseURL(): string {
+    return this.client.defaults.baseURL || '';
   }
 }
 

@@ -381,10 +381,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           onClose();
         }
       }
-    } catch (error) {
-      // Error is already handled by parent component or Alert.alert
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (error instanceof Error ? error.message : null);
+      Alert.alert('Error', msg || 'Failed to add expense. Please try again.');
       // Don't close modal on error so user can retry
-      // Don't reset form on error so user can retry
     } finally {
       setIsLoading(false);
       setUploadingImage(false);

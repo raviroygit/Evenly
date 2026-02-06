@@ -57,6 +57,98 @@ export class AuthService {
     }
   }
 
+  /**
+   * Signup with OTP: request OTP for new user (name, email, phoneNumber required).
+   */
+  async signupWithOtp(name: string, email: string, phoneNumber: string): Promise<AuthResponse> {
+    try {
+      const signupPath = '/auth/signup/otp';
+      if (__DEV__) {
+        const base = evenlyApiClient.getBaseURL();
+        console.log('[AuthService] Signup OTP URL:', base ? `${base}${signupPath}` : '(no base URL)', 'ENV.EVENLY_BACKEND_URL:', ENV.EVENLY_BACKEND_URL);
+      }
+      const { data: response } = await this.makeRequest(signupPath, {
+        method: 'POST',
+        body: JSON.stringify({ name, email, phoneNumber }),
+      });
+
+      if (response.success === false || !response.success) {
+        return {
+          success: false,
+          message: response.message || 'Failed to send OTP',
+        };
+      }
+
+      return {
+        success: true,
+        message: response.message || 'OTP sent to your email!',
+      };
+    } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
+      const status = error?.response?.status;
+      let userMessage = serverMsg || error.message || 'Failed to send OTP';
+      if (status === 400) userMessage = serverMsg || 'Invalid input. Check name, email and phone (E.164).';
+      if (status === 429) userMessage = 'Too many attempts. Please wait a few minutes.';
+      if (status >= 500) userMessage = 'Server error. Please try again later.';
+      if (status === 404) {
+        userMessage =
+          'Signup endpoint not found (404). Your app is calling the Evenly Backend correctly; the server may not have this route. Redeploy evenly-backend to Cloud Run so it includes POST /api/auth/signup/otp, or run the backend locally (npm run dev) and use EXPO_PUBLIC_EVENLY_BACKEND_URL=http://YOUR_IP:3002';
+      }
+      return { success: false, message: userMessage };
+    }
+  }
+
+  /**
+   * Verify signup OTP and complete registration; returns user and tokens (same shape as verifyOTP).
+   */
+  async signupVerifyOtp(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
+    try {
+      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/signup/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otp }),
+      });
+
+      if (response.success && (response.user || response.data?.user)) {
+        const user = response.user || response.data?.user;
+        const organization = response.organization || response.data?.organization;
+
+        if (organization) {
+          await AuthStorage.setCurrentOrganizationId(organization.id);
+        }
+
+        await this.syncUserWithEvenlyBackend(user);
+
+        const userResponse = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phoneNumber: user.phoneNumber,
+          stats: { groups: 0, totalSpent: 0, owed: 0 },
+          organizations: organization ? [organization] : undefined,
+          currentOrganization: organization,
+        };
+
+        return {
+          success: true,
+          message: response.message || 'Signup successful!',
+          user: userResponse,
+          accessToken,
+          refreshToken,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Invalid or expired OTP',
+      };
+    } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
+      let userMessage = serverMsg || error.message || 'Verification failed';
+      if (error?.response?.status === 400) userMessage = 'Invalid or expired OTP. Request a new code.';
+      return { success: false, message: userMessage };
+    }
+  }
+
   async signup(email: string): Promise<AuthResponse> {
     try {
       const { data: response } = await this.makeRequest('/auth/signup', {
@@ -81,10 +173,33 @@ export class AuthService {
         message: response.message || 'Magic link sent to your email!',
       };
     } catch (error: any) {
+      // Enhanced error logging to debug backend responses
+      console.log('🔴 [AuthService] signup Error:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+
       const serverMsg = error?.response?.data?.message;
+      const status = error?.response?.status;
+
+      // Provide user-friendly messages based on status code if backend message is generic
+      let userMessage = serverMsg || error.message || 'Failed to send magic link';
+
+      if (status === 400) {
+        userMessage = 'Invalid email format. Please check and try again.';
+      } else if (status === 409) {
+        userMessage = 'This email is already registered. Please login instead.';
+      } else if (status === 429) {
+        userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+      } else if (status >= 500) {
+        userMessage = 'Server error. Please try again later.';
+      }
+
       return {
         success: false,
-        message: serverMsg || error.message || 'Failed to send magic link',
+        message: userMessage,
       };
     }
   }
@@ -113,10 +228,33 @@ export class AuthService {
         message: response.message || 'OTP sent to your email!',
       };
     } catch (error: any) {
+      // Enhanced error logging to debug backend responses
+      console.log('🔴 [AuthService] requestOTP Error:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+
       const serverMsg = error?.response?.data?.message;
+      const status = error?.response?.status;
+
+      // Provide user-friendly messages based on status code if backend message is generic
+      let userMessage = serverMsg || error.message || 'Failed to send OTP';
+
+      if (status === 400 && serverMsg === 'Failed to send OTP') {
+        userMessage = 'User not found. Please check your email or sign up first.';
+      } else if (status === 404) {
+        userMessage = 'User not found. Please sign up first.';
+      } else if (status === 429) {
+        userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+      } else if (status >= 500) {
+        userMessage = 'Server error. Please try again later.';
+      }
+
       return {
         success: false,
-        message: serverMsg || error.message || 'Failed to send OTP',
+        message: userMessage,
       };
     }
   }
@@ -168,10 +306,35 @@ export class AuthService {
         message: response.message || 'Invalid OTP',
       };
     } catch (error: any) {
+      // Enhanced error logging to debug backend responses
+      console.log('🔴 [AuthService] verifyOTP Error:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+
       const serverMsg = error?.response?.data?.message;
+      const status = error?.response?.status;
+
+      // Provide user-friendly messages based on status code if backend message is generic
+      let userMessage = serverMsg || error.message || 'Invalid OTP';
+
+      if (status === 400) {
+        userMessage = 'Invalid OTP code. Please check and try again.';
+      } else if (status === 401) {
+        userMessage = 'OTP has expired. Please request a new code.';
+      } else if (status === 404) {
+        userMessage = 'User not found. Please sign up first.';
+      } else if (status === 429) {
+        userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+      } else if (status >= 500) {
+        userMessage = 'Server error. Please try again later.';
+      }
+
       return {
         success: false,
-        message: serverMsg || error.message || 'Invalid OTP',
+        message: userMessage,
       };
     }
   }

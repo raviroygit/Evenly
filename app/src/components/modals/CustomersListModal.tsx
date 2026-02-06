@@ -41,6 +41,9 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
 }) => {
   const { colors, theme } = useTheme();
 
+  // Safety check: ensure customers is always an array
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+
   const getInitials = (name: string): string => {
     return name
       .split(' ')
@@ -51,7 +54,13 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
   };
 
   const formatAmount = (amount: number | string) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    let numAmount = 0;
+    if (typeof amount === 'string') {
+      const parsed = parseFloat(amount);
+      numAmount = isNaN(parsed) ? 0 : parsed;
+    } else if (typeof amount === 'number') {
+      numAmount = isNaN(amount) ? 0 : amount;
+    }
     return new Intl.NumberFormat('en-IN').format(Math.abs(numAmount));
   };
 
@@ -87,7 +96,7 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
                 All Customers
               </Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                {loading ? 'Loading...' : `${customers.length} Customer${customers.length !== 1 ? 's' : ''}`}
+                {loading ? 'Loading...' : `${safeCustomers.length} Customer${safeCustomers.length !== 1 ? 's' : ''}`}
               </Text>
             </View>
             <TouchableOpacity
@@ -115,14 +124,14 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
                   Loading customers...
                 </Text>
               </View>
-            ) : customers.length === 0 ? (
+            ) : safeCustomers.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                   No customers found
                 </Text>
               </View>
             ) : (
-              customers.map((customer) => {
+              safeCustomers.map((customer) => {
                 const initials = getInitials(customer.name);
                 const amountColor =
                   customer.type === 'give' ? '#10B981' :

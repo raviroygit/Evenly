@@ -271,8 +271,10 @@ export const CustomerDetailScreen: React.FC = () => {
         setTransactions(formattedTransactions);
         setLoading(false);
       }
-    } catch (error: any) {
-      Alert.alert('Error', 'Failed to update transaction. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to update transaction. Please try again.');
+      Alert.alert('Error', message);
     }
   };
 
@@ -323,10 +325,12 @@ export const CustomerDetailScreen: React.FC = () => {
       setLoading(false);
       // Modal will close automatically, show success alert
       Alert.alert('Success', 'Transaction deleted successfully');
-    } catch (error) {
+    } catch (err: unknown) {
       setLoading(false);
-      Alert.alert('Error', 'Failed to delete transaction. Please try again.');
-      throw error; // Re-throw to prevent modal from closing
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to delete transaction. Please try again.');
+      Alert.alert('Error', message);
+      throw err;
     }
   };
 

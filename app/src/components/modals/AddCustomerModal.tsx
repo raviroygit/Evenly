@@ -133,10 +133,12 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
       // Then refresh list in background
       await onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (error instanceof Error ? error.message : null);
       Alert.alert(
         'Error',
-        error.response?.data?.message || `Failed to ${editCustomer ? 'update' : 'create'} customer. Please try again.`,
+        msg || `Failed to ${editCustomer ? 'update' : 'create'} customer. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {

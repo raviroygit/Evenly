@@ -17,6 +17,118 @@ export class AuthService {
   private static readonly AUTH_SERVICE_URL = config.auth.serviceUrl;
 
   /**
+   * Signup with OTP: request OTP for new user (name, email, phoneNumber required).
+   */
+  static async signupWithOtp(
+    name: string,
+    email: string,
+    phoneNumber: string,
+    request?: FastifyRequest
+  ): Promise<AuthResponse> {
+    try {
+      const isMobile = this.isMobileClient(request);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Organization-Id': config.auth.organizationId,
+      };
+      if (isMobile) headers['x-client-type'] = 'mobile';
+
+      const response = await axios.post(
+        `${this.AUTH_SERVICE_URL}/signup/otp`,
+        {
+          name,
+          email,
+          phoneNumber,
+          senderName: 'EvenlySplit',
+          appName: 'EvenlySplit',
+        },
+        { headers, timeout: 30000 }
+      );
+
+      return {
+        success: response.data.success !== false,
+        message: response.data.message || 'OTP sent to your email.',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to send signup OTP',
+      };
+    }
+  }
+
+  /**
+   * Verify signup OTP and create account; returns user and tokens (same shape as verifyOTP).
+   */
+  static async signupVerifyOtp(
+    email: string,
+    otp: string,
+    request?: FastifyRequest
+  ): Promise<AuthResponse> {
+    try {
+      const isMobile = this.isMobileClient(request);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Organization-Id': config.auth.organizationId,
+      };
+      if (isMobile) headers['x-client-type'] = 'mobile';
+
+      const response = await axios.post(
+        `${this.AUTH_SERVICE_URL}/signup/verify-otp`,
+        { email, otp },
+        { headers, timeout: 30000 }
+      );
+
+      if (response.data.user && response.data.accessToken) {
+        const setCookieHeader = response.headers['set-cookie'];
+        let ssoToken: string | null = null;
+        if (setCookieHeader) {
+          const arr = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+          const match = arr.find((c: string) => c.startsWith('sso_token='));
+          if (match) ssoToken = match.split('sso_token=')[1].split(';')[0];
+        }
+
+        const syncedUser = await UserService.createOrUpdateUser({
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar,
+          phoneNumber: response.data.user.phoneNumber,
+        });
+
+        return {
+          success: true,
+          message: response.data.message || 'Signup successful!',
+          user: {
+            id: syncedUser.id,
+            email: syncedUser.email,
+            name: syncedUser.name,
+            avatar: syncedUser.avatar,
+            phoneNumber: syncedUser.phoneNumber,
+            role: response.data.user.role,
+          },
+          organization: response.data.organization,
+          ssoToken: ssoToken || undefined,
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.data.message || 'Invalid or expired OTP',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to verify signup OTP',
+      };
+    }
+  }
+
+  /**
    * Send magic link for signup
    */
   static async signup(email: string): Promise<AuthResponse> {

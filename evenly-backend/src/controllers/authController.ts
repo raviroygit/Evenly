@@ -18,6 +18,17 @@ const verifyOTPSchema = z.object({
   otp: z.string().min(4, 'OTP must be at least 4 characters'),
 });
 
+const signupWithOtpSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email format'),
+  phoneNumber: z.string().min(10, 'Phone number is required').regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164 (e.g. +14155552671)'),
+});
+
+const signupVerifyOtpSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  otp: z.string().min(4, 'OTP must be at least 4 characters'),
+});
+
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
@@ -107,6 +118,111 @@ export class AuthController {
       return reply.status(400).send({ success: false, message: result.message || 'Failed to delete account' });
     } catch (error: any) {
       return reply.status(500).send({ success: false, message: error.message || 'Failed to delete account' });
+    }
+  }
+
+  /**
+   * Signup with OTP: request OTP (name, email, phoneNumber required).
+   */
+  static async signupWithOtp(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { name, email, phoneNumber } = signupWithOtpSchema.parse(request.body);
+      const result = await AuthService.signupWithOtp(name, email, phoneNumber, request);
+
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          message: result.message,
+          data: null,
+        });
+      }
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+        data: null,
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+      }
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to send signup OTP',
+      });
+    }
+  }
+
+  /**
+   * Verify signup OTP and complete signup (create account, return tokens like login).
+   */
+  static async signupVerifyOtp(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { email, otp } = signupVerifyOtpSchema.parse(request.body);
+      const result = await AuthService.signupVerifyOtp(email, otp, request);
+
+      if (result.success && result.user) {
+        if (result.ssoToken) {
+          reply.setCookie('sso_token', result.ssoToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: '/',
+          });
+        }
+
+        if (result.organization) {
+          try {
+            await OrganizationService.syncOrganizationFromData(
+              {
+                id: result.organization.id,
+                name: result.organization.name,
+                displayName: result.organization.displayName,
+                domainIdentifier: result.organization.domainIdentifier,
+                role: result.organization.role,
+              },
+              result.user.id
+            );
+          } catch {
+          }
+        }
+
+        return reply.status(200).send({
+          success: true,
+          message: result.message,
+          data: {
+            user: result.user,
+            organization: result.organization,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+          },
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          ssoToken: result.ssoToken,
+        });
+      }
+
+      return reply.status(400).send({
+        success: false,
+        message: result.message || 'Invalid or expired OTP',
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+      }
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to verify signup OTP',
+      });
     }
   }
 

@@ -264,7 +264,10 @@ export const ProfileScreen: React.FC = () => {
                     color: netBalance && netBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  ₹{netBalance?.netBalance.toFixed(2) || '0.00'}
+                  ₹{(() => {
+                    const value = netBalance?.netBalance;
+                    return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
+                  })()}
                 </Text>
                 <Text style={[
                   styles.balanceLabel,
@@ -285,7 +288,10 @@ export const ProfileScreen: React.FC = () => {
                 styles.balanceAmount,
                 { color: '#10B981' }
               ]}>
-                ₹{netBalance?.totalOwed.toFixed(2) || '0.00'}
+                ₹{(() => {
+                  const value = netBalance?.totalOwed;
+                  return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
+                })()}
               </Text>
             ),
           },
@@ -297,7 +303,10 @@ export const ProfileScreen: React.FC = () => {
                 styles.balanceAmount,
                 { color: '#EF4444' }
               ]}>
-                ₹{netBalance?.totalOwing.toFixed(2) || '0.00'}
+                ₹{(() => {
+                  const value = netBalance?.totalOwing;
+                  return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
+                })()}
               </Text>
             ),
           },

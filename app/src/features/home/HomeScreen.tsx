@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroups } from '../../hooks/useGroups';
@@ -76,10 +76,14 @@ export const HomeScreen: React.FC = () => {
           EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 30000 }),
         ]);
         setKhataSummary(summary);
-        setCustomerCount(customersData.length);
-        setCustomers(customersData);
+        // Safety check: ensure customersData is always an array
+        const safeCustomers = Array.isArray(customersData) ? customersData : [];
+        setCustomerCount(safeCustomers.length);
+        setCustomers(safeCustomers);
       } catch {
-        // Ignore fetch error
+        // Ignore fetch error - keep empty array
+        setCustomers([]);
+        setCustomerCount(0);
       } finally {
         setKhataLoading(false);
       }
@@ -106,10 +110,12 @@ export const HomeScreen: React.FC = () => {
                 EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
               ]);
               setKhataSummary(summary);
-              setCustomerCount(customersData.length);
-              setCustomers(customersData);
+              // Safety check: ensure customersData is always an array
+              const safeCustomers = Array.isArray(customersData) ? customersData : [];
+              setCustomerCount(safeCustomers.length);
+              setCustomers(safeCustomers);
             } catch {
-              // Ignore
+              // Ignore - keep existing data
             }
           })(),
         ]);
@@ -141,10 +147,12 @@ export const HomeScreen: React.FC = () => {
                 EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
               ]);
               setKhataSummary(summary);
-              setCustomerCount(customersData.length);
-              setCustomers(customersData);
+              // Safety check: ensure customersData is always an array
+              const safeCustomers = Array.isArray(customersData) ? customersData : [];
+              setCustomerCount(safeCustomers.length);
+              setCustomers(safeCustomers);
             } catch {
-              // Ignore
+              // Ignore - keep existing data
             }
           })(),
         ]);
@@ -186,10 +194,12 @@ export const HomeScreen: React.FC = () => {
               EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
             ]);
             setKhataSummary(summary);
-            setCustomerCount(customersData.length);
-            setCustomers(customersData);
+            // Safety check: ensure customersData is always an array
+            const safeCustomers = Array.isArray(customersData) ? customersData : [];
+            setCustomerCount(safeCustomers.length);
+            setCustomers(safeCustomers);
           } catch {
-            // Ignore
+            // Ignore - keep existing data
           }
         })(),
       ]);
@@ -247,8 +257,10 @@ export const HomeScreen: React.FC = () => {
       if (activitiesRefreshRef.current) {
         activitiesRefreshRef.current();
       }
-    } catch {
-      // Silent error - user can see it in the UI state
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to create group. Please try again.');
+      Alert.alert('Error', message);
     } finally {
       setIsCreatingGroup(false);
     }
@@ -313,8 +325,10 @@ export const HomeScreen: React.FC = () => {
       if (activitiesRefreshRef.current) {
         activitiesRefreshRef.current();
       }
-    } catch (error) {
-      // Silent error - user can see it in the UI state
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to add expense. Please try again.');
+      Alert.alert('Error', message);
     } finally {
       setIsAddingExpense(false);
     }
@@ -497,7 +511,10 @@ export const HomeScreen: React.FC = () => {
                     Will Get
                   </Text>
                   <Text style={[styles.khataSummaryValue, { color: '#10B981' }]}>
-                    {`₹${parseFloat(khataSummary?.totalGive || '0').toFixed(2)}`}
+                    {(() => {
+                      const value = parseFloat(khataSummary?.totalGive || '0');
+                      return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;
+                    })()}
                   </Text>
                 </View>
                 <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
@@ -506,7 +523,10 @@ export const HomeScreen: React.FC = () => {
                     Will Give
                   </Text>
                   <Text style={[styles.khataSummaryValue, { color: '#EF4444' }]}>
-                    {`₹${parseFloat(khataSummary?.totalGet || '0').toFixed(2)}`}
+                    {(() => {
+                      const value = parseFloat(khataSummary?.totalGet || '0');
+                      return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;
+                    })()}
                   </Text>
                 </View>
               </View>

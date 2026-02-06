@@ -187,6 +187,8 @@ async function registerRoutes() {
     await fastify.register(khataRoutes, { prefix: '/api/khata' });
     await fastify.register(appRedirectRoutes, { prefix: '/api' }); // No prefix needed, routes are /app/download
   } catch (error) {
+    fastify.log.error(error, 'Failed to register API routes');
+    throw error;
   }
   // Health check management routes removed - using simple background service instead
 }

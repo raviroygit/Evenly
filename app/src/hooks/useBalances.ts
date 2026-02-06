@@ -11,6 +11,7 @@ let globalUserBalancesIsFirstFetch = true;
 let globalUserBalancesLastFetchTime = 0;
 let globalUserBalancesIsLoading = false;
 let globalUserBalancesCache: any = null;
+let globalUserBalancesFetchPromise: Promise<void> | null = null;
 const USER_BALANCES_CACHE_DURATION = 60000; // 1 minute
 
 export const useBalances = (groupId?: string) => {
@@ -123,71 +124,84 @@ export const useUserBalances = () => {
     try {
       const { silent = false } = options;
 
-      // If another instance is already loading, wait and use cached data
-      if (globalUserBalancesIsLoading && !globalUserBalancesIsFirstFetch) {
-
-        // Wait for the other instance to finish loading (max 5 seconds)
-        let attempts = 0;
-        while (globalUserBalancesIsLoading && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-
-        // Use the cached data that was just loaded
+      // If there's already a fetch in progress, wait for it
+      if (globalUserBalancesFetchPromise) {
+        console.log('🔄 [useUserBalances] Waiting for existing fetch...');
+        await globalUserBalancesFetchPromise;
         if (globalUserBalancesCache) {
           setBalances(globalUserBalancesCache.balances);
           setNetBalance(globalUserBalancesCache.netBalance);
-        } else {
-          // Cache is still empty, don't skip - continue to load below
         }
         setLoading(false);
-
-        // Only return if we have cache data, otherwise continue to load
-        if (globalUserBalancesCache) {
-          return;
-        }
+        return;
       }
 
-      // Only show loader for non-silent refreshes AND if this is the first instance loading
-      if (!silent && !globalUserBalancesIsLoading) {
+      // If we have recent cache data (< 5 seconds old), use it immediately
+      const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
+      if (globalUserBalancesCache && timeSinceLastFetch < 5000 && !globalUserBalancesIsFirstFetch) {
+        console.log('⚡ [useUserBalances] Using recent cache (age: ' + Math.round(timeSinceLastFetch/1000) + 's)');
+        setBalances(globalUserBalancesCache.balances);
+        setNetBalance(globalUserBalancesCache.netBalance);
+        setLoading(false);
+        return;
+      }
+
+      // Only show loader for non-silent refreshes
+      if (!silent) {
         setLoading(true);
       }
       setError(null);
-      globalUserBalancesIsLoading = true;
 
-      // Always bypass cache on first fetch to ensure fresh data on app reopen
-      // After first fetch, use cache for better performance
-      let cacheTTL: number;
-      if (globalUserBalancesIsFirstFetch) {
-        cacheTTL = 0; // Bypass cache - force fresh fetch
-        globalUserBalancesIsFirstFetch = false;
-        globalUserBalancesLastFetchTime = Date.now();
-      } else {
-        // Check if cache has expired (1 minute)
-        const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
-        if (timeSinceLastFetch > USER_BALANCES_CACHE_DURATION) {
-          cacheTTL = 0; // Cache expired - fetch fresh data silently
+      // Create a shared fetch promise
+      globalUserBalancesFetchPromise = (async () => {
+        try {
+          globalUserBalancesIsLoading = true;
+
+          // Always bypass cache on first fetch to ensure fresh data on app reopen
+          // After first fetch, use cache for better performance
+          let cacheTTL: number;
+          if (globalUserBalancesIsFirstFetch) {
+            cacheTTL = 0; // Bypass cache - force fresh fetch
+            globalUserBalancesIsFirstFetch = false;
+            globalUserBalancesLastFetchTime = Date.now();
+          } else {
+            // Check if cache has expired (1 minute)
+            const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
+            if (timeSinceLastFetch > USER_BALANCES_CACHE_DURATION) {
+              cacheTTL = 0; // Cache expired - fetch fresh data silently
+              globalUserBalancesLastFetchTime = Date.now();
+            } else {
+              // Use cache for subsequent fetches within 1 minute
+              cacheTTL = USER_BALANCES_CACHE_DURATION - timeSinceLastFetch;
+            }
+          }
+
+          const [balancesData, netBalanceData] = await Promise.all([
+            EvenlyBackendService.getUserBalances({ cacheTTLMs: cacheTTL }),
+            EvenlyBackendService.getUserNetBalance({ cacheTTLMs: cacheTTL }),
+          ]);
+
+          console.log('✅ [useUserBalances] Fetched balances:', {
+            balances: balancesData?.length || 0,
+            netBalance: netBalanceData
+          });
+
+          // Update global cache
+          globalUserBalancesCache = {
+            balances: balancesData,
+            netBalance: netBalanceData
+          };
           globalUserBalancesLastFetchTime = Date.now();
-        } else {
-          // Use cache for subsequent fetches within 1 minute
-          cacheTTL = USER_BALANCES_CACHE_DURATION - timeSinceLastFetch;
+
+          setBalances(balancesData);
+          setNetBalance(netBalanceData);
+        } finally {
+          globalUserBalancesIsLoading = false;
+          globalUserBalancesFetchPromise = null;
         }
-      }
+      })();
 
-      const [balancesData, netBalanceData] = await Promise.all([
-        EvenlyBackendService.getUserBalances({ cacheTTLMs: cacheTTL }),
-        EvenlyBackendService.getUserNetBalance({ cacheTTLMs: cacheTTL }),
-      ]);
-
-
-      // Update global cache
-      globalUserBalancesCache = {
-        balances: balancesData,
-        netBalance: netBalanceData
-      };
-
-      setBalances(balancesData);
-      setNetBalance(netBalanceData);
+      await globalUserBalancesFetchPromise;
     } catch (err: any) {
       // If in offline mode (session expired), don't show error to user
       if (err._offlineMode) {
@@ -196,7 +210,6 @@ export const useUserBalances = () => {
         setError(err instanceof Error ? err.message : 'Failed to load user balances');
       }
     } finally {
-      globalUserBalancesIsLoading = false;
       setLoading(false);
     }
   }, []);

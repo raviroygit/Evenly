@@ -186,8 +186,20 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     fetchKhata();
   }, [user, authState]);
 
+  // Track if generation is in progress to prevent concurrent calls
+  const isGeneratingRef = useRef(false);
+
+  // Store latest generateActivities function in ref to avoid stale closures
+  const generateActivitiesRef = useRef<() => void>();
+
   const generateActivities = useCallback(() => {
+    // Prevent concurrent generation - fixes infinite loop crash
+    if (isGeneratingRef.current) {
+      return;
+    }
+
     try {
+      isGeneratingRef.current = true;
 
       const generatedActivities: ActivityItem[] = [];
 
@@ -212,7 +224,16 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const expenseUpdatedAt = expense.updatedAt instanceof Date ? expense.updatedAt : new Date(expense.updatedAt);
         const expenseSortDate = expenseUpdatedAt > expenseCreatedAt ? expenseUpdatedAt : expenseCreatedAt;
         const expenseDisplayDate = expense.date instanceof Date ? expense.date : new Date(expense.date);
-        const amount = typeof expense.totalAmount === 'string' ? parseFloat(expense.totalAmount) : expense.totalAmount || 0;
+
+        // Safe amount calculation - ensure it's always a valid number
+        let amount = 0;
+        if (typeof expense.totalAmount === 'string') {
+          const parsed = parseFloat(expense.totalAmount);
+          amount = isNaN(parsed) ? 0 : parsed;
+        } else if (typeof expense.totalAmount === 'number') {
+          amount = isNaN(expense.totalAmount) ? 0 : expense.totalAmount;
+        }
+
         const group = groups.find(g => g.id === expense.groupId);
 
         generatedActivities.push({
@@ -231,7 +252,15 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Add khata activities
       khataTransactions.forEach((transaction) => {
         const transactionDate = transaction.transactionDate ? new Date(transaction.transactionDate) : new Date(transaction.createdAt);
-        const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount || 0;
+
+        // Safe amount calculation - ensure it's always a valid number
+        let amount = 0;
+        if (typeof transaction.amount === 'string') {
+          const parsed = parseFloat(transaction.amount);
+          amount = isNaN(parsed) ? 0 : parsed;
+        } else if (typeof transaction.amount === 'number') {
+          amount = isNaN(transaction.amount) ? 0 : transaction.amount;
+        }
 
         generatedActivities.push({
           id: `khata-${transaction.id}`,
@@ -261,8 +290,17 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
     } finally {
       setLoading(false);
+      // Reset flag after a short delay to allow state updates to complete
+      setTimeout(() => {
+        isGeneratingRef.current = false;
+      }, 100);
     }
   }, [groups, expenses, khataTransactions]);
+
+  // Update ref whenever generateActivities changes to avoid stale closures
+  useEffect(() => {
+    generateActivitiesRef.current = generateActivities;
+  }, [generateActivities]);
 
   // Generate activities when data changes (only when user is logged in AND authenticated)
   useEffect(() => {
@@ -288,12 +326,18 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         generateActivities();
       }
     }
-  }, [user, authState, groups, expenses, khataTransactions, groupsLoading, expensesLoading, khataLoading, generateActivities]);
+    // IMPORTANT: Do NOT include generateActivities in deps - causes infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authState, groups, expenses, khataTransactions, groupsLoading, expensesLoading, khataLoading]);
 
   // Listen for events to regenerate
   useEffect(() => {
     const handleRefreshNeeded = () => {
-      generateActivities();
+      // Only regenerate if not currently generating - prevents circular event loops
+      // Use ref to always call the latest version of generateActivities
+      if (!isGeneratingRef.current && generateActivitiesRef.current) {
+        generateActivitiesRef.current();
+      }
     };
 
     groupEvents.on(GROUP_EVENTS.EXPENSES_REFRESH_NEEDED, handleRefreshNeeded);
@@ -309,7 +353,8 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       groupEvents.off(GROUP_EVENTS.EXPENSE_DELETED, handleRefreshNeeded);
       groupEvents.off(GROUP_EVENTS.GROUPS_REFRESH_NEEDED, handleRefreshNeeded);
     };
-  }, [generateActivities]);
+    // Empty deps - handlers use refs for latest values, no need to recreate
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!user || authState !== 'authenticated') {
@@ -320,10 +365,13 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Always bypass cache on manual refresh
       const freshKhata = await EvenlyBackendService.getKhataRecentTransactions({ limit: 10, cacheTTLMs: 0 });
       setKhataTransactions(freshKhata);
-      generateActivities();
+      // Use ref to always call the latest version
+      if (generateActivitiesRef.current) {
+        generateActivitiesRef.current();
+      }
     } catch (error) {
     }
-  }, [user, authState, generateActivities]);
+  }, [user, authState]);
 
   /**
    * Reset all activities state - used on logout

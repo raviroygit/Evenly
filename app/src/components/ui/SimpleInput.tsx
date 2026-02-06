@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 interface SimpleInputProps extends TextInputProps {
   label?: string;
   error?: string;
+  required?: boolean;
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
 }
@@ -12,6 +13,7 @@ interface SimpleInputProps extends TextInputProps {
 export const SimpleInput: React.FC<SimpleInputProps> = ({
   label,
   error,
+  required,
   containerStyle,
   inputStyle,
   ...textInputProps
@@ -46,6 +48,7 @@ export const SimpleInput: React.FC<SimpleInputProps> = ({
       {label && (
         <Text style={[styles.label, { color: colors.foreground }]}>
           {label}
+          {required && <Text style={{ color: colors.destructive }}> *</Text>}
         </Text>
       )}
       

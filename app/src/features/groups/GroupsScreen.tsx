@@ -108,8 +108,10 @@ export const GroupsScreen: React.FC = () => {
       emitGroupCreated(newGroup);
       // Silently refresh to show the new group
       await refresh();
-    } catch (err) {
-      // Silent error - user can see it in the UI state
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to create group. Please try again.');
+      Alert.alert('Error', message);
     }
   };
 
@@ -125,8 +127,10 @@ export const GroupsScreen: React.FC = () => {
       setEditingGroup(null);
       // Silently refresh to show updated group
       await refresh();
-    } catch (err) {
-      // Silent error - user can see it in the UI state
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
+        || (err instanceof Error ? err.message : 'Failed to update group. Please try again.');
+      Alert.alert('Error', message);
     }
   };
 

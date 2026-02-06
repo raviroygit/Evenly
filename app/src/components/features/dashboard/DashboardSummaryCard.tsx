@@ -21,6 +21,11 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
 }) => {
   const { colors, theme } = useTheme();
 
+  // Safety checks - ensure all values are valid numbers before toFixed()
+  const safeNetBalance = typeof netBalance === 'number' && !isNaN(netBalance) ? netBalance : 0;
+  const safeYouOwe = typeof youOwe === 'number' && !isNaN(youOwe) ? youOwe : 0;
+  const safeYoureOwed = typeof youreOwed === 'number' && !isNaN(youreOwed) ? youreOwed : 0;
+
   const CardWrapper = onPress ? TouchableOpacity : View;
   const cardProps = onPress ? { onPress, activeOpacity: 0.7 } : {};
 
@@ -63,10 +68,10 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
             <Text
               style={[
                 styles.summaryValue,
-                { color: netBalance >= 0 ? '#10B981' : '#EF4444' },
+                { color: safeNetBalance >= 0 ? '#10B981' : '#EF4444' },
               ]}
             >
-              {loading ? '...' : `₹${Math.abs(netBalance).toFixed(0)}`}
+              {loading ? '...' : `₹${Math.abs(safeNetBalance).toFixed(0)}`}
             </Text>
           </View>
 
@@ -79,7 +84,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
               You Owe
             </Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-              {loading ? '...' : `₹${youOwe.toFixed(0)}`}
+              {loading ? '...' : `₹${safeYouOwe.toFixed(0)}`}
             </Text>
           </View>
 
@@ -92,7 +97,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
               You Get
             </Text>
             <Text style={[styles.summaryValue, { color: '#10B981' }]}>
-              {loading ? '...' : `₹${youreOwed.toFixed(0)}`}
+              {loading ? '...' : `₹${safeYoureOwed.toFixed(0)}`}
             </Text>
           </View>
         </View>

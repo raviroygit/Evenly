@@ -23,6 +23,8 @@ interface AuthContextType {
   setUser: (user: User | null) => void;
   login: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   signup: (email: string) => Promise<{ success: boolean; message: string }>;
+  signupWithOtp: (name: string, email: string, phoneNumber: string) => Promise<{ success: boolean; message: string }>;
+  signupVerifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   requestOTP: (email: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -371,6 +373,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService]);
 
+  const signupWithOtp = useCallback(async (name: string, email: string, phoneNumber: string) => {
+    try {
+      const result = await authService.signupWithOtp(name, email, phoneNumber);
+      return { success: result.success, message: result.message };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Failed to send OTP' };
+    }
+  }, [authService]);
+
+  const signupVerifyOtp = useCallback(async (email: string, otp: string) => {
+    try {
+      const result = await authService.signupVerifyOtp(email, otp);
+
+      if (result.success && result.user) {
+        if (result.user.organizations) {
+          setOrganizations(result.user.organizations);
+          if (result.user.currentOrganization) {
+            setCurrentOrganization(result.user.currentOrganization);
+            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
+            evenlyApiClient.setOrganizationId(result.user.currentOrganization.id);
+          } else if (result.user.organizations.length > 0) {
+            setCurrentOrganization(result.user.organizations[0]);
+            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
+            evenlyApiClient.setOrganizationId(result.user.organizations[0].id);
+          }
+        }
+
+        await AuthStorage.saveAuthData(
+          result.user,
+          result.accessToken,
+          result.user.organizations
+        );
+
+        setAuthState('authenticated');
+        setUser(result.user);
+
+        return { success: true, message: 'Signup successful!' };
+      }
+
+      return { success: false, message: result.message || 'Invalid or expired OTP' };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Verification failed' };
+    }
+  }, [authService]);
 
   const requestOTP = useCallback(async (email: string) => {
     try {
@@ -458,6 +504,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser,
     login,
     signup,
+    signupWithOtp,
+    signupVerifyOtp,
     requestOTP,
     logout,
     refreshUser,
@@ -465,7 +513,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     organizations,
     switchOrganization,
     refreshOrganizations,
-  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
+  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, signupWithOtp, signupVerifyOtp, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
 
   return (
     <AuthContext.Provider value={value}>

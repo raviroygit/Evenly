@@ -29,6 +29,9 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
 }) => {
   const { colors, theme } = useTheme();
 
+  // Safety check: ensure groups is always an array
+  const safeGroups = Array.isArray(groups) ? groups : [];
+
   if (!visible) return null;
 
   return (
@@ -86,7 +89,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
                       Loading groups...
                     </Text>
                   </View>
-                ) : groups.length === 0 ? (
+                ) : safeGroups.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Ionicons
                       name="people-outline"
@@ -102,7 +105,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
                   </View>
                 ) : (
                   <View style={styles.groupsList}>
-                    {groups.map((group) => (
+                    {safeGroups.map((group) => (
                       <TouchableOpacity
                         key={group.id}
                         style={[

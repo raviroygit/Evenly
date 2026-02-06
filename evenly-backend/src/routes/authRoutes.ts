@@ -46,6 +46,66 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   }, AuthController.signup);
 
+  // Signup with OTP - Request OTP (name, email, phoneNumber required)
+  fastify.post('/signup/otp', {
+    schema: {
+      description: 'Request signup OTP (name, email, phone number required)',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['name', 'email', 'phoneNumber'],
+        properties: {
+          name: { type: 'string', minLength: 2 },
+          email: { type: 'string', format: 'email' },
+          phoneNumber: { type: 'string', description: 'E.164 e.g. +14155552671' },
+        },
+      },
+      response: {
+        200: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, data: { type: 'null' } } },
+        400: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' }, errors: { type: 'array' } } },
+        500: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } },
+      },
+    },
+  }, AuthController.signupWithOtp);
+
+  // Signup with OTP - Verify OTP and create account
+  fastify.post('/signup/verify-otp', {
+    schema: {
+      description: 'Verify signup OTP and complete registration',
+      tags: ['Authentication'],
+      body: {
+        type: 'object',
+        required: ['email', 'otp'],
+        properties: {
+          email: { type: 'string', format: 'email' },
+          otp: { type: 'string', minLength: 4 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                user: { type: 'object' },
+                organization: { type: 'object' },
+                accessToken: { type: 'string' },
+                refreshToken: { type: 'string' },
+              },
+            },
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' },
+          },
+        },
+        400: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } },
+        500: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } },
+      },
+    },
+  }, AuthController.signupVerifyOtp);
+
   // Login - Request OTP
   fastify.post('/login/otp', {
     schema: {

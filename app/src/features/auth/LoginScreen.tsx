@@ -45,17 +45,12 @@ export const LoginScreen: React.FC = () => {
         setStep('otp');
         Alert.alert('OTP Sent', result.message);
       } else {
-        setErrors({ email: result.message });
+        // Display the actual backend error message
+        setErrors({ email: result.message || 'Failed to send OTP. Please try again.' });
       }
     } catch (error: any) {
-      let errorMessage = 'Failed to send OTP. Please try again.';
-      
-      if (error.message.includes('User does not exist')) {
-        errorMessage = 'User does not exist. Please sign up first.';
-      } else if (error.message.includes('400')) {
-        errorMessage = 'User not found. Please sign up first or check your email.';
-      }
-      
+      // This shouldn't happen as requestOTP catches errors, but just in case
+      const errorMessage = error.message || 'Failed to send OTP. Please try again.';
       setErrors({ email: errorMessage });
     } finally {
       setIsLoading(false);
@@ -84,17 +79,12 @@ export const LoginScreen: React.FC = () => {
         // when isAuthenticated becomes true to avoid race condition
         // Navigation will happen automatically via PublicRoute useEffect
       } else {
-        setErrors({ otp: result.message });
+        // Display the actual backend error message
+        setErrors({ otp: result.message || 'Login failed. Please try again.' });
       }
     } catch (error: any) {
-      let errorMessage = 'Login failed. Please try again.';
-
-      if (error.message.includes('400') || error.message.includes('Invalid')) {
-        errorMessage = 'Invalid or expired OTP. Please try again or request a new code.';
-      } else if (error.message.includes('Request failed')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-
+      // This shouldn't happen as login catches errors, but just in case
+      const errorMessage = error.message || 'Login failed. Please try again.';
       setErrors({ otp: errorMessage });
     } finally {
       setIsLoading(false);
@@ -117,10 +107,13 @@ export const LoginScreen: React.FC = () => {
         Alert.alert('New OTP Sent', result.message);
         setOtp(''); // Clear the current OTP
       } else {
-        setErrors({ otp: result.message });
+        // Display the actual backend error message
+        setErrors({ otp: result.message || 'Failed to send new OTP. Please try again.' });
       }
     } catch (error: any) {
-      setErrors({ otp: error.message || 'Failed to send new OTP. Please try again.' });
+      // This shouldn't happen as requestOTP catches errors, but just in case
+      const errorMessage = error.message || 'Failed to send new OTP. Please try again.';
+      setErrors({ otp: errorMessage });
     } finally {
       setIsLoading(false);
     }
