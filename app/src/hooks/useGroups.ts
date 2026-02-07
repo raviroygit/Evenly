@@ -5,6 +5,7 @@ import { CacheManager } from '../utils/cacheManager';
 import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
+import { OfflineDataCache } from '../utils/offlineDataCache';
 import { useAuth } from '../contexts/AuthContext';
 
 // Global state shared across all hook instances
@@ -41,6 +42,24 @@ export const useGroups = () => {
         setGroups([...globalGroupsCache]);
         setLoading(false);
         return;
+      }
+
+      // Restore from offline cache when in-memory cache is empty (e.g. app reopen)
+      if (globalGroupsCache.length === 0) {
+        try {
+          const cached = await OfflineDataCache.getGroups();
+          if (cached && cached.length > 0) {
+            const revived = cached.map((g: any) => ({
+              ...g,
+              createdAt: g.createdAt ? new Date(g.createdAt) : new Date(),
+              updatedAt: g.updatedAt ? new Date(g.updatedAt) : new Date(),
+            }));
+            globalGroupsCache = revived;
+            setGroups([...revived]);
+          }
+        } catch {
+          // ignore
+        }
       }
 
       // Only show loader for non-silent refreshes
@@ -83,6 +102,7 @@ export const useGroups = () => {
           // Update global cache
           globalGroupsCache = groupsData;
           globalLastFetchTime = Date.now();
+          await OfflineDataCache.setGroups(groupsData);
 
           // Force update by replacing the entire array - this ensures React detects the change
           setGroups(() => [...groupsData]);

@@ -366,7 +366,7 @@ async function sendSupportConfirmationEmail(
  * @param customerEmail - Customer's email address
  * @param customerName - Customer's name
  * @param userName - User's name (who made the transaction)
- * @param transaction - Transaction data
+ * @param transaction - Transaction data; balance must be from customer's perspective (negative = customer owes, positive = customer will get)
  */
 export async function sendKhataTransactionEmail(
   customerEmail: string,
@@ -385,9 +385,11 @@ export async function sendKhataTransactionEmail(
     // Transaction label: "You given to [userName]" when you gave to them (type get), "You taken" when you took from them (type give)
     const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
+    const amountSign = transaction.type === 'give' ? '-' : '+';
+    const amountWithSign = `${amountSign}₹${transaction.amount}`;
     const balanceNum = parseFloat(transaction.balance);
     // Current Balance: negative = total Due of [userName], positive = You will get, zero = Settled
-    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceType = balanceNum < 0 ? `Total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
     const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
     const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
@@ -423,7 +425,7 @@ export async function sendKhataTransactionEmail(
           
           <div class="transaction-card">
             <h3 style="margin-top: 0; color: ${transactionColor};">${transactionType}</h3>
-            <div class="amount">₹${transaction.amount}</div>
+            <div class="amount">${amountWithSign}</div>
             ${transaction.description ? `<p><strong>Description:</strong> ${transaction.description}</p>` : ''}
             <p><strong>Date:</strong> ${new Date(transaction.date).toLocaleString('en-IN')}</p>
           </div>
@@ -440,7 +442,7 @@ export async function sendKhataTransactionEmail(
       </html>
     `;
     
-    const subject = `Khata Transaction: ${transactionType} ₹${transaction.amount}`;
+    const subject = `Khata Transaction: ${transactionType} ${amountWithSign}`;
     await sendEmail(customerEmail, subject, htmlBody);
   } catch (error) {
     throw error;
@@ -608,8 +610,10 @@ export async function sendTransactionUpdatedEmail(
   try {
     const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
+    const amountSign = transaction.type === 'give' ? '-' : '+';
+    const amountWithSign = `${amountSign}₹${transaction.amount}`;
     const balanceNum = parseFloat(transaction.balance);
-    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceType = balanceNum < 0 ? `Total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
     const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
     const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
@@ -622,6 +626,7 @@ export async function sendTransactionUpdatedEmail(
       transaction,
       transactionType,
       transactionColor,
+      amountWithSign,
       balanceNum,
       balanceType,
       balanceColor,
@@ -630,7 +635,7 @@ export async function sendTransactionUpdatedEmail(
       year: new Date().getFullYear()
     });
 
-    const subject = `Transaction Updated: ${transactionType} ₹${transaction.amount}`;
+    const subject = `Transaction Updated: ${transactionType} ${amountWithSign}`;
 
     await sendEmail(customerEmail, subject, htmlBody);
   } catch {
@@ -656,8 +661,10 @@ export async function sendTransactionDeletedEmail(
 ): Promise<void> {
   try {
     const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
+    const amountSign = transaction.type === 'give' ? '-' : '+';
+    const amountWithSign = `${amountSign}₹${transaction.amount}`;
     const balanceNum = parseFloat(transaction.balance);
-    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceType = balanceNum < 0 ? `Total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
     const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
     const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
@@ -669,6 +676,7 @@ export async function sendTransactionDeletedEmail(
       userName,
       transaction,
       transactionType,
+      amountWithSign,
       balanceNum,
       balanceType,
       balanceColor,
@@ -677,7 +685,7 @@ export async function sendTransactionDeletedEmail(
       year: new Date().getFullYear()
     });
 
-    const subject = `Transaction Deleted: ${transactionType} ₹${transaction.amount}`;
+    const subject = `Transaction Deleted: ${transactionType} ${amountWithSign}`;
 
     await sendEmail(customerEmail, subject, htmlBody);
   } catch {

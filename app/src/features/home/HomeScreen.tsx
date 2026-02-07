@@ -21,6 +21,7 @@ import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { useRouter } from 'expo-router';
+import { HomeCache } from '../../utils/homeCache';
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
@@ -66,30 +67,44 @@ export const HomeScreen: React.FC = () => {
   // Note: Removed useFocusEffect to prevent infinite loops
   // Dashboard and groups will refresh via pull-to-refresh
 
-  // Fetch khata summary on mount
+  // Fetch khata summary on mount: show previous loaded data first, then refresh; on API fail keep previous
   useEffect(() => {
+    let cancelled = false;
     const fetchKhataSummary = async () => {
       try {
+        const cached = await HomeCache.get();
+        if (cached && !cancelled) {
+          setKhataSummary(cached.khataSummary);
+          setCustomerCount(cached.customerCount);
+          setCustomers(Array.isArray(cached.customers) ? cached.customers : []);
+        }
         setKhataLoading(true);
         const [summary, customersData] = await Promise.all([
           EvenlyBackendService.getKhataFinancialSummary(),
           EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 30000 }),
         ]);
-        setKhataSummary(summary);
-        // Safety check: ensure customersData is always an array
+        if (cancelled) return;
         const safeCustomers = Array.isArray(customersData) ? customersData : [];
+        setKhataSummary(summary);
         setCustomerCount(safeCustomers.length);
         setCustomers(safeCustomers);
+        await HomeCache.set({ khataSummary: summary, customerCount: safeCustomers.length, customers: safeCustomers });
       } catch {
-        // Ignore fetch error - keep empty array
-        setCustomers([]);
-        setCustomerCount(0);
+        if (!cancelled) {
+          const cached = await HomeCache.get();
+          if (cached) {
+            setKhataSummary(cached.khataSummary);
+            setCustomerCount(cached.customerCount);
+            setCustomers(Array.isArray(cached.customers) ? cached.customers : []);
+          }
+        }
       } finally {
-        setKhataLoading(false);
+        if (!cancelled) setKhataLoading(false);
       }
     };
 
     fetchKhataSummary();
+    return () => { cancelled = true; };
   }, []);
 
   // Listen for group events to refresh when groups are created/updated from other screens
@@ -109,13 +124,13 @@ export const HomeScreen: React.FC = () => {
                 EvenlyBackendService.getKhataFinancialSummary(),
                 EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
               ]);
-              setKhataSummary(summary);
-              // Safety check: ensure customersData is always an array
               const safeCustomers = Array.isArray(customersData) ? customersData : [];
+              setKhataSummary(summary);
               setCustomerCount(safeCustomers.length);
               setCustomers(safeCustomers);
+              await HomeCache.set({ khataSummary: summary, customerCount: safeCustomers.length, customers: safeCustomers });
             } catch {
-              // Ignore - keep existing data
+              // Keep existing data
             }
           })(),
         ]);
@@ -193,13 +208,13 @@ export const HomeScreen: React.FC = () => {
               EvenlyBackendService.getKhataFinancialSummary(),
               EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
             ]);
-            setKhataSummary(summary);
-            // Safety check: ensure customersData is always an array
             const safeCustomers = Array.isArray(customersData) ? customersData : [];
+            setKhataSummary(summary);
             setCustomerCount(safeCustomers.length);
             setCustomers(safeCustomers);
+            await HomeCache.set({ khataSummary: summary, customerCount: safeCustomers.length, customers: safeCustomers });
           } catch {
-            // Ignore - keep existing data
+            // Keep existing data
           }
         })(),
       ]);
@@ -242,11 +257,13 @@ export const HomeScreen: React.FC = () => {
               EvenlyBackendService.getKhataFinancialSummary(),
               EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
             ]);
+            const safeCustomers = Array.isArray(customersData) ? customersData : [];
             setKhataSummary(summary);
-            setCustomerCount(customersData.length);
-            setCustomers(customersData);
+            setCustomerCount(safeCustomers.length);
+            setCustomers(safeCustomers);
+            await HomeCache.set({ khataSummary: summary, customerCount: safeCustomers.length, customers: safeCustomers });
           } catch {
-            // Ignore
+            // Keep existing data
           } finally {
             setKhataLoading(false);
           }
@@ -310,11 +327,13 @@ export const HomeScreen: React.FC = () => {
               EvenlyBackendService.getKhataFinancialSummary(),
               EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
             ]);
+            const safeCustomers = Array.isArray(customersData) ? customersData : [];
             setKhataSummary(summary);
-            setCustomerCount(customersData.length);
-            setCustomers(customersData);
-          } catch (error) {
-            // Ignore
+            setCustomerCount(safeCustomers.length);
+            setCustomers(safeCustomers);
+            await HomeCache.set({ khataSummary: summary, customerCount: safeCustomers.length, customers: safeCustomers });
+          } catch {
+            // Keep existing data
           } finally {
             setKhataLoading(false);
           }

@@ -427,6 +427,8 @@ export class KhataService {
           try {
             const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
+              // Pass customer's current balance (negated): email is to customer so show their view (negative = they owe, positive = they will get)
+              const customerBalance = -newBalance;
               await sendKhataTransactionEmail(
                 customerEmail,
                 customer.name,
@@ -436,7 +438,7 @@ export class KhataService {
                   amount: transactionData.amount,
                   currency: transactionData.currency || 'INR',
                   description: transactionData.description,
-                  balance: newBalance.toFixed(2),
+                  balance: customerBalance.toFixed(2),
                   date: transaction.transactionDate.toISOString(),
                 }
               );

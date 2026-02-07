@@ -5,6 +5,8 @@ import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
 import { CacheManager } from '../utils/cacheManager';
+import { HomeCache } from '../utils/homeCache';
+import { OfflineDataCache } from '../utils/offlineDataCache';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -401,6 +403,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Clear cache FIRST to prevent race conditions
       await CacheManager.invalidateAllData();
+      await HomeCache.clear();
+      await OfflineDataCache.clearAll();
 
       // Call backend logout
       await authService.logout();
@@ -418,6 +422,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Even if logout fails, clear everything locally
       await CacheManager.invalidateAllData();
+      await HomeCache.clear();
+      await OfflineDataCache.clearAll();
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);

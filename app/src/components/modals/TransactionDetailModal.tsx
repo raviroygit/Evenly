@@ -43,6 +43,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   const transactionType = transaction.amountGiven ? 'You Gave' : 'You Got';
   const amount = transaction.amountGiven || transaction.amountGot;
   const isGave = !!transaction.amountGiven;
+  const amountSign = isGave ? '-' : '+';
+  const amountWithSign = `${amountSign}₹${amount}`;
 
   return (
     <>
@@ -137,7 +139,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                           { color: isGave ? '#FF3B30' : '#10B981' },
                         ]}
                       >
-                        {transactionType}
+                        {amountSign} {transactionType}
                       </Text>
                     </View>
                   </View>
@@ -153,7 +155,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                         { color: isGave ? '#FF3B30' : '#10B981' },
                       ]}
                     >
-                      ₹{amount}
+                      {amountWithSign}
                     </Text>
                   </View>
 

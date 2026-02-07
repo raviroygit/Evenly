@@ -4,6 +4,7 @@ import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { CacheManager } from '../utils/cacheManager';
 import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
+import { OfflineDataCache } from '../utils/offlineDataCache';
 import { useAuth } from '../contexts/AuthContext';
 
 // Global state for user balances shared across all hook instances
@@ -146,6 +147,20 @@ export const useUserBalances = () => {
         return;
       }
 
+      // Restore from offline cache when in-memory cache is empty (e.g. app reopen)
+      if (!globalUserBalancesCache) {
+        try {
+          const cached = await OfflineDataCache.getUserBalances();
+          if (cached && Array.isArray(cached.balances)) {
+            globalUserBalancesCache = { balances: cached.balances, netBalance: cached.netBalance || null };
+            setBalances(cached.balances);
+            setNetBalance(cached.netBalance || null);
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       // Only show loader for non-silent refreshes
       if (!silent) {
         setLoading(true);
@@ -192,6 +207,7 @@ export const useUserBalances = () => {
             netBalance: netBalanceData
           };
           globalUserBalancesLastFetchTime = Date.now();
+          await OfflineDataCache.setUserBalances({ balances: balancesData, netBalance: netBalanceData });
 
           setBalances(balancesData);
           setNetBalance(netBalanceData);

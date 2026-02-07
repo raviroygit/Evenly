@@ -529,16 +529,16 @@ export const CustomerDetailScreen: React.FC = () => {
                     </View>
                   </View>
 
-                  {/* Amount on the right */}
+                  {/* Amount on the right (with sign: - for You Gave, + for You Got) */}
                   <View style={styles.transactionRight}>
                     {transaction.amountGiven ? (
                       <Text style={[styles.transactionAmount, { color: '#FF3B30' }]}>
-                        ₹{transaction.amountGiven}
+                        -₹{transaction.amountGiven}
                       </Text>
                     ) : null}
                     {transaction.amountGot ? (
                       <Text style={[styles.transactionAmount, { color: '#10B981' }]}>
-                        ₹{transaction.amountGot}
+                        +₹{transaction.amountGot}
                       </Text>
                     ) : null}
                   </View>
