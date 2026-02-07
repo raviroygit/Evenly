@@ -1,34 +1,33 @@
 import React from 'react';
 import {
+  Modal,
   View,
   Text,
-  Modal,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const { height } = Dimensions.get('window');
-
-interface Customer {
+export interface KhataCustomerItem {
   id: string;
+  userId: string;
   name: string;
   email?: string;
   phone?: string;
   balance: string;
   type: 'give' | 'get' | 'settled';
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface CustomersListModalProps {
   visible: boolean;
   onClose: () => void;
-  customers: Customer[];
-  onCustomerPress: (customerId: string, customerName: string, customerInitials: string) => void;
+  customers: KhataCustomerItem[];
+  onCustomerPress: (customer: KhataCustomerItem) => void;
   loading?: boolean;
 }
 
@@ -41,28 +40,14 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
 }) => {
   const { colors, theme } = useTheme();
 
-  // Safety check: ensure customers is always an array
   const safeCustomers = Array.isArray(customers) ? customers : [];
 
-  const getInitials = (name: string): string => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const formatAmount = (amount: string) => {
+    const num = parseFloat(amount);
+    return `₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatAmount = (amount: number | string) => {
-    let numAmount = 0;
-    if (typeof amount === 'string') {
-      const parsed = parseFloat(amount);
-      numAmount = isNaN(parsed) ? 0 : parsed;
-    } else if (typeof amount === 'number') {
-      numAmount = isNaN(amount) ? 0 : amount;
-    }
-    return new Intl.NumberFormat('en-IN').format(Math.abs(numAmount));
-  };
+  if (!visible) return null;
 
   return (
     <Modal
@@ -70,113 +55,139 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-
-        <BlurView
-          intensity={theme === 'dark' ? 80 : 60}
-          tint={theme === 'dark' ? 'dark' : 'light'}
-          style={[
-            styles.modalContainer,
-            {
-              backgroundColor: theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-              borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              <Text style={[styles.title, { color: colors.foreground }]}>
-                All Customers
-              </Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                {loading ? 'Loading...' : `${safeCustomers.length} Customer${safeCustomers.length !== 1 ? 's' : ''}`}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={onClose}
+      <View
+        style={[
+          styles.overlay,
+          {
+            backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+          },
+        ]}
+      >
+        <View style={styles.overlayTouchable}>
+          <TouchableOpacity
+            style={styles.overlayBackground}
+            activeOpacity={1}
+            onPress={onClose}
+          />
+          <View style={styles.modalWrapper}>
+            <View
               style={[
-                styles.closeButton,
+                styles.modalContainer,
                 {
-                  backgroundColor: theme === 'dark' ? '#333333' : '#F0F0F0',
+                  backgroundColor: colors.background,
                 },
               ]}
             >
-              <Ionicons name="close" size={24} color={colors.foreground} />
-            </TouchableOpacity>
+              <View style={styles.header}>
+                <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+                  Your Customers
+                </Text>
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={[styles.closeButton, { backgroundColor: colors.muted }]}
+                >
+                  <Ionicons name="close" size={24} color={colors.foreground} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.content}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+                      Loading customers...
+                    </Text>
+                  </View>
+                ) : safeCustomers.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons
+                      name="people-outline"
+                      size={48}
+                      color={colors.mutedForeground}
+                    />
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                      No customers yet
+                    </Text>
+                    <Text style={[styles.emptySubtext, { color: colors.mutedForeground }]}>
+                      Add customers in Khata to track balances
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.list}>
+                    {safeCustomers.map((customer) => {
+                      const balanceNum = parseFloat(customer.balance);
+                      const typeColor =
+                        customer.type === 'give' ? '#10B981' :
+                        customer.type === 'get' ? '#EF4444' :
+                        colors.mutedForeground;
+                      return (
+                        <TouchableOpacity
+                          key={customer.id}
+                          style={[
+                            styles.customerItem,
+                            {
+                              backgroundColor: colors.card,
+                              borderColor: colors.border,
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => onCustomerPress(customer)}
+                        >
+                          <View style={styles.customerInfo}>
+                            <View
+                              style={[
+                                styles.customerIcon,
+                                { backgroundColor: colors.primary + '20' },
+                              ]}
+                            >
+                              <Ionicons
+                                name="person"
+                                size={24}
+                                color={colors.primary}
+                              />
+                            </View>
+                            <View style={styles.customerDetails}>
+                              <Text
+                                style={[styles.customerName, { color: colors.foreground }]}
+                                numberOfLines={1}
+                              >
+                                {customer.name}
+                              </Text>
+                              <Text
+                                style={[styles.customerBalance, { color: typeColor }]}
+                                numberOfLines={1}
+                              >
+                                {customer.type === 'settled'
+                                  ? 'Settled'
+                                  : customer.type === 'give'
+                                    ? `Will get ${formatAmount(customer.balance)}`
+                                    : `Will give ${formatAmount(customer.balance)}`}
+                              </Text>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={[
+                              styles.eyeButton,
+                              { backgroundColor: colors.primary + '15' },
+                            ]}
+                            onPress={() => onCustomerPress(customer)}
+                          >
+                            <Ionicons name="eye-outline" size={20} color={colors.primary} />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
           </View>
-
-          {/* Customer List */}
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-                  Loading customers...
-                </Text>
-              </View>
-            ) : safeCustomers.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No customers found
-                </Text>
-              </View>
-            ) : (
-              safeCustomers.map((customer) => {
-                const initials = getInitials(customer.name);
-                const amountColor =
-                  customer.type === 'give' ? '#10B981' :
-                  customer.type === 'get' ? '#EF4444' :
-                  colors.mutedForeground;
-
-                return (
-                  <TouchableOpacity
-                    key={customer.id}
-                    style={[
-                      styles.customerItem,
-                      {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                        borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
-                      },
-                    ]}
-                    onPress={() => onCustomerPress(customer.id, customer.name, initials)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}>
-                      <Text style={[styles.avatarText, { color: colors.primary }]}>
-                        {initials}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfo}>
-                      <Text style={[styles.customerName, { color: colors.foreground }]}>
-                        {customer.name}
-                      </Text>
-                      <Text style={[styles.customerLabel, { color: amountColor }]}>
-                        You&apos;ll {customer.type === 'get' ? 'Give' : customer.type === 'give' ? 'Get' : 'Settled'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.amountContainer}>
-                      <Text style={[styles.amountText, { color: amountColor }]}>
-                        ₹{formatAmount(customer.balance)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </ScrollView>
-        </BlurView>
+        </View>
       </View>
     </Modal>
   );
@@ -187,89 +198,102 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  overlayTouchable: {
+    flex: 1,
+  },
+  overlayBackground: {
+    flex: 1,
+  },
+  modalWrapper: {
+    maxHeight: '85%',
   },
   modalContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderWidth: 1,
-    height: height * 0.7,
-    overflow: 'hidden',
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  headerContent: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
-  scrollView: {
+  content: {
     paddingHorizontal: 20,
   },
-  scrollContent: {
-    paddingBottom: 20,
-    flexGrow: 1,
-  },
   loadingContainer: {
-    padding: 40,
+    paddingVertical: 40,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   loadingText: {
     fontSize: 16,
+    fontWeight: '500',
   },
   emptyContainer: {
-    padding: 40,
+    paddingVertical: 60,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 14,
     textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  list: {
+    gap: 12,
+    paddingBottom: 20,
   },
   customerItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 12,
   },
-  avatar: {
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  customerIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  customerInfo: {
+  customerDetails: {
     flex: 1,
   },
   customerName: {
@@ -277,15 +301,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  customerLabel: {
-    fontSize: 12,
+  customerBalance: {
+    fontSize: 13,
     fontWeight: '500',
   },
-  amountContainer: {
-    alignItems: 'flex-end',
-  },
-  amountText: {
-    fontSize: 18,
-    fontWeight: '700',
+  eyeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

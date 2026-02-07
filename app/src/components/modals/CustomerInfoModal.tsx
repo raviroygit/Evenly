@@ -22,6 +22,7 @@ interface CustomerInfoModalProps {
     name: string;
     email?: string;
     phone?: string;
+    phoneNumber?: string;
     address?: string;
     notes?: string;
     balance: string;
@@ -181,7 +182,9 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                 }
               ]}>
                 <InfoRow label="Email" value={customer.email || ''} icon="mail-outline" />
-                <InfoRow label="Phone" value={customer.phone || ''} icon="call-outline" />
+                {(customer.phone || customer.phoneNumber) ? (
+                  <InfoRow label="Phone" value={customer.phone || customer.phoneNumber || ''} icon="call-outline" />
+                ) : null}
                 {customer.address && (
                   <InfoRow label="Address" value={customer.address} icon="location-outline" />
                 )}

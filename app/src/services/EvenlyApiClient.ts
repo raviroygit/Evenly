@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
+import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
 /**
  * Axios instance for Evenly Backend API with automatic authentication.
@@ -9,6 +10,7 @@ import ErrorHandler from '../utils/ErrorHandler';
  */
 class EvenlyApiClient {
   private client: AxiosInstance;
+  private unauthorizedEmitted = false;
 
   constructor() {
     // Ensure base URL ends with /api so paths like /auth/signup/otp resolve to .../api/auth/signup/otp
@@ -48,6 +50,9 @@ class EvenlyApiClient {
           // Get auth data from storage
           const authData = await AuthStorage.getAuthData();
           const accessToken = authData?.accessToken;
+          if (!accessToken) {
+            this.unauthorizedEmitted = false;
+          }
 
           if (accessToken) {
             // Simply attach the token - it never expires for mobile
@@ -85,16 +90,17 @@ class EvenlyApiClient {
         if (error.config?.data instanceof FormData || error.code === 'ERR_NETWORK') {
         }
 
-        // Handle 401 Unauthorized - token might be revoked or network issue
+        // Handle 401 Unauthorized
         if (error.response?.status === 401) {
-
-          // Since mobile tokens never expire, 401 means:
-          // 1. Token was revoked remotely (security issue)
-          // 2. Network error / backend issue
-          // 3. Invalid token (shouldn't happen)
-
-          // Keep user logged in with cached data in all cases
-          // User can view cached data and retry when network is restored
+          const message = error.response?.data?.message ?? '';
+          if (message === 'Unauthorized Access') {
+            if (!this.unauthorizedEmitted) {
+              this.unauthorizedEmitted = true;
+              sessionEvents.emit(SESSION_EVENTS.SESSION_EXPIRED);
+            }
+            return Promise.reject(error);
+          }
+          // Other 401s: keep user logged in with cached data (e.g. network/backend issue)
           return Promise.reject({
             ...error,
             _offlineMode: true,

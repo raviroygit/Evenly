@@ -4,24 +4,18 @@ import { ResponsiveLiquidGlassCard } from './ResponsiveLiquidGlassCard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
-interface ProfileStats {
-  groups: number;
-  totalSpent: number;
-  owed: number;
-}
-
 interface GlassProfileCardProps {
   name: string;
   email: string;
   phoneNumber?: string;
   initials: string;
-  stats: ProfileStats;
   avatarColor?: string;
   style?: ViewStyle;
   padding?: number | { small?: number; medium?: number; large?: number; tablet?: number };
   marginBottom?: number;
   borderRadius?: number | { small?: number; medium?: number; large?: number; tablet?: number };
   onThemeToggle?: () => void;
+  onEditPress?: () => void;
 }
 
 export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
@@ -29,7 +23,6 @@ export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
   email,
   phoneNumber,
   initials,
-  stats,
   avatarColor,
   style,
   padding = {
@@ -46,6 +39,7 @@ export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
     tablet: 22,
   },
   onThemeToggle,
+  onEditPress,
 }) => {
   const { colors, theme } = useTheme();
 
@@ -59,7 +53,13 @@ export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
       style={style}
     >
       <View style={styles.headerContainer}>
-        {/* Theme Toggle Button - Positioned absolutely */}
+        {/* Edit Button - Top left */}
+        {onEditPress ? (
+          <TouchableOpacity style={[styles.iconButton, styles.iconButtonLeft]} onPress={onEditPress}>
+            <Ionicons name="pencil" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+        ) : null}
+        {/* Theme Toggle Button - Top right */}
         <TouchableOpacity style={styles.iconButton} onPress={onThemeToggle}>
           <Ionicons 
             name={theme === 'dark' ? 'sunny' : 'moon'} 
@@ -95,33 +95,6 @@ export const GlassProfileCard: React.FC<GlassProfileCardProps> = ({
           {phoneNumber}
         </Text>
       )}
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>
-            {stats.groups}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Groups
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>
-            ₹{stats.totalSpent.toLocaleString()}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Total Spent
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: colors.foreground }]}>
-            ₹{stats.owed.toLocaleString()}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-            Owed
-          </Text>
-        </View>
-      </View>
     </ResponsiveLiquidGlassCard>
   );
 };
@@ -146,6 +119,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
+  },
+  iconButtonLeft: {
+    right: undefined,
+    left: 0,
   },
   avatarContainer: {
     alignItems: 'center',
@@ -180,23 +157,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    fontWeight: '400',
+    marginBottom: 8,
   },
 });

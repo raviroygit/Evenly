@@ -52,6 +52,7 @@ export class AuthService {
         return {
           success: false,
           error: 'Unauthorized - Invalid token',
+          authRejected: true,
         };
       }
 

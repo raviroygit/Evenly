@@ -31,8 +31,11 @@ export const authenticateToken = async (
       throw new UnauthorizedError('No authentication token provided');
     }
 
-    // Validate token with external auth service first; fall back to local session
+    // Validate token with external auth service first; fall back to local session only when auth is unavailable
     const authResult = await AuthService.validateToken(token);
+    if (authResult.authRejected) {
+      throw new UnauthorizedError('Unauthorized Access');
+    }
     if (authResult.success && authResult.user) {
       const u = authResult.user;
       if (!u.id || !u.email || !u.name) {
@@ -59,6 +62,7 @@ export const authenticateToken = async (
       return;
     }
 
+    // Fall back to local session only when auth service was unavailable (e.g. timeout), not when it rejected (401)
     const { validateSession } = await import('../utils/localSession');
     const local = validateSession(token);
     if (local.valid && local.userId) {
@@ -74,7 +78,7 @@ export const authenticateToken = async (
       }
     }
 
-    throw new UnauthorizedError('Invalid or expired token');
+    throw new UnauthorizedError('Unauthorized Access');
   } catch (error: unknown) {
     if (error instanceof UnauthorizedError) {
       throw error;

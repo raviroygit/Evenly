@@ -10,10 +10,9 @@ import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
 
-// E.164: + followed by 1–15 digits
+// E.164: + followed by country code + 10 digits (India: +91 + 10 digits)
 const PHONE_E164_REGEX = /^\+[1-9]\d{1,14}$/;
-const MIN_PHONE_DIGITS = 6;
-const MAX_PHONE_DIGITS = 15;
+const REQUIRED_PHONE_DIGITS = 10;
 
 // Email: local part (letters, digits, . _ % + -), @, domain with at least one dot and 2+ char TLD
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -59,15 +58,13 @@ export const SignupScreen: React.FC = () => {
       next.email = 'Please enter a valid email (e.g. name@example.com)';
     }
 
-    // Phone validation
+    // Phone validation: exactly 10 digits
     if (!phoneNumber.trim()) {
       next.phoneNumber = 'Phone number is required';
-    } else if (digitsOnly.length < MIN_PHONE_DIGITS) {
-      next.phoneNumber = `Phone number must be at least ${MIN_PHONE_DIGITS} digits`;
-    } else if (digitsOnly.length > MAX_PHONE_DIGITS) {
-      next.phoneNumber = `Phone number must be at most ${MAX_PHONE_DIGITS} digits`;
+    } else if (digitsOnly.length !== REQUIRED_PHONE_DIGITS) {
+      next.phoneNumber = `Phone number must be exactly ${REQUIRED_PHONE_DIGITS} digits`;
     } else if (!PHONE_E164_REGEX.test(fullPhone)) {
-      next.phoneNumber = 'Enter a valid phone number (digits only)';
+      next.phoneNumber = 'Enter a valid 10-digit phone number';
     }
 
     setErrors(next);
@@ -248,11 +245,11 @@ export const SignupScreen: React.FC = () => {
                         placeholderTextColor={colors.mutedForeground}
                         value={phoneNumber}
                         onChangeText={(t) => {
-                          setPhoneNumber(t.replace(/\D/g, '').slice(0, 15));
+                          setPhoneNumber(t.replace(/\D/g, '').slice(0, REQUIRED_PHONE_DIGITS));
                           if (errors.phoneNumber) setErrors((e) => ({ ...e, phoneNumber: undefined }));
                         }}
                         keyboardType="phone-pad"
-                        maxLength={15}
+                        maxLength={REQUIRED_PHONE_DIGITS}
                       />
                     </View>
                   </View>

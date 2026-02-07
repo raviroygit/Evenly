@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,8 +16,11 @@ import { AboutModal } from '../../components/modals/AboutModal';
 import { SupportModal } from '../../components/modals/SupportModal';
 import { PrivacySecurityModal } from '../../components/modals/PrivacySecurityModal';
 import { PersonalInfoModal } from '../../components/modals/PersonalInfoModal';
+import { PersonalInfoPreviewModal } from '../../components/modals/PersonalInfoPreviewModal';
 import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
+import { CustomersListModal } from '../../components/modals/CustomersListModal';
+import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const ProfileScreen: React.FC = () => {
@@ -31,27 +34,84 @@ export const ProfileScreen: React.FC = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showPrivacySecurityModal, setShowPrivacySecurityModal] = useState(false);
   const [showPersonalInfoModal, setShowPersonalInfoModal] = useState(false);
+  const [showPersonalInfoPreviewModal, setShowPersonalInfoPreviewModal] = useState(false);
   const [showGroupsListModal, setShowGroupsListModal] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0); // Force re-render trigger
+  const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
+  const [khataSummary, setKhataSummary] = useState<{ totalGive: string; totalGet: string } | null>(null);
+  const [customers, setCustomers] = useState<Array<{ id: string; name: string; email?: string; phone?: string; balance: string; type: 'give' | 'get' | 'settled'; createdAt?: string; updatedAt?: string }>>([]);
+  const [khataSummaryLoading, setKhataSummaryLoading] = useState(false);
+  const [showCustomersListModal, setShowCustomersListModal] = useState(false);
+  const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+    balance: string;
+    type: 'give' | 'get' | 'settled';
+    createdAt?: string;
+    updatedAt?: string;
+  } | null>(null);
+
+  const fetchKhataSummary = async () => {
+    setKhataSummaryLoading(true);
+    try {
+      const [summary, customersList] = await Promise.all([
+        EvenlyBackendService.getKhataFinancialSummary(),
+        EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 0 }),
+      ]);
+      setKhataSummary(summary);
+      setCustomers(Array.isArray(customersList) ? customersList : []);
+    } catch {
+      setKhataSummary(null);
+      setCustomers([]);
+    } finally {
+      setKhataSummaryLoading(false);
+    }
+  };
+
+  const customerCount = customers.length;
+
+  useEffect(() => {
+    fetchKhataSummary();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refresh user profile data, groups, and balances
       await Promise.all([
         refreshUser ? refreshUser() : Promise.resolve(),
         refreshGroups ? refreshGroups() : Promise.resolve(),
         refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
+        fetchKhataSummary(),
       ]);
-      // Force re-render after refresh
       setProfileUpdateTrigger(prev => prev + 1);
     } catch (error) {
     } finally {
       setRefreshing(false);
     }
   };
+
+  // Combined overall balance: groups + khata (customers)
+  const overallBalance = useMemo(() => {
+    const groupsOwed = typeof netBalance?.totalOwed === 'number' && !isNaN(netBalance.totalOwed) ? netBalance.totalOwed : 0;
+    const groupsOwing = typeof netBalance?.totalOwing === 'number' && !isNaN(netBalance.totalOwing) ? netBalance.totalOwing : 0;
+    const khataGet = khataSummary ? parseFloat(khataSummary.totalGet) || 0 : 0;
+    const khataGive = khataSummary ? parseFloat(khataSummary.totalGive) || 0 : 0;
+    const totalOwed = groupsOwed + khataGet;
+    const totalOwing = groupsOwing + khataGive;
+    const net = totalOwed - totalOwing;
+    return {
+      totalOwed,
+      totalOwing,
+      netBalance: net,
+    };
+  }, [netBalance?.totalOwed, netBalance?.totalOwing, khataSummary]);
+  const balanceLoading = balancesLoading || khataSummaryLoading;
 
   const handlePersonalInfoSuccess = () => {
     // Force re-render when personal info is updated
@@ -138,6 +198,28 @@ export const ProfileScreen: React.FC = () => {
     setTimeout(() => {
       setShowGroupsListModal(true);
     }, 300);
+  };
+
+  const handleCustomerPress = (customer: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+    balance: string;
+    type: 'give' | 'get' | 'settled';
+    createdAt?: string;
+    updatedAt?: string;
+  }) => {
+    setShowCustomersListModal(false);
+    setSelectedCustomer(customer);
+    setTimeout(() => setShowCustomerInfoModal(true), 300);
+  };
+
+  const handleCustomerInfoClose = () => {
+    setShowCustomerInfoModal(false);
+    setSelectedCustomer(null);
   };
 
   // Show loading state while initializing auth
@@ -232,14 +314,10 @@ export const ProfileScreen: React.FC = () => {
         user={{
           ...user,
           name: user.name || 'User',
-          stats: {
-            groups: groups.length,
-            totalSpent: netBalance?.totalOwing || 0,
-            owed: netBalance?.totalOwed || 0,
-          }
         }} 
         initials={userInitials}
         onThemeToggle={toggleTheme}
+        onEditPress={() => setShowPersonalInfoModal(true)}
       />
 
       {/* Organization Switcher - Only for owners */}
@@ -249,71 +327,61 @@ export const ProfileScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Balance Summary */}
+      {/* Balance Summary (Groups + Khata combined) */}
       <GlassMenuCard
         title="Balance Summary"
         items={[
           {
             title: "Net Balance",
-            subtitle: balancesLoading ? "Loading..." : undefined,
-            rightElement: balancesLoading ? undefined : (
+            subtitle: balanceLoading ? "Loading..." : undefined,
+            rightElement: balanceLoading ? undefined : (
               <View style={styles.balanceRow}>
                 <Text style={[
                   styles.balanceAmount,
                   {
-                    color: netBalance && netBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
+                    color: overallBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  ₹{(() => {
-                    const value = netBalance?.netBalance;
-                    return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
-                  })()}
+                  ₹{overallBalance.netBalance.toFixed(2)}
                 </Text>
                 <Text style={[
                   styles.balanceLabel,
                   {
-                    color: netBalance && netBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
+                    color: overallBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  {netBalance && netBalance.netBalance >= 0 ? 'Owed' : 'Owing'}
+                  {overallBalance.netBalance >= 0 ? 'Owed' : 'Owing'}
                 </Text>
               </View>
             ),
           },
           {
             title: "Total Owed",
-            subtitle: balancesLoading ? "Loading..." : undefined,
-            rightElement: balancesLoading ? undefined : (
-              <Text style={[
-                styles.balanceAmount,
-                { color: '#10B981' }
-              ]}>
-                ₹{(() => {
-                  const value = netBalance?.totalOwed;
-                  return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
-                })()}
+            subtitle: balanceLoading ? "Loading..." : undefined,
+            rightElement: balanceLoading ? undefined : (
+              <Text style={[styles.balanceAmount, { color: '#10B981' }]}>
+                ₹{overallBalance.totalOwed.toFixed(2)}
               </Text>
             ),
           },
           {
             title: "Total Owing",
-            subtitle: balancesLoading ? "Loading..." : undefined,
-            rightElement: balancesLoading ? undefined : (
-              <Text style={[
-                styles.balanceAmount,
-                { color: '#EF4444' }
-              ]}>
-                ₹{(() => {
-                  const value = netBalance?.totalOwing;
-                  return typeof value === 'number' && !isNaN(value) ? value.toFixed(2) : '0.00';
-                })()}
+            subtitle: balanceLoading ? "Loading..." : undefined,
+            rightElement: balanceLoading ? undefined : (
+              <Text style={[styles.balanceAmount, { color: '#EF4444' }]}>
+                ₹{overallBalance.totalOwing.toFixed(2)}
               </Text>
             ),
           },
           {
-            title: "Active Groups",
+            title: "Total Groups",
             subtitle: groupsLoading ? "Loading..." : `${groups.length} group${groups.length !== 1 ? 's' : ''}`,
             onPress: () => setShowGroupsListModal(true),
+          },
+          {
+            title: "Total Customers",
+            subtitle: balanceLoading ? "Loading..." : `${customerCount} customer${customerCount !== 1 ? 's' : ''}`,
+            onPress: () => setShowCustomersListModal(true),
           },
         ]}
       />
@@ -326,10 +394,8 @@ export const ProfileScreen: React.FC = () => {
         items={[
           {
             title: "Personal Information",
-            subtitle: "Update your details",
-            onPress: () => {
-              setShowPersonalInfoModal(true);
-            },
+            subtitle: "View your details",
+            onPress: () => setShowPersonalInfoPreviewModal(true),
           },
           {
             title: "Privacy & Security",
@@ -392,11 +458,18 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setShowPrivacySecurityModal(false)}
       />
 
-      {/* Personal Info Modal */}
+      {/* Personal Info Edit Modal */}
       <PersonalInfoModal
         visible={showPersonalInfoModal}
         onClose={() => setShowPersonalInfoModal(false)}
         onSuccess={handlePersonalInfoSuccess}
+      />
+
+      {/* Personal Info Preview Modal (view only) */}
+      <PersonalInfoPreviewModal
+        visible={showPersonalInfoPreviewModal}
+        onClose={() => setShowPersonalInfoPreviewModal(false)}
+        user={user}
       />
 
       {/* Groups List Modal */}
@@ -416,6 +489,22 @@ export const ProfileScreen: React.FC = () => {
         visible={showGroupInfoModal}
         onClose={handleGroupInfoClose}
         groupId={selectedGroupId}
+      />
+
+      {/* Customers List Modal */}
+      <CustomersListModal
+        visible={showCustomersListModal}
+        onClose={() => setShowCustomersListModal(false)}
+        customers={customers}
+        onCustomerPress={handleCustomerPress}
+        loading={khataSummaryLoading}
+      />
+
+      {/* Customer Info Modal (details when tapping a customer) */}
+      <CustomerInfoModal
+        visible={showCustomerInfoModal}
+        onClose={handleCustomerInfoClose}
+        customer={selectedCustomer}
       />
     </>
   );

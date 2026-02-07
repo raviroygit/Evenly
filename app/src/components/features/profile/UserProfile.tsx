@@ -5,26 +5,19 @@ import { User } from '../../../types';
 interface UserProfileProps {
   user: User;
   initials: string;
-  realStats?: {
-    groups: number;
-    totalSpent: number;
-    owed: number;
-  };
   onThemeToggle?: () => void;
+  onEditPress?: () => void;
 }
 
-export const UserProfile: React.FC<UserProfileProps> = ({ user, initials, realStats, onThemeToggle }) => {
-  // Use real stats if provided, otherwise fall back to user.stats
-  const stats = realStats || user.stats;
-
+export const UserProfile: React.FC<UserProfileProps> = ({ user, initials, onThemeToggle, onEditPress }) => {
   return (
     <GlassProfileCard
       name={user.name}
       email={user.email}
       phoneNumber={user.phoneNumber}
       initials={initials}
-      stats={stats}
       onThemeToggle={onThemeToggle}
+      onEditPress={onEditPress}
     />
   );
 };

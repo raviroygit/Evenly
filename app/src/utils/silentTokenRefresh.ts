@@ -107,6 +107,17 @@ export class SilentTokenRefresh {
   }
 
   /**
+   * Clear refresh timestamp (call on logout so next user has clean state)
+   */
+  static async clearRefreshTimestamp(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem('evenly_last_refresh');
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
    * Silently refresh session using refresh token
    * No user interaction required
    *

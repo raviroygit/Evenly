@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -12,10 +12,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Keyboard,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
+import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
+
+const REQUIRED_PHONE_DIGITS = 10;
 
 interface Customer {
   id: string;
@@ -43,9 +47,18 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const prefilledPhoneRef = useRef<string | undefined>(undefined);
+  const prefilledCountryRef = useRef<string | undefined>(undefined);
+
+  const fullPhone = (): string => {
+    const digits = phone.replace(/\D/g, '').slice(0, REQUIRED_PHONE_DIGITS);
+    return digits ? `${countryCode}${digits}` : '';
+  };
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
@@ -62,16 +75,34 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     };
   }, []);
 
-  // Pre-fill form when editing
+  // Pre-fill form when editing (store pre-filled phone/country so we skip validation when unchanged)
   React.useEffect(() => {
     if (editCustomer) {
       setName(editCustomer.name || '');
       setEmail(editCustomer.email || '');
-      setPhone(editCustomer.phone || '');
+      const raw = (editCustomer.phone || '').replace(/\D/g, '');
+      let nextCode = DEFAULT_COUNTRY_CODE;
+      let nextPhone = raw.slice(-REQUIRED_PHONE_DIGITS);
+      if (editCustomer.phone?.startsWith('+')) {
+        const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+        const matched = sorted.find((c) => editCustomer.phone!.startsWith(c.code));
+        if (matched) {
+          const codeDigits = matched.code.replace('+', '');
+          nextCode = matched.code;
+          nextPhone = raw.slice(codeDigits.length).slice(-REQUIRED_PHONE_DIGITS);
+        }
+      }
+      setCountryCode(nextCode);
+      setPhone(nextPhone);
+      prefilledPhoneRef.current = nextPhone;
+      prefilledCountryRef.current = nextCode;
     } else {
       setName('');
       setEmail('');
       setPhone('');
+      setCountryCode(DEFAULT_COUNTRY_CODE);
+      prefilledPhoneRef.current = undefined;
+      prefilledCountryRef.current = undefined;
     }
     setErrors({});
   }, [editCustomer, visible]);
@@ -82,7 +113,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: { name?: string; email?: string } = {};
+    const newErrors: { name?: string; email?: string; phone?: string } = {};
+    const digitsOnly = phone.replace(/\D/g, '');
 
     if (!name.trim()) {
       newErrors.name = 'Name is required';
@@ -92,6 +124,21 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       newErrors.email = 'Email is required';
     } else if (!validateEmail(email.trim())) {
       newErrors.email = 'Please enter a valid email address';
+    }
+
+    const isUnchangedPrefill =
+      editCustomer &&
+      prefilledPhoneRef.current !== undefined &&
+      prefilledCountryRef.current !== undefined &&
+      phone === prefilledPhoneRef.current &&
+      countryCode === prefilledCountryRef.current;
+
+    if (!isUnchangedPrefill) {
+      if (!phone.trim()) {
+        newErrors.phone = 'Phone number is required';
+      } else if (digitsOnly.length !== REQUIRED_PHONE_DIGITS) {
+        newErrors.phone = `Phone number must be exactly ${REQUIRED_PHONE_DIGITS} digits`;
+      }
     }
 
     setErrors(newErrors);
@@ -107,18 +154,16 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setLoading(true);
 
       if (editCustomer && onUpdateCustomer) {
-        // Update existing customer
         await onUpdateCustomer(editCustomer.id, {
           name: name.trim(),
           email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
+          phone: fullPhone(),
         });
       } else {
-        // Create new customer
         await EvenlyBackendService.createKhataCustomer({
           name: name.trim(),
           email: email.trim(),
-          phone: phone.trim() || undefined,
+          phone: fullPhone(),
         });
       }
 
@@ -126,6 +171,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setName('');
       setEmail('');
       setPhone('');
+      setCountryCode(DEFAULT_COUNTRY_CODE);
       setErrors({});
 
       // Close modal immediately for better UX
@@ -151,6 +197,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setName('');
       setEmail('');
       setPhone('');
+      setCountryCode(DEFAULT_COUNTRY_CODE);
       setErrors({});
       onClose();
     }
@@ -280,28 +327,108 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       )}
                     </View>
 
-                    {/* Phone Field */}
+                    {/* Phone Field - required with country code */}
                     <View style={styles.inputContainer}>
                       <Text style={[styles.label, { color: colors.foreground }]}>
-                        Phone
+                        Phone <Text style={styles.required}>*</Text>
                       </Text>
-                      <TextInput
-                        style={[
-                          styles.input,
-                          {
-                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                            color: colors.foreground,
-                          },
-                        ]}
-                        placeholder="Enter phone number (optional)"
-                        placeholderTextColor={colors.mutedForeground}
-                        value={phone}
-                        onChangeText={setPhone}
-                        keyboardType="phone-pad"
-                        editable={!loading}
-                      />
+                      <View style={styles.phoneInputRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.countryCodeTouchable,
+                            {
+                              backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                              borderColor: errors.phone ? '#FF3B30' : 'transparent',
+                              borderWidth: errors.phone ? 1 : 0,
+                            },
+                          ]}
+                          onPress={() => setShowCountryPicker(true)}
+                          activeOpacity={0.7}
+                          disabled={loading}
+                        >
+                          <Text style={[styles.countryCodeText, { color: colors.foreground }]} numberOfLines={1}>
+                            {COUNTRY_CODES.find((c) => c.code === countryCode)?.label ?? countryCode}
+                          </Text>
+                          <Text style={[styles.countryCodeChevron, { color: colors.mutedForeground }]}>▼</Text>
+                        </TouchableOpacity>
+                        <View
+                          style={[
+                            styles.phoneInputWrapper,
+                            {
+                              backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                              borderColor: errors.phone ? '#FF3B30' : 'transparent',
+                              borderWidth: errors.phone ? 1 : 0,
+                            },
+                          ]}
+                        >
+                          <TextInput
+                            style={[styles.phoneInput, { color: colors.foreground }]}
+                            placeholder="9876543210"
+                            placeholderTextColor={colors.mutedForeground}
+                            value={phone}
+                            onChangeText={(t) => {
+                              setPhone(t.replace(/\D/g, '').slice(0, REQUIRED_PHONE_DIGITS));
+                              if (errors.phone) setErrors((e) => ({ ...e, phone: undefined }));
+                            }}
+                            keyboardType="phone-pad"
+                            maxLength={REQUIRED_PHONE_DIGITS}
+                            editable={!loading}
+                          />
+                        </View>
+                      </View>
+                      {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
                     </View>
-                  </View>
+                </View>
+
+                {/* Country code picker modal */}
+                <Modal visible={showCountryPicker} transparent animationType="slide">
+                  <TouchableOpacity
+                    style={styles.countryModalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowCountryPicker(false)}
+                  >
+                    <View
+                      style={[styles.countryPickerSheet, { backgroundColor: colors.background }]}
+                      onStartShouldSetResponder={() => true}
+                    >
+                      <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>
+                        Select country code
+                      </Text>
+                      <FlatList
+                        data={COUNTRY_CODES}
+                        keyExtractor={(item) => item.code}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={[
+                              styles.countryOption,
+                              countryCode === item.code && { backgroundColor: colors.muted },
+                            ]}
+                            onPress={() => {
+                              setCountryCode(item.code);
+                              setShowCountryPicker(false);
+                            }}
+                          >
+                            <Text style={[styles.countryOptionText, { color: colors.foreground }]}>
+                              {item.label}
+                            </Text>
+                            {countryCode === item.code && (
+                              <Text style={{ color: colors.primary, fontWeight: '600' }}>✓</Text>
+                            )}
+                          </TouchableOpacity>
+                        )}
+                        style={styles.countryList}
+                      />
+                      <TouchableOpacity
+                        style={[styles.cancelCountryButton, { backgroundColor: colors.muted }]}
+                        onPress={() => setShowCountryPicker(false)}
+                      >
+                        <Text style={[styles.cancelCountryButtonText, { color: colors.foreground }]}>
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
 
                   {/* Submit Button */}
                   <TouchableOpacity
@@ -426,6 +553,81 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  countryCodeTouchable: {
+    minWidth: 100,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  countryCodeText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  countryCodeChevron: {
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  phoneInputWrapper: {
+    flex: 1,
+    borderRadius: 12,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  phoneInput: {
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  countryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  countryPickerSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    padding: 20,
+    paddingBottom: 40,
+  },
+  countryPickerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  countryList: {
+    maxHeight: 360,
+    marginBottom: 16,
+  },
+  countryOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  countryOptionText: {
+    fontSize: 16,
+  },
+  cancelCountryButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelCountryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

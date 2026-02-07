@@ -176,6 +176,8 @@ export interface AuthServiceResponse {
   success: boolean;
   user?: User;
   error?: string;
+  /** When true, auth service explicitly rejected (e.g. 401) - do not fall back to local session */
+  authRejected?: boolean;
 }
 
 // Database Query Types

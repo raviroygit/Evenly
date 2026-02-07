@@ -7,6 +7,8 @@ import { evenlyApiClient } from '../services/EvenlyApiClient';
 import { CacheManager } from '../utils/cacheManager';
 import { HomeCache } from '../utils/homeCache';
 import { OfflineDataCache } from '../utils/offlineDataCache';
+import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
+import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -401,10 +403,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = useCallback(async () => {
     try {
 
-      // Clear cache FIRST to prevent race conditions
+      // Clear all cache and session data first to prevent race conditions and data leaks
       await CacheManager.invalidateAllData();
       await HomeCache.clear();
       await OfflineDataCache.clearAll();
+      await SilentTokenRefresh.clearRefreshTimestamp();
+      DataRefreshCoordinator.clearAll();
 
       // Call backend logout
       await authService.logout();
@@ -424,6 +428,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await CacheManager.invalidateAllData();
       await HomeCache.clear();
       await OfflineDataCache.clearAll();
+      await SilentTokenRefresh.clearRefreshTimestamp();
+      DataRefreshCoordinator.clearAll();
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
