@@ -223,6 +223,18 @@ export class OrganizationService {
   }
 
   /**
+   * Get local organization ID for the Evenly app (hardcoded org).
+   * Use when request.organizationId is missing so controllers never see "Organization ID is required".
+   */
+  static async getDefaultLocalOrganizationId(userId: string): Promise<string | null> {
+    const authServiceOrgId = config.auth.evenlyOrganizationId || '';
+    if (!authServiceOrgId) return null;
+    const localOrg = await this.getOrganizationByAuthServiceId(authServiceOrgId);
+    if (localOrg) return localOrg.id;
+    return await this.ensureOrganizationExistsForAuthServiceId(authServiceOrgId, userId);
+  }
+
+  /**
    * Get organization by auth service org ID
    */
   static async getOrganizationByAuthServiceId(

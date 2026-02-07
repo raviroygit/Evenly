@@ -2,14 +2,13 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
-import { Platform } from 'react-native';
 
 /**
- * Axios instance for Evenly Backend API with automatic authentication
+ * Axios instance for Evenly Backend API with automatic authentication.
+ * Organization ID is always taken from env (EXPO_PUBLIC_ORGANIZATION_ID) – no storage or user resolution.
  */
 class EvenlyApiClient {
   private client: AxiosInstance;
-  private currentOrganizationId: string | null = null;
 
   constructor() {
     // Ensure base URL ends with /api so paths like /auth/signup/otp resolve to .../api/auth/signup/otp
@@ -28,36 +27,6 @@ class EvenlyApiClient {
     });
 
     this.setupInterceptors();
-    this.initializeOrganizationId();
-  }
-
-  /**
-   * Initialize organization ID from storage on app startup
-   */
-  private async initializeOrganizationId() {
-    try {
-      const authData = await AuthStorage.getAuthData();
-      if (authData?.user?.currentOrganization?.id) {
-        this.currentOrganizationId = authData.user.currentOrganization.id;
-      } else if (authData?.user?.organizations && authData.user.organizations.length > 0) {
-        this.currentOrganizationId = authData.user.organizations[0].id;
-      }
-    } catch (error) {
-    }
-  }
-
-  /**
-   * Set the current organization ID (called when user logs in or switches org)
-   */
-  setOrganizationId(organizationId: string | null) {
-    this.currentOrganizationId = organizationId;
-  }
-
-  /**
-   * Get the current organization ID
-   */
-  getOrganizationId(): string | null {
-    return this.currentOrganizationId;
   }
 
   private setupInterceptors() {
@@ -86,25 +55,10 @@ class EvenlyApiClient {
             config.headers['Authorization'] = `Bearer ${accessToken}`;
           }
 
-          // Always send org id: backend needs x-organization-id for groups/khata.
-          // Resolve on every request so we never miss (storage/auth may load after first request).
-          let orgId = this.currentOrganizationId;
-          if (!orgId) {
-            orgId = await AuthStorage.getCurrentOrganizationId();
-            if (orgId) this.currentOrganizationId = orgId;
-          }
-          if (!orgId && authData?.user) {
-            const u = authData.user;
-            orgId = u.currentOrganization?.id || u.organizations?.[0]?.id || null;
-            if (orgId) this.currentOrganizationId = orgId;
-          }
-          if (!orgId && ENV.ORGANIZATION_ID) {
-            orgId = ENV.ORGANIZATION_ID;
-            this.currentOrganizationId = orgId;
-          }
-          if (orgId) {
+          // Org id from env only (same as backend EVENLY_ORGANIZATION_ID)
+          if (ENV.ORGANIZATION_ID) {
             config.headers = config.headers || {};
-            config.headers['x-organization-id'] = orgId;
+            config.headers['x-organization-id'] = ENV.ORGANIZATION_ID;
           }
 
           return config;

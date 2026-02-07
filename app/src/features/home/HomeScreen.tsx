@@ -506,11 +506,12 @@ export const HomeScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.khataSummaryContent}>
+                {/* Row 1: Will Give (amount you owe) – red */}
                 <View style={styles.khataSummaryItem}>
                   <Text style={[styles.khataSummaryLabel, { color: colors.mutedForeground }]}>
-                    Will Get
+                    Will Give
                   </Text>
-                  <Text style={[styles.khataSummaryValue, { color: '#10B981' }]}>
+                  <Text style={[styles.khataSummaryValue, { color: '#EF4444' }]}>
                     {(() => {
                       const value = parseFloat(khataSummary?.totalGive || '0');
                       return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;
@@ -518,11 +519,12 @@ export const HomeScreen: React.FC = () => {
                   </Text>
                 </View>
                 <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+                {/* Row 2: Will Get (amount owed to you) – green */}
                 <View style={styles.khataSummaryItem}>
                   <Text style={[styles.khataSummaryLabel, { color: colors.mutedForeground }]}>
-                    Will Give
+                    Will Get
                   </Text>
-                  <Text style={[styles.khataSummaryValue, { color: '#EF4444' }]}>
+                  <Text style={[styles.khataSummaryValue, { color: '#10B981' }]}>
                     {(() => {
                       const value = parseFloat(khataSummary?.totalGet || '0');
                       return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;

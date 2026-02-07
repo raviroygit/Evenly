@@ -75,8 +75,8 @@ export class KhataService {
             if (Math.abs(balanceNum) < 0.01) {
               type = 'settled';
             } else {
-              // Use last transaction's type so label matches: "You Gave" → type give → UI "You'll Get", "You Got" → type get → UI "You'll Give"
-              type = last.type as 'give' | 'get';
+              // Derive type from balance sign: positive = customer owes you (you will get), negative = you owe customer (you will give)
+              type = balanceNum > 0 ? 'give' : 'get';
             }
           }
 
@@ -185,8 +185,8 @@ export class KhataService {
         if (Math.abs(balanceNum) < 0.01) {
           type = 'settled';
         } else {
-          // Use last transaction's type so label matches: "You Gave" → type give → UI "You'll Get"
-          type = last.type as 'give' | 'get';
+          // Derive type from balance sign: positive = you will get, negative = you will give
+          type = balanceNum > 0 ? 'give' : 'get';
         }
       }
 

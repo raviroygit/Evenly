@@ -17,19 +17,18 @@ export class GroupService {
     organizationId?: string
   ): Promise<Group> {
     try {
-      // Validate organizationId is provided
-      if (!organizationId || !process.env.EVENLY_ORGANIZATION_ID) {
+      // organizationId is set by auth middleware from hardcoded Evenly org (config.auth.evenlyOrganizationId)
+      if (!organizationId) {
         throw new ValidationError('Organization ID is required');
       }
 
-      // User is already synced by auth middleware, no need to sync again
       const newGroup: NewGroup = {
         name: groupData.name,
         description: groupData.description,
-        currency: 'INR', // Default to INR
+        currency: 'INR',
         defaultSplitType: groupData.defaultSplitType || 'equal',
         createdBy,
-        organizationId: organizationId || process.env.EVENLY_ORGANIZATION_ID,
+        organizationId,
       };
 
       const [createdGroup] = await db

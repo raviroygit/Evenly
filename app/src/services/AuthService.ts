@@ -108,9 +108,9 @@ export class AuthService {
         body: JSON.stringify({ email, otp }),
       });
 
-      if (response.success && (response.user || response.data?.user)) {
-        const user = response.user || response.data?.user;
-        const organization = response.organization || response.data?.organization;
+      const user = response.user || response.data?.user || response.data?.data?.user;
+      const organization = response.organization || response.data?.organization || response.data?.data?.organization;
+      if (response.success && user) {
 
         if (organization) {
           await AuthStorage.setCurrentOrganizationId(organization.id);
@@ -348,7 +348,7 @@ export class AuthService {
       const { data: response } = await this.makeRequest('/auth/me', {});
       if (response.success && response.user) {
         const organizations = response.organizations || [];
-
+console.log(response,'response.user current user', response.user);
         // Store organizations
         if (organizations.length > 0) {
 

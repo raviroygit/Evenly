@@ -6,8 +6,11 @@ import { config } from '../config/config';
  */
 export async function initializeDatabase(): Promise<boolean> {
   try {
-    // eslint-disable-next-line no-console
-    
+    if (!config.database.url || config.database.url.trim() === '') {
+      console.error('EVENLY_DATABASE_URL is not set. Add it to .env or your environment.');
+      return false;
+    }
+
     // Create database connection
     const sql = neon(config.database.url);
 
@@ -22,8 +25,12 @@ export async function initializeDatabase(): Promise<boolean> {
     
     // eslint-disable-next-line no-console
     return true;
-  } catch (error) {
-    // eslint-disable-next-line no-console
+  } catch (error: unknown) {
+    const err = error as { message?: string; cause?: { code?: string; hostname?: string } };
+    console.error('Migration error:', err?.message || error);
+    if (err?.cause?.code === 'ENOTFOUND' || err?.message?.includes('fetch failed')) {
+      console.error('Hint: Database host unreachable. Check EVENLY_DATABASE_URL, internet, and firewall.');
+    }
     return false;
   }
 }

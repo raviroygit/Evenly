@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { GroupService } from '../services/groupService';
+import { OrganizationService } from '../services/organizationService';
 import { UserService } from '../services/userService';
 import { 
   createGroupSchema, 
@@ -20,7 +21,10 @@ export class GroupController {
    */
   static createGroup = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
-    const organizationId = (request as any).organizationId;
+    let organizationId = (request as any).organizationId;
+    if (!organizationId) {
+      organizationId = await OrganizationService.getDefaultLocalOrganizationId(user.id) ?? undefined;
+    }
     const groupData = createGroupSchema.parse(request.body);
     const group = await GroupService.createGroup(groupData, user.id, organizationId);
 

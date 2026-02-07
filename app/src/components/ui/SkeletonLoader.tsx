@@ -357,7 +357,7 @@ export const SkeletonKhataSummary: React.FC = () => {
 
         {/* Content with two summary items */}
         <View style={styles.khataSummaryContent}>
-          {/* Will Get */}
+          {/* Will Give */}
           <View style={styles.khataSummaryItem}>
             <SkeletonLoader width={60} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
             <SkeletonLoader width={80} height={20} borderRadius={8} />
@@ -366,7 +366,7 @@ export const SkeletonKhataSummary: React.FC = () => {
           {/* Divider */}
           <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
 
-          {/* Will Give */}
+          {/* Will Get */}
           <View style={styles.khataSummaryItem}>
             <SkeletonLoader width={60} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
             <SkeletonLoader width={80} height={20} borderRadius={8} />

@@ -34,6 +34,7 @@ export class AuthService {
       };
       if (isMobile) headers['x-client-type'] = 'mobile';
 
+      const orgId = config.auth.evenlyOrganizationId;
       const response = await axios.post(
         `${this.AUTH_SERVICE_URL}/signup/otp`,
         {
@@ -42,6 +43,7 @@ export class AuthService {
           phoneNumber,
           senderName: 'EvenlySplit',
           appName: 'EvenlySplit',
+          organizationId: orgId,
         },
         { headers, timeout: 30000 }
       );
@@ -75,9 +77,10 @@ export class AuthService {
       };
       if (isMobile) headers['x-client-type'] = 'mobile';
 
+      const orgId = config.auth.evenlyOrganizationId;
       const response = await axios.post(
         `${this.AUTH_SERVICE_URL}/signup/verify-otp`,
-        { email, otp },
+        { email, otp, organizationId: orgId },
         { headers, timeout: 30000 }
       );
 
@@ -90,25 +93,38 @@ export class AuthService {
           if (match) ssoToken = match.split('sso_token=')[1].split(';')[0];
         }
 
-        const syncedUser = await UserService.createOrUpdateUser({
+        let userPayload = {
           id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           avatar: response.data.user.avatar,
           phoneNumber: response.data.user.phoneNumber,
-        });
-
-        return {
-          success: true,
-          message: response.data.message || 'Signup successful!',
-          user: {
+          role: response.data.user.role,
+        };
+        try {
+          const syncedUser = await UserService.createOrUpdateUser({
+            id: response.data.user.id,
+            email: response.data.user.email,
+            name: response.data.user.name,
+            avatar: response.data.user.avatar,
+            phoneNumber: response.data.user.phoneNumber,
+          });
+          userPayload = {
             id: syncedUser.id,
             email: syncedUser.email,
             name: syncedUser.name,
             avatar: syncedUser.avatar,
             phoneNumber: syncedUser.phoneNumber,
             role: response.data.user.role,
-          },
+          };
+        } catch {
+          // Auth succeeded; return success with auth user so app can log in. User will sync on next API call.
+        }
+
+        return {
+          success: true,
+          message: response.data.message || 'Signup successful!',
+          user: userPayload,
           organization: response.data.organization,
           ssoToken: ssoToken || undefined,
           accessToken: response.data.accessToken,
@@ -209,6 +225,8 @@ export class AuthService {
    */
   static async verifyOTP(email: string, otp: string, request?: FastifyRequest): Promise<AuthResponse> {
     try {
+      console.log('email', email);
+      console.log('otp', otp);
       const isMobile = this.isMobileClient(request);
 
       // Build headers - forward mobile header to shared auth system
@@ -230,49 +248,55 @@ export class AuthService {
         headers,
         timeout: 30000, // Increased timeout to 30 seconds
       });
+      console.log('response.data', response.data);
 
       if (response.data.user && response.data.accessToken) {
-        // Log what we received from shared auth system
-        if (isMobile) {
-        }
 
-        // Extract sso_token from response headers
+        // Optional: extract sso_token from Set-Cookie (web). Mobile uses accessToken only (never expires).
+        let ssoToken: string | null = null;
         const setCookieHeader = response.headers['set-cookie'];
-        let ssoToken = null;
-
         if (setCookieHeader) {
-          const ssoTokenMatch = setCookieHeader.find(cookie =>
-            cookie.startsWith('sso_token=')
-          );
-          if (ssoTokenMatch) {
-            ssoToken = ssoTokenMatch.split('sso_token=')[1].split(';')[0];
-          }
+          const arr = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+          const match = arr.find((c: string) => c.startsWith('sso_token='));
+          if (match) ssoToken = match.split('sso_token=')[1].split(';')[0];
         }
 
-        // Sync user with local database
-        const syncedUser = await UserService.createOrUpdateUser({
+        let userPayload = {
           id: response.data.user.id,
           email: response.data.user.email,
           name: response.data.user.name,
           avatar: response.data.user.avatar,
-          phoneNumber: response.data.user.phoneNumber, // Sync phoneNumber to database
-        });
-
-        return {
-          success: true,
-          message: response.data.message || 'Login successful!',
-          user: {
+          phoneNumber: response.data.user.phoneNumber,
+          role: response.data.user.role,
+        };
+        try {
+          const syncedUser = await UserService.createOrUpdateUser({
+            id: response.data.user.id,
+            email: response.data.user.email,
+            name: response.data.user.name,
+            avatar: response.data.user.avatar,
+            phoneNumber: response.data.user.phoneNumber,
+          });
+          userPayload = {
             id: syncedUser.id,
             email: syncedUser.email,
             name: syncedUser.name,
             avatar: syncedUser.avatar,
-            phoneNumber: syncedUser.phoneNumber, // Return phoneNumber from synced user
+            phoneNumber: syncedUser.phoneNumber,
             role: response.data.user.role,
-          },
+          };
+        } catch {
+          // Auth succeeded; return success with auth user. User will sync on next API call. Mobile uses token only.
+        }
+
+        return {
+          success: true,
+          message: response.data.message || 'Login successful!',
+          user: userPayload,
           organization: response.data.organization,
-          ssoToken: ssoToken || undefined, // Use the actual sso_token from cookie
-          accessToken: response.data.accessToken, // From shared auth (mobile-aware)
-          refreshToken: response.data.refreshToken, // null for mobile, present for web
+          ssoToken: ssoToken || undefined,
+          accessToken: response.data.accessToken, // Token-based auth; mobile uses this (never expires)
+          refreshToken: response.data.refreshToken,
         };
       }
 

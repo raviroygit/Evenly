@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { KhataService } from '../services/khataService';
+import { OrganizationService } from '../services/organizationService';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
 import { uploadSingleImage, deleteImage } from '../utils/cloudinary';
@@ -69,7 +70,10 @@ export class KhataController {
       });
     }
 
-    const organizationId = (request as any).organizationId;
+    let organizationId = (request as any).organizationId;
+    if (!organizationId) {
+      organizationId = await OrganizationService.getDefaultLocalOrganizationId(user.id) ?? undefined;
+    }
     if (!organizationId) {
       return reply.status(400).send({
         success: false,

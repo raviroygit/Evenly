@@ -15,7 +15,10 @@ export class UserService {
   }
 
   /**
-   * Create or update user from auth service
+   * Create or update user from auth service.
+   * - Found by authServiceId: return existing user (no DB write).
+   * - Found by email only (same person, id not matching): update authServiceId in Evenly DB so they're linked (only update when email existing).
+   * - Else: insert new user.
    */
   static async createOrUpdateUser(userData: {
     id: string;
@@ -25,45 +28,85 @@ export class UserService {
     phoneNumber?: string;
   }): Promise<User> {
     try {
-      // Check if user exists by auth service ID
-      const existingUser = await db
+      // 1. Already exists by auth service ID → return as-is (no insert/update)
+      const byAuthId = await db
         .select()
         .from(users)
         .where(eq(users.authServiceId, userData.id))
         .limit(1);
 
-      if (existingUser.length > 0) {
-        // Update existing user
+      if (byAuthId.length > 0) {
+        return byAuthId[0];
+      }
+
+      // 2. Same person in Evenly DB (by email) but auth id different/missing → update authServiceId only when email existing
+      const byEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, userData.email))
+        .limit(1);
+
+      if (byEmail.length > 0) {
         const [updatedUser] = await db
           .update(users)
           .set({
-            email: userData.email,
+            authServiceId: userData.id,
             name: userData.name,
             avatar: userData.avatar,
             phoneNumber: userData.phoneNumber,
             updatedAt: new Date(),
           })
-          .where(eq(users.authServiceId, userData.id))
+          .where(eq(users.id, byEmail[0].id))
           .returning();
         return updatedUser;
-      } else {
-        // Create new user with generated UUID
-        const newEvenlyId = UUIDUtils.generateForDB();
-        const [createdUser] = await db
-          .insert(users)
-          .values({
-            id: newEvenlyId, // Explicitly generate UUID
-            authServiceId: userData.id, // Store the auth service ID
-            email: userData.email,
-            name: userData.name,
-            avatar: userData.avatar,
-            phoneNumber: userData.phoneNumber,
-          })
-          .returning();
-        return createdUser;
       }
-    } catch (error) {
-      throw new DatabaseError('Failed to create or update user');
+
+      // 3. Insert new user
+      const newEvenlyId = UUIDUtils.generateForDB();
+      const [createdUser] = await db
+        .insert(users)
+        .values({
+          id: newEvenlyId,
+          authServiceId: userData.id,
+          email: userData.email,
+          name: userData.name,
+          avatar: userData.avatar,
+          phoneNumber: userData.phoneNumber,
+        })
+        .returning();
+      return createdUser;
+    } catch (error: unknown) {
+      const err = error as { code?: string; detail?: string; message?: string };
+      // Log so we can see constraint name / detail in logs
+      if (err?.code === '23505') {
+        // Unique violation: try linking by email if we didn't already
+        try {
+          const byEmail = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, userData.email))
+            .limit(1);
+          if (byEmail.length > 0) {
+            const [updated] = await db
+              .update(users)
+              .set({
+                authServiceId: userData.id,
+                name: userData.name,
+                avatar: userData.avatar,
+                phoneNumber: userData.phoneNumber,
+                updatedAt: new Date(),
+              })
+              .where(eq(users.id, byEmail[0].id))
+              .returning();
+            return updated;
+          }
+        } catch {
+          // fall through to rethrow
+        }
+      }
+      throw new DatabaseError(
+        err?.message ? `Failed to create or update user: ${err.message}` : 'Failed to create or update user'
+      );
     }
   }
 

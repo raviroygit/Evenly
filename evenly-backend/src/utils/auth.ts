@@ -6,17 +6,32 @@ export class AuthService {
   private static readonly baseURL = config.auth.serviceUrl;
 
   /**
-   * Validate session token with auth service
+   * Whether the token looks like a JWT (three base64 parts separated by dots).
+   * JWTs are validated via Bearer; opaque session IDs via Cookie.
+   */
+  private static looksLikeJwt(token: string): boolean {
+    return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token.trim());
+  }
+
+  /**
+   * Validate session token with auth service.
+   * Sends JWT as Bearer (mobile), opaque session ID as Cookie (web).
    */
   static async validateToken(token: string): Promise<AuthServiceResponse> {
     try {
-      
+      const isJwt = this.looksLikeJwt(token);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (isJwt) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        headers['Cookie'] = `sso_token=${token}`;
+      }
+
       const response = await axios.get(`${this.baseURL}/me`, {
-        headers: {
-          'Cookie': `sso_token=${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 5000, // 5 second timeout
+        headers,
+        timeout: 10000, // 10 second timeout (auth service may be on cold start)
       });
 
 

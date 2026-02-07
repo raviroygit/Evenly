@@ -4,7 +4,8 @@
   "description": "Backend API for Evenly",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "npm run kill-ports && npm run db:init && tsx watch src/server.ts",
+    "dev": "npm run kill-ports && (npm run db:init || true) && tsx watch src/server.ts",
+    "dev:no-migrate": "npm run kill-ports && tsx watch src/server.ts",
     "kill-ports": "lsof -ti:3001,3002 | xargs kill -9 2>/dev/null || true",
     "clean": "pkill -f 'evenly-backend.*tsx' 2>/dev/null || true",
     "build": "tsc",

@@ -112,10 +112,14 @@ export const SignupScreen: React.FC = () => {
     try {
       const result = await signupVerifyOtp(email.trim().toLowerCase(), trimmedOtp);
       if (result.success) {
-        // Auth state will update; PublicRoute will redirect
-      } else {
-        setErrors({ otp: result.message || 'Invalid or expired OTP' });
+        Alert.alert(
+          'Account created',
+          'Please sign in with your email to continue.',
+          [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+        );
+        return;
       }
+      setErrors({ otp: result.message || 'Invalid or expired OTP' });
     } catch (error: any) {
       setErrors({ otp: error.message || 'Verification failed' });
     } finally {

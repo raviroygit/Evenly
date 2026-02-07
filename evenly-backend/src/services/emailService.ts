@@ -385,8 +385,9 @@ export async function sendKhataTransactionEmail(
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
     const balanceNum = parseFloat(transaction.balance);
-    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
+    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
 
     const htmlBody = `
       <!DOCTYPE html>
@@ -606,8 +607,9 @@ export async function sendTransactionUpdatedEmail(
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
     const balanceNum = parseFloat(transaction.balance);
-    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
+    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
 
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
@@ -652,8 +654,9 @@ export async function sendTransactionDeletedEmail(
   try {
     const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
     const balanceNum = parseFloat(transaction.balance);
-    const balanceType = balanceNum > 0 ? 'You will get' : balanceNum < 0 ? 'You will give' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#FF3B30' : balanceNum < 0 ? '#FF3B30' : '#666';
+    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
+    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
 
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;

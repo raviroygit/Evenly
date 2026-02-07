@@ -6,8 +6,9 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  phoneNumber?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface AuthenticatedUser extends User {

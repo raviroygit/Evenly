@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, Platform, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
 import { useGroupsInfinite } from '../../hooks/useGroupsInfinite';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { GroupItem } from '../../components/features/groups/GroupItem';
@@ -17,7 +17,6 @@ import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 import { InfiniteScrollScreen } from '../../components/ui/InfiniteScrollScreen';
 import { useSearch } from '../../hooks/useSearch';
 import { useApiError } from '../../hooks/useApiError';
-import ErrorHandler from '../../utils/ErrorHandler';
 import { Group } from '../../types';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { emitGroupDeleted, emitGroupCreated, emitGroupUpdated } from '../../utils/groupEvents';
@@ -256,33 +255,6 @@ export const GroupsScreen: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <GlassListCard
-          title="Groups"
-          subtitle="Unable to load groups"
-          contentGap={0}
-        >
-          <View style={styles.errorContainer}>
-            <Text style={[styles.errorIcon, { color: colors.destructive }]}>⚠️</Text>
-            <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {ErrorHandler.handleApiError(error).message}
-            </Text>
-            <TouchableOpacity
-              style={[styles.retryButton, { backgroundColor: colors.primary }]}
-              onPress={() => showErrorWithRetry(error, () => refresh())}
-            >
-              <Text style={[styles.retryButtonText, { color: colors.primaryForeground }]}>
-                Try Again
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </GlassListCard>
-      </View>
-    );
-  }
-
   const renderGroupItem = ({ item: group }: { item: any }) => {
     const handleEditGroup = (group: any) => {
       
@@ -468,29 +440,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 10 : 20,
     paddingBottom: 20,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  errorIcon: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   emptyText: {
     fontSize: 14,

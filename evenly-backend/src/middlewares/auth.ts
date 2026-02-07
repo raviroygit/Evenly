@@ -12,15 +12,13 @@ export const authenticateToken = async (
 ): Promise<void> => {
   void _reply;
   try {
-    // Extract token: cookies (sso_token) for web, or Authorization Bearer for mobile
-    const cookies = request.cookies;
-    let token = cookies?.sso_token;
-    if (!token) {
-      const bearer = AuthService.extractToken(request.headers.authorization);
-      if (bearer) token = bearer;
-    }
+    // Mobile: use Bearer token from Authorization header. Web: fallback to sso_token cookie.
+    let token: string | null =
+      AuthService.extractToken(request.headers.authorization) ??
+      request.cookies?.sso_token ??
+      null;
 
-    // Handle duplicate sso_token issue from iOS
+    // Handle duplicate sso_token issue from iOS (cookie only)
     if (typeof token === 'string' && token.includes(',')) {
       // Split by comma and take the first one, then clean it
       const tokenParts = token.split(',');
@@ -36,16 +34,27 @@ export const authenticateToken = async (
     // Validate token with external auth service first; fall back to local session
     const authResult = await AuthService.validateToken(token);
     if (authResult.success && authResult.user) {
+      const u = authResult.user;
+      if (!u.id || !u.email || !u.name) {
+        throw new UnauthorizedError('Invalid user data from auth service');
+      }
       const syncedUser = await UserService.createOrUpdateUser({
-        id: authResult.user.id,
-        email: authResult.user.email,
-        name: authResult.user.name,
-        avatar: authResult.user.avatar,
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        avatar: u.avatar,
+        phoneNumber: u.phoneNumber,
       });
-      (request as AuthenticatedRequest).user = { ...syncedUser, avatar: syncedUser.avatar || undefined };
+      (request as AuthenticatedRequest).user = {
+        ...syncedUser,
+        avatar: syncedUser.avatar ?? undefined,
+        phoneNumber: syncedUser.phoneNumber ?? undefined,
+      } as AuthenticatedRequest['user'];
 
-      // Extract and sync organization context
+      // Extract and sync organization context (non-throwing; best-effort)
       await extractOrganizationContext(request, token, syncedUser.id);
+      // Ensure org is set from hardcoded Evenly org so controllers never see "Organization ID is required"
+      await ensureOrganizationIdSet(request, syncedUser.id);
 
       return;
     }
@@ -59,19 +68,20 @@ export const authenticateToken = async (
 
         // Extract and sync organization context
         await extractOrganizationContext(request, token, user.id);
+        await ensureOrganizationIdSet(request, user.id);
 
         return;
       }
     }
 
     throw new UnauthorizedError('Invalid or expired token');
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof UnauthorizedError) {
       throw error;
     }
-    
-    // If auth service is unavailable, we might want to handle this differently
-    // For now, we'll treat it as unauthorized
+    // Log the real error so we can fix 503s (e.g. DB errors, org sync failures)
+    const err = error as { message?: string; name?: string };
+    request.log?.error?.({ err: error, message: err?.message, name: err?.name }, 'Auth middleware error');
     throw new AuthServiceError('Authentication service unavailable');
   }
 };
@@ -147,64 +157,86 @@ export const requireGroupAdmin = async (
 };
 
 /**
- * Extract organization context from request header and sync to local DB
+ * Extract organization context: use hardcoded Evenly org id, ensure local org exists and user is member, set request.organizationId.
  */
 async function extractOrganizationContext(
   request: FastifyRequest,
   ssoToken: string,
   userId: string
 ): Promise<void> {
+  const authServiceOrgId = config.auth.evenlyOrganizationId || '';
+  if (!authServiceOrgId) return;
+
   try {
-    // Organization ID: header from client, then env, then fixed Evenly org (always available)
-    const headerOrgId = (request.headers['x-organization-id'] as string)?.trim();
-    const authServiceOrgId = headerOrgId || config.auth.evenlyOrganizationId || '';
-
-    if (!authServiceOrgId) {
-      return;
-    }
-
-
-    // Check if org exists in local DB
-    let localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
-
-    if (!localOrg) {
-      const localOrgId = await OrganizationService.syncOrganizationFromAuthService(
-        authServiceOrgId,
-        ssoToken,
-        userId
-      );
-      if (localOrgId) {
-        localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
-      }
-    }
-
-    // Fallback: if still no local org (e.g. mobile token, sync failed), ensure minimal org exists so every API has org context
-    if (!localOrg) {
-      const localOrgId = await OrganizationService.ensureOrganizationExistsForAuthServiceId(
+    const localOrgId = await OrganizationService.ensureOrganizationExistsForAuthServiceId(
+      authServiceOrgId,
+      userId
+    );
+    if (!localOrgId) {
+      await OrganizationService.syncOrganizationFromAuthService(authServiceOrgId, ssoToken, userId);
+      const retryId = await OrganizationService.ensureOrganizationExistsForAuthServiceId(
         authServiceOrgId,
         userId
       );
-      if (localOrgId) {
-        localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+      if (!retryId) {
+        // Org may already exist; use it so we always set organizationId
+        const existing = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+        if (existing) {
+          (request as any).organizationId = existing.id;
+          (request as any).authServiceOrgId = authServiceOrgId;
+          (request as any).organizationRole = 'member';
+        }
+        return;
       }
-    }
-
-    if (!localOrg) {
+      (request as any).organizationId = retryId;
+      (request as any).authServiceOrgId = authServiceOrgId;
+      (request as any).organizationRole = 'member';
       return;
     }
 
-    const isMember = await OrganizationService.isMember(localOrg.id, userId);
-    if (!isMember) {
-      return;
-    }
+    const localOrg = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+    const membership = localOrg
+      ? await OrganizationService.getUserMembership(localOrg.id, userId)
+      : null;
 
-    const membership = await OrganizationService.getUserMembership(localOrg.id, userId);
-
-    (request as any).organizationId = localOrg.id;
+    (request as any).organizationId = localOrgId;
     (request as any).authServiceOrgId = authServiceOrgId;
-    (request as any).organizationRole = membership?.role;
-
+    (request as any).organizationRole = membership?.role ?? 'member';
   } catch (error: any) {
-    // Don't fail the request, just log the error
+    try {
+      const fallbackId = await OrganizationService.ensureOrganizationExistsForAuthServiceId(
+        authServiceOrgId,
+        userId
+      );
+      if (fallbackId) {
+        (request as any).organizationId = fallbackId;
+        (request as any).authServiceOrgId = authServiceOrgId;
+        (request as any).organizationRole = 'member';
+      } else {
+        const existing = await OrganizationService.getOrganizationByAuthServiceId(authServiceOrgId);
+        if (existing) {
+          (request as any).organizationId = existing.id;
+          (request as any).authServiceOrgId = authServiceOrgId;
+          (request as any).organizationRole = 'member';
+        }
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Ensure request.organizationId is set using hardcoded Evenly org when missing (so controllers never see "Organization ID is required").
+ */
+async function ensureOrganizationIdSet(request: FastifyRequest, userId: string): Promise<void> {
+  if ((request as any).organizationId) return;
+  const authServiceOrgId = config.auth.evenlyOrganizationId || '';
+  if (!authServiceOrgId) return;
+  const localOrgId = await OrganizationService.getDefaultLocalOrganizationId(userId);
+  if (localOrgId) {
+    (request as any).organizationId = localOrgId;
+    (request as any).authServiceOrgId = authServiceOrgId;
+    (request as any).organizationRole = 'member';
   }
 }

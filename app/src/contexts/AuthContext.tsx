@@ -81,10 +81,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const storedOrg = authData.organizations.find(org => org.id === storedOrgId);
             if (storedOrg) {
               setCurrentOrganization(storedOrg);
-              evenlyApiClient.setOrganizationId(storedOrg.id);
             } else if (authData.organizations.length > 0) {
               setCurrentOrganization(authData.organizations[0]);
-              evenlyApiClient.setOrganizationId(authData.organizations[0].id);
             }
           }
 
@@ -113,10 +111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
                     if (storedOrg) {
                       setCurrentOrganization(storedOrg);
-                      evenlyApiClient.setOrganizationId(storedOrg.id);
                     } else {
                       setCurrentOrganization(currentUser.organizations[0]);
-                      evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
                     }
                   }
                 }
@@ -204,10 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
             if (storedOrg) {
               setCurrentOrganization(storedOrg);
-              evenlyApiClient.setOrganizationId(storedOrg.id);
             } else {
               setCurrentOrganization(currentUser.organizations[0]);
-              evenlyApiClient.setOrganizationId(currentUser.organizations[0].id);
             }
           }
         }
@@ -285,7 +279,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.organization) {
         setCurrentOrganization(response.organization);
         await AuthStorage.setCurrentOrganizationId(orgId);
-        evenlyApiClient.setOrganizationId(orgId);
 
         // Screens will automatically reload when organization changes
       }
@@ -327,14 +320,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (result.user.currentOrganization) {
             setCurrentOrganization(result.user.currentOrganization);
             await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
-            evenlyApiClient.setOrganizationId(result.user.currentOrganization.id);
           } else if (result.user.organizations.length > 0) {
             // Set first organization as current if not specified
             setCurrentOrganization(result.user.organizations[0]);
             await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
-            evenlyApiClient.setOrganizationId(result.user.organizations[0].id);
           }
-        } else {
         }
 
         // IMPORTANT: Save auth data BEFORE setting user state
@@ -387,29 +377,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await authService.signupVerifyOtp(email, otp);
 
       if (result.success && result.user) {
-        if (result.user.organizations) {
-          setOrganizations(result.user.organizations);
-          if (result.user.currentOrganization) {
-            setCurrentOrganization(result.user.currentOrganization);
-            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
-            evenlyApiClient.setOrganizationId(result.user.currentOrganization.id);
-          } else if (result.user.organizations.length > 0) {
-            setCurrentOrganization(result.user.organizations[0]);
-            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
-            evenlyApiClient.setOrganizationId(result.user.organizations[0].id);
-          }
-        }
-
-        await AuthStorage.saveAuthData(
-          result.user,
-          result.accessToken,
-          result.user.organizations
-        );
-
-        setAuthState('authenticated');
-        setUser(result.user);
-
-        return { success: true, message: 'Signup successful!' };
+        // Do not log the user in after signup. Redirect to sign-in so they log in with a fresh session.
+        return { success: true, message: 'Account created successfully. Please sign in.' };
       }
 
       return { success: false, message: result.message || 'Invalid or expired OTP' };
@@ -440,7 +409,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
-      evenlyApiClient.setOrganizationId(null);
 
       // Clear storage
       await AuthStorage.clearAuthData();
@@ -453,7 +421,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setCurrentOrganization(null);
       setOrganizations([]);
-      evenlyApiClient.setOrganizationId(null);
       await AuthStorage.clearAuthData();
       await AuthStorage.clearCurrentOrganization();
 
