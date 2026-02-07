@@ -382,12 +382,14 @@ export async function sendKhataTransactionEmail(
   }
 ): Promise<void> {
   try {
-    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    // Transaction label: "You given to [userName]" when you gave to them (type get), "You taken" when you took from them (type give)
+    const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
     const balanceNum = parseFloat(transaction.balance);
-    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
-    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
+    // Current Balance: negative = total Due of [userName], positive = You will get, zero = Settled
+    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
+    const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
     const htmlBody = `
       <!DOCTYPE html>
@@ -427,7 +429,7 @@ export async function sendKhataTransactionEmail(
           </div>
           
           <h3>Current Balance</h3>
-          <div class="balance">${balanceType}: ₹${Math.abs(balanceNum).toFixed(2)}</div>
+          <div class="balance">${balanceType}: ${balanceAmountFormatted}</div>
           
           <div class="footer">
             <p>This is an automated notification from EvenlySplit Khata.</p>
@@ -604,12 +606,12 @@ export async function sendTransactionUpdatedEmail(
   }
 ): Promise<void> {
   try {
-    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
     const transactionColor = transaction.type === 'give' ? '#D9433D' : '#519F51';
     const balanceNum = parseFloat(transaction.balance);
-    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
-    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
+    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
+    const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
@@ -623,6 +625,7 @@ export async function sendTransactionUpdatedEmail(
       balanceNum,
       balanceType,
       balanceColor,
+      balanceAmountFormatted,
       appOpenLink,
       year: new Date().getFullYear()
     });
@@ -652,11 +655,11 @@ export async function sendTransactionDeletedEmail(
   }
 ): Promise<void> {
   try {
-    const transactionType = transaction.type === 'give' ? 'You Gave' : 'You Got';
+    const transactionType = transaction.type === 'give' ? 'You taken' : `You given to ${userName}`;
     const balanceNum = parseFloat(transaction.balance);
-    // From customer's perspective: positive = they owe you (they will give), negative = you owe them (they will get)
-    const balanceType = balanceNum > 0 ? 'You will give' : balanceNum < 0 ? 'You will get' : 'Settled';
-    const balanceColor = balanceNum > 0 ? '#EF4444' : balanceNum < 0 ? '#10B981' : '#666';
+    const balanceType = balanceNum < 0 ? `total Due of ${userName}` : balanceNum > 0 ? 'You will get' : 'Settled';
+    const balanceColor = balanceNum > 0 ? '#10B981' : balanceNum < 0 ? '#EF4444' : '#666';
+    const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
@@ -669,6 +672,7 @@ export async function sendTransactionDeletedEmail(
       balanceNum,
       balanceType,
       balanceColor,
+      balanceAmountFormatted,
       appOpenLink,
       year: new Date().getFullYear()
     });
