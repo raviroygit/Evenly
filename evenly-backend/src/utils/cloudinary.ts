@@ -106,26 +106,40 @@ export const uploadSingleImage = async (
 
 
   return new Promise((resolve, reject) => {
-    // Set a timeout for the upload (60 seconds)
+    let uploadCompleted = false;
+
+    // Set a timeout for the upload (30 seconds - shorter for faster failure)
     const uploadTimeout = setTimeout(() => {
-      reject(new Error('Cloudinary upload timeout: Upload took longer than 60 seconds'));
-    }, 60000);
+      if (!uploadCompleted) {
+        console.error('[Cloudinary] Upload timeout triggered after 30 seconds');
+        reject(new Error('Cloudinary upload timeout: Upload took longer than 30 seconds. Please check your Cloudinary credentials and network connectivity.'));
+      }
+    }, 30000);
+
+    console.log('[Cloudinary] Creating upload stream...');
 
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: `evenly/${folder}`,
         resource_type: 'image',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'],
-        timeout: 60000, // 60 second timeout for Cloudinary API
+        timeout: 30000, // 30 second timeout for Cloudinary API
       },
       (error, result) => {
-        clearTimeout(uploadTimeout); // Clear timeout on completion
+        uploadCompleted = true;
+        clearTimeout(uploadTimeout);
 
         if (error) {
+          console.error('[Cloudinary] Upload callback error:', {
+            message: error.message,
+            http_code: error.http_code,
+            name: error.name
+          });
           return reject(new Error(`Cloudinary upload failed: ${error.message} (HTTP ${error.http_code || 'N/A'})`));
         }
 
         if (!result || !result.secure_url) {
+          console.error('[Cloudinary] Invalid result:', result);
           return reject(new Error('Cloudinary upload failed: Invalid response from Cloudinary'));
         }
 
@@ -140,10 +154,13 @@ export const uploadSingleImage = async (
 
     // Handle stream errors
     stream.on('error', (streamError) => {
+      uploadCompleted = true;
       clearTimeout(uploadTimeout);
+      console.error('[Cloudinary] Stream error:', streamError.message);
       reject(new Error(`Cloudinary stream error: ${streamError.message}`));
     });
 
+    console.log('[Cloudinary] Piping buffer to stream...');
     Readable.from(fileBuffer).pipe(stream);
   });
 };
