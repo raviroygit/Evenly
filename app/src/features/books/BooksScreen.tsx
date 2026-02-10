@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
@@ -37,7 +38,7 @@ interface Customer {
 }
 
 export const BooksScreen: React.FC = () => {
-
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { setActiveSwipeId } = useSwipeAction();
@@ -72,11 +73,11 @@ export const BooksScreen: React.FC = () => {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 60) {
-      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+      return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
     } else if (diffHours < 24) {
-      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+      return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
     } else if (diffDays < 30) {
-      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+      return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
     } else {
       return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
@@ -216,7 +217,7 @@ export const BooksScreen: React.FC = () => {
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err instanceof Error ? err.message : 'Failed to update customer. Please try again.');
-      Alert.alert('Error', message);
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -260,12 +261,12 @@ export const BooksScreen: React.FC = () => {
       setLoading(false);
 
       // Modal will close automatically, show success alert
-      Alert.alert('Success', `"${deletingCustomer.name}" and all their transactions have been deleted successfully`);
+      Alert.alert(t('common.success'), `"${deletingCustomer.name}" and all their transactions have been deleted successfully`);
     } catch (err: unknown) {
       setLoading(false);
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err instanceof Error ? err.message : 'Failed to delete customer. Please try again.');
-      Alert.alert('Error', message);
+      Alert.alert(t('common.error'), message);
       throw err;
     }
   };
@@ -295,7 +296,7 @@ export const BooksScreen: React.FC = () => {
               style={styles.summaryCard}
             >
               <Text style={[styles.summaryLabel, { color: '#10B981' }]}>
-                You will get
+                {t('khata.youWillGet')}
               </Text>
               <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
                 ₹{formatAmount(summary.totalGet)}
@@ -313,7 +314,7 @@ export const BooksScreen: React.FC = () => {
               style={styles.summaryCard}
             >
               <Text style={[styles.summaryLabel, { color: '#FF3B30' }]}>
-                You will give
+                {t('khata.youWillGive')}
               </Text>
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
                 ₹{formatAmount(summary.totalGive)}
@@ -329,7 +330,7 @@ export const BooksScreen: React.FC = () => {
             <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
             <TextInput
               style={[styles.searchInput, { color: colors.foreground }]}
-              placeholder="Search Customer"
+              placeholder={t('common.search')}
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -351,7 +352,7 @@ export const BooksScreen: React.FC = () => {
           ) : customers.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                No customers found
+                {t('khata.noCustomers')}
               </Text>
             </View>
           ) : (
@@ -362,7 +363,7 @@ export const BooksScreen: React.FC = () => {
                 actions={[
                   {
                     id: 'edit',
-                    title: 'Edit',
+                    title: t('common.edit'),
                     icon: 'pencil-outline',
                     color: '#FFFFFF',
                     backgroundColor: '#FF9500',
@@ -372,7 +373,7 @@ export const BooksScreen: React.FC = () => {
                   },
                   {
                     id: 'delete',
-                    title: 'Delete',
+                    title: t('common.delete'),
                     icon: 'trash-outline',
                     color: '#FFFFFF',
                     backgroundColor: '#FF3B30',
@@ -427,7 +428,7 @@ export const BooksScreen: React.FC = () => {
                       <Text style={[styles.amountLabel, {
                         color: customer.type === 'give' ? '#10B981' : customer.type === 'get' ? '#FF3B30' : colors.mutedForeground
                       }]}>
-                        You&apos;ll {customer.type === 'get' ? 'Give' : customer.type === 'give' ? 'Get' : 'Settled'}
+                        {customer.type === 'get' ? t('khata.youWillGive') : customer.type === 'give' ? t('khata.youWillGet') : t('khata.settled')}
                       </Text>
                     </View>
                   </View>
@@ -443,7 +444,7 @@ export const BooksScreen: React.FC = () => {
           actions={[
             {
               id: 'add-customer',
-              title: 'Add Customer',
+              title: t('khata.addCustomer'),
               icon: '👤',
               onPress: handleAddCustomer,
             },
@@ -484,7 +485,7 @@ export const BooksScreen: React.FC = () => {
             setDeletingCustomer(null);
           }}
           onConfirm={confirmDeleteCustomer}
-          title="Delete Customer"
+          title={t('common.delete') + ' ' + t('khata.customers').slice(0, -1)}
           description={`Are you sure you want to delete "${deletingCustomer?.name}"? This will also delete all transactions with this customer. This action cannot be undone.`}
         />
       </View>

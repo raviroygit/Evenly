@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EnhancedExpense } from '../../types';
 import { formatHumanDateTime } from '../../utils/date';
+import { useTranslation } from 'react-i18next';
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
   expense,
   onImagePress,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   if (!expense) return null;
@@ -35,15 +37,15 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
     ? parseFloat(expense.totalAmount)
     : expense.totalAmount;
   const currency = expense.currency || 'INR';
-  const paidByName = expense.paidByUser?.name ?? expense.paidByDisplay ?? 'Unknown';
+  const paidByName = expense.paidByUser?.name ?? expense.paidByDisplay ?? t('common.unknown');
   const dateFormatted = formatHumanDateTime(expense.date as string | Date);
   // Match expense item: use netBalance color for amount (You Lent / You Borrowed / Even)
   const amountColor = expense.netBalance?.color ?? colors.mutedForeground;
   const statusText = expense.netBalance
-    ? (expense.netBalance.text.includes('you lent') ? 'You Lent' :
-       expense.netBalance.text.includes('you borrowed') ? 'You Borrowed' :
+    ? (expense.netBalance.text.includes('you lent') ? t('modals.youLent') :
+       expense.netBalance.text.includes('you borrowed') ? t('modals.youBorrowed') :
        expense.netBalance.text)
-    : 'Even';
+    : t('modals.even');
 
   return (
     <Modal
@@ -79,7 +81,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-                  Expense Details
+                  {t('modals.expenseDetails')}
                 </Text>
                 <TouchableOpacity
                   onPress={onClose}
@@ -108,7 +110,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                     />
                     <View style={styles.imageOverlay}>
                       <Ionicons name="expand-outline" size={24} color="#FFFFFF" />
-                      <Text style={styles.imageOverlayText}>Tap to view full image</Text>
+                      <Text style={styles.imageOverlayText}>{t('modals.tapToView')}</Text>
                     </View>
                   </TouchableOpacity>
                 )}
@@ -116,7 +118,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 {/* Title */}
                 <View style={styles.section}>
                   <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                    Title
+                    {t('modals.title')}
                   </Text>
                   <Text style={[styles.titleValue, { color: colors.foreground }]}>
                     {expense.title}
@@ -137,7 +139,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 {/* Date */}
                 <View style={styles.section}>
                   <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                    Date
+                    {t('modals.date')}
                   </Text>
                   <View style={styles.valueWithIcon}>
                     <Ionicons
@@ -154,7 +156,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 {/* Paid by */}
                 <View style={styles.section}>
                   <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                    Paid by
+                    {t('modals.paidBy')}
                   </Text>
                   <View style={styles.valueWithIcon}>
                     <Ionicons name="person-outline" size={18} color={colors.foreground} />
@@ -167,7 +169,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                 {/* Expense ID */}
                 <View style={[styles.section, styles.lastSection]}>
                   <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                    Expense ID
+                    {t('modals.expenseId')}
                   </Text>
                   <Text style={[styles.idValue, { color: colors.mutedForeground }]}>
                     {expense.id}

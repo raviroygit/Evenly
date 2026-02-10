@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, TSpan } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { SimpleInput } from '../../components/ui/SimpleInput';
@@ -10,6 +11,7 @@ import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 
 export const LoginScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { login, requestOTP } = useAuth();
   const router = useRouter();
@@ -27,12 +29,12 @@ export const LoginScreen: React.FC = () => {
 
   const handleRequestOTP = async () => {
     if (!email.trim()) {
-      setErrors({ email: 'Email is required' });
+      setErrors({ email: t('auth.emailRequired') });
       return;
     }
 
     if (!validateEmail(email)) {
-      setErrors({ email: 'Please enter a valid email address' });
+      setErrors({ email: t('auth.pleaseEnterValidEmail') });
       return;
     }
 
@@ -43,14 +45,14 @@ export const LoginScreen: React.FC = () => {
       const result = await requestOTP(email);
       if (result.success) {
         setStep('otp');
-        Alert.alert('OTP Sent', result.message);
+        Alert.alert(t('auth.otpSent'), result.message);
       } else {
         // Display the actual backend error message
-        setErrors({ email: result.message || 'Failed to send OTP. Please try again.' });
+        setErrors({ email: result.message || t('errors.tryAgain') });
       }
     } catch (error: any) {
       // This shouldn't happen as requestOTP catches errors, but just in case
-      const errorMessage = error.message || 'Failed to send OTP. Please try again.';
+      const errorMessage = error.message || t('errors.tryAgain');
       setErrors({ email: errorMessage });
     } finally {
       setIsLoading(false);
@@ -59,12 +61,12 @@ export const LoginScreen: React.FC = () => {
 
   const handleVerifyOTP = async () => {
     if (!otp.trim()) {
-      setErrors({ otp: 'OTP is required' });
+      setErrors({ otp: t('auth.otpRequired') });
       return;
     }
 
     if (otp.length !== 6) {
-      setErrors({ otp: 'OTP must be 6 digits' });
+      setErrors({ otp: t('auth.otpMustBe6Digits') });
       return;
     }
 
@@ -80,11 +82,11 @@ export const LoginScreen: React.FC = () => {
         // Navigation will happen automatically via PublicRoute useEffect
       } else {
         // Display the actual backend error message
-        setErrors({ otp: result.message || 'Login failed. Please try again.' });
+        setErrors({ otp: result.message || t('errors.tryAgain') });
       }
     } catch (error: any) {
       // This shouldn't happen as login catches errors, but just in case
-      const errorMessage = error.message || 'Login failed. Please try again.';
+      const errorMessage = error.message || t('errors.tryAgain');
       setErrors({ otp: errorMessage });
     } finally {
       setIsLoading(false);
@@ -104,15 +106,15 @@ export const LoginScreen: React.FC = () => {
     try {
       const result = await requestOTP(email);
       if (result.success) {
-        Alert.alert('New OTP Sent', result.message);
+        Alert.alert(t('auth.newOtpSent'), result.message);
         setOtp(''); // Clear the current OTP
       } else {
         // Display the actual backend error message
-        setErrors({ otp: result.message || 'Failed to send new OTP. Please try again.' });
+        setErrors({ otp: result.message || t('errors.tryAgain') });
       }
     } catch (error: any) {
       // This shouldn't happen as requestOTP catches errors, but just in case
-      const errorMessage = error.message || 'Failed to send new OTP. Please try again.';
+      const errorMessage = error.message || t('errors.tryAgain');
       setErrors({ otp: errorMessage });
     } finally {
       setIsLoading(false);
@@ -153,24 +155,24 @@ export const LoginScreen: React.FC = () => {
                   letterSpacing="0.5"
                   fontFamily="System"
                 >
-                  EvenlySplit
+                  {t('auth.appName')}
                 </SvgText>
               </Svg>
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
-              Welcome Back
+              {t('auth.welcomeBack')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {step === 'email' 
-                ? 'Enter your email to receive a login code'
-                : 'Enter the 6-digit code sent to your email'
+              {step === 'email'
+                ? t('auth.enterEmailToReceiveCode')
+                : t('auth.enter6DigitCodeSentToEmail')
               }
             </Text>
           </View>
 
           {/* Form Card */}
           <GlassListCard
-            title={step === 'email' ? 'Login' : 'Verify Code'}
+            title={step === 'email' ? t('auth.login') : t('auth.verifyCode')}
             contentGap={20}
             padding={{
               small: 20,
@@ -183,8 +185,8 @@ export const LoginScreen: React.FC = () => {
             {step === 'email' ? (
               <>
                 <SimpleInput
-                  label="Email Address"
-                  placeholder="Enter your email"
+                  label={t('auth.emailAddress')}
+                  placeholder={t('auth.enterYourEmail')}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -192,9 +194,9 @@ export const LoginScreen: React.FC = () => {
                   autoCorrect={false}
                   error={errors.email}
                 />
-                
+
                 <PlatformActionButton
-                  title="Send Login Code"
+                  title={t('auth.sendLoginCode')}
                   onPress={handleRequestOTP}
                   variant="primary"
                   size="large"
@@ -206,41 +208,41 @@ export const LoginScreen: React.FC = () => {
               <>
                 <View style={styles.emailDisplay}>
                   <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
-                    Code sent to: {email}
+                    {t('auth.codeSentTo', { email })}
                   </Text>
                 </View>
 
                 <SimpleInput
-                  label="Verification Code"
-                  placeholder="Enter 6-digit code"
+                  label={t('auth.verificationCode')}
+                  placeholder={t('auth.enter6DigitCode')}
                   value={otp}
                   onChangeText={setOtp}
                   keyboardType="numeric"
                   maxLength={6}
                   error={errors.otp}
                 />
-                
+
                 <View style={styles.buttonContainer}>
                   <PlatformActionButton
-                    title="Verify & Login"
+                    title={t('auth.verifyAndLogin')}
                     onPress={handleVerifyOTP}
                     variant="primary"
                     size="large"
                     disabled={isLoading}
                     loading={isLoading}
                   />
-                  
+
                   <PlatformActionButton
-                    title="Request New OTP"
+                    title={t('auth.requestNewOTP')}
                     onPress={handleRequestNewOTP}
                     variant="secondary"
                     size="medium"
                     disabled={isLoading}
                     loading={false}
                   />
-                  
+
                   <PlatformActionButton
-                    title="Back to Email"
+                    title={t('auth.backToEmail')}
                     onPress={handleBackToEmail}
                     variant="secondary"
                     size="medium"
@@ -255,16 +257,16 @@ export const LoginScreen: React.FC = () => {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-              Don&apos;t have an account?{' '}
-              <Text 
+              {t('auth.dontHaveAccount')}{' '}
+              <Text
                 style={[styles.linkText, { color: colors.primary }]}
                 onPress={() => router.push('/auth/signup')}
               >
-                Sign up
+                {t('auth.signUp')}
               </Text>
             </Text>
             <Text style={[styles.helpText, { color: colors.mutedForeground }]}>
-              Need help? Make sure you&apos;ve verified your email after signing up.
+              {t('auth.needHelp')}
             </Text>
           </View>
         </View>

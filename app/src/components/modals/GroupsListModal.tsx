@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Group } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface GroupsListModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
   onGroupPress,
   loading = false,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   // Safety check: ensure groups is always an array
@@ -68,7 +70,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-                  Your Groups
+                  {t('modals.yourGroups')}
                 </Text>
                 <TouchableOpacity
                   onPress={onClose}
@@ -86,7 +88,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
                 {loading ? (
                   <View style={styles.loadingContainer}>
                     <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-                      Loading groups...
+                      {t('modals.loadingGroups')}
                     </Text>
                   </View>
                 ) : safeGroups.length === 0 ? (
@@ -97,10 +99,10 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
                       color={colors.mutedForeground}
                     />
                     <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                      No groups yet
+                      {t('modals.noGroupsYet')}
                     </Text>
                     <Text style={[styles.emptySubtext, { color: colors.mutedForeground }]}>
-                      Create your first group to start splitting expenses
+                      {t('modals.createFirstGroup')}
                     </Text>
                   </View>
                 ) : (
@@ -150,8 +152,7 @@ export const GroupsListModal: React.FC<GroupsListModalProps> = ({
                                   { color: colors.mutedForeground },
                                 ]}
                               >
-                                {group.memberCount} member
-                                {group.memberCount !== 1 ? 's' : ''}
+                                {group.memberCount} {group.memberCount !== 1 ? t('modals.members') : t('modals.member')}
                               </Text>
                             </View>
                           </View>

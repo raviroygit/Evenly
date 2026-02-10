@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { useUserBalances } from '../../hooks/useBalances';
@@ -21,11 +22,13 @@ import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { CustomersListModal } from '../../components/modals/CustomersListModal';
 import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
+import { LanguageSelectionModal } from '../../components/modals/LanguageSelectionModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, currentOrganization, authState, refreshUser } = useAuth();
   const { colors, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
   const { groups, loading: groupsLoading, refreshGroups } = useGroups();
@@ -37,6 +40,7 @@ export const ProfileScreen: React.FC = () => {
   const [showPersonalInfoPreviewModal, setShowPersonalInfoPreviewModal] = useState(false);
   const [showGroupsListModal, setShowGroupsListModal] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
   const [khataSummary, setKhataSummary] = useState<{ totalGive: string; totalGet: string } | null>(null);
@@ -132,18 +136,24 @@ export const ProfileScreen: React.FC = () => {
     return names.map(name => name.charAt(0)).join('').toUpperCase();
   }, [user?.name, profileUpdateTrigger]);
 
+  // Get current language display
+  const currentLanguageDisplay = useMemo(() => {
+    const lang = i18n.language || 'en';
+    return lang === 'hi' ? 'हिंदी' : 'English';
+  }, [i18n.language]);
+
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('auth.logout'),
+      t('auth.logout') + '?',
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Logout',
+          text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -160,24 +170,24 @@ export const ProfileScreen: React.FC = () => {
 
   const handleDeleteAccount = async () => {
     Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and all your data. This action cannot be undone. Do you want to continue?',
+      t('profile.deleteAccount'),
+      t('profile.deleteAccount') + ' - ' + t('errors.tryAgain'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const res = await EvenlyBackendService.deleteCurrentUser();
               if (res.success) {
                 await logout();
-                Alert.alert('Account Deleted', res.message || 'Your account has been deleted.');
+                Alert.alert(t('profile.deleteAccount'), res.message || t('profile.deleteAccount'));
               } else {
-                Alert.alert('Error', res.message || 'Failed to delete account');
+                Alert.alert(t('common.error'), res.message || t('profile.deleteAccount'));
               }
             } catch (e: any) {
-              Alert.alert('Error', e.message || 'Failed to delete account');
+              Alert.alert(t('common.error'), e.message || t('profile.deleteAccount'));
             }
           }
         }
@@ -237,8 +247,8 @@ export const ProfileScreen: React.FC = () => {
             contentContainerStyle={styles.contentContainer}
           >
             <GlassMenuCard
-              title="Profile"
-              subtitle="Initializing your account..."
+              title={t('profile.title')}
+              subtitle={t('common.loading')}
               items={[]}
             />
           </PullToRefreshScrollView>
@@ -262,8 +272,8 @@ export const ProfileScreen: React.FC = () => {
             contentContainerStyle={styles.contentContainer}
           >
             <GlassMenuCard
-              title="Profile"
-              subtitle="Refreshing your session..."
+              title={t('profile.title')}
+              subtitle={t('common.loading')}
               items={[]}
             />
           </PullToRefreshScrollView>
@@ -287,8 +297,8 @@ export const ProfileScreen: React.FC = () => {
             contentContainerStyle={styles.contentContainer}
           >
             <GlassMenuCard
-              title="Profile"
-              subtitle="Loading user information..."
+              title={t('profile.title')}
+              subtitle={t('common.loading')}
               items={[]}
             />
           </PullToRefreshScrollView>
@@ -329,11 +339,11 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Balance Summary (Groups + Khata combined) */}
       <GlassMenuCard
-        title="Balance Summary"
+        title={t('dashboard.yourBalance')}
         items={[
           {
-            title: "Net Balance",
-            subtitle: balanceLoading ? "Loading..." : undefined,
+            title: t('khata.balance'),
+            subtitle: balanceLoading ? t('common.loading') : undefined,
             rightElement: balanceLoading ? undefined : (
               <View style={styles.balanceRow}>
                 <Text style={[
@@ -350,14 +360,14 @@ export const ProfileScreen: React.FC = () => {
                     color: overallBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  {overallBalance.netBalance >= 0 ? 'Owed' : 'Owing'}
+                  {overallBalance.netBalance >= 0 ? t('dashboard.youAreOwed') : t('dashboard.youOwe')}
                 </Text>
               </View>
             ),
           },
           {
-            title: "Total Owed",
-            subtitle: balanceLoading ? "Loading..." : undefined,
+            title: t('dashboard.youAreOwed'),
+            subtitle: balanceLoading ? t('common.loading') : undefined,
             rightElement: balanceLoading ? undefined : (
               <Text style={[styles.balanceAmount, { color: '#10B981' }]}>
                 ₹{overallBalance.totalOwed.toFixed(2)}
@@ -365,8 +375,8 @@ export const ProfileScreen: React.FC = () => {
             ),
           },
           {
-            title: "Total Owing",
-            subtitle: balanceLoading ? "Loading..." : undefined,
+            title: t('dashboard.youOwe'),
+            subtitle: balanceLoading ? t('common.loading') : undefined,
             rightElement: balanceLoading ? undefined : (
               <Text style={[styles.balanceAmount, { color: '#EF4444' }]}>
                 ₹{overallBalance.totalOwing.toFixed(2)}
@@ -374,13 +384,13 @@ export const ProfileScreen: React.FC = () => {
             ),
           },
           {
-            title: "Total Groups",
-            subtitle: groupsLoading ? "Loading..." : `${groups.length} group${groups.length !== 1 ? 's' : ''}`,
+            title: t('groups.title'),
+            subtitle: groupsLoading ? t('common.loading') : `${groups.length} ${groups.length !== 1 ? t('groups.title').toLowerCase() : t('groups.title').toLowerCase()}`,
             onPress: () => setShowGroupsListModal(true),
           },
           {
-            title: "Total Customers",
-            subtitle: balanceLoading ? "Loading..." : `${customerCount} customer${customerCount !== 1 ? 's' : ''}`,
+            title: t('khata.customers'),
+            subtitle: balanceLoading ? t('common.loading') : `${customerCount} ${customerCount !== 1 ? t('khata.customers').toLowerCase() : t('khata.customers').toLowerCase()}`,
             onPress: () => setShowCustomersListModal(true),
           },
         ]}
@@ -390,21 +400,26 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Account Section */}
       <GlassMenuCard
-        title="Account"
+        title={t('profile.settings')}
         items={[
           {
-            title: "Personal Information",
-            subtitle: "View your details",
+            title: t('modals.personalInformation'),
+            subtitle: t('modals.viewProfile'),
             onPress: () => setShowPersonalInfoPreviewModal(true),
           },
           {
-            title: "Privacy & Security",
-            subtitle: "Control your data",
+            title: t('profile.language'),
+            subtitle: currentLanguageDisplay,
+            onPress: () => setShowLanguageModal(true),
+          },
+          {
+            title: t('profile.privacy'),
+            subtitle: t('profile.privacy'),
             onPress: () => setShowPrivacySecurityModal(true),
           },
           {
-            title: "Delete Account",
-            subtitle: "Permanently remove your account",
+            title: t('profile.deleteAccount'),
+            subtitle: t('profile.deleteAccount'),
             onPress: handleDeleteAccount,
           },
         ]}
@@ -412,16 +427,16 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Support Section */}
       <GlassMenuCard
-        title="Support"
+        title={t('profile.about')}
         items={[
           {
-            title: "Help Center",
-            subtitle: "Send us feedback",
+            title: t('profile.about'),
+            subtitle: t('profile.about'),
             onPress: () => setShowSupportModal(true),
           },
           {
-            title: "About",
-            subtitle: "Learn more about the app",
+            title: t('profile.version'),
+            subtitle: t('profile.version'),
             onPress: () => setShowAboutModal(true),
           },
         ]}
@@ -430,12 +445,12 @@ export const ProfileScreen: React.FC = () => {
       {/* Logout Button */}
       <View style={styles.logoutContainer}>
         <PlatformActionButton
-          title="Sign Out"
+          title={t('auth.logout')}
           onPress={handleLogout}
           variant="destructive"
           size="large"
         />
-        
+
       </View>
         </PullToRefreshScrollView>
       </View>
@@ -505,6 +520,12 @@ export const ProfileScreen: React.FC = () => {
         visible={showCustomerInfoModal}
         onClose={handleCustomerInfoClose}
         customer={selectedCustomer}
+      />
+
+      {/* Language Selection Modal */}
+      <LanguageSelectionModal
+        visible={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
       />
     </>
   );

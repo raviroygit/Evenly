@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface DeleteConfirmationModalProps {
@@ -31,6 +32,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   cancelButtonText = 'Cancel',
 }) => {
   const { colors, theme } = useTheme();
+  const { t } = useTranslation();
   const [deleting, setDeleting] = useState(false);
 
   const handleConfirm = async () => {
@@ -125,7 +127,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                       deleting && { opacity: 0.5 },
                     ]}
                   >
-                    {cancelButtonText}
+                    {cancelButtonText || t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
 
@@ -145,12 +147,12 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator color="#FFFFFF" size="small" />
                       <Text style={[styles.buttonText, styles.confirmButtonText]}>
-                        Deleting...
+                        {t('modals.deleting')}
                       </Text>
                     </View>
                   ) : (
                     <Text style={[styles.buttonText, styles.confirmButtonText]}>
-                      {confirmButtonText}
+                      {confirmButtonText || t('common.delete')}
                     </Text>
                   )}
                 </TouchableOpacity>

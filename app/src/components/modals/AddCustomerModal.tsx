@@ -15,6 +15,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
@@ -43,6 +44,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   editCustomer = null,
   onUpdateCustomer,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -117,13 +119,13 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     const digitsOnly = phone.replace(/\D/g, '');
 
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('errors.requiredField');
     }
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('errors.requiredField');
     } else if (!validateEmail(email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('errors.invalidEmail');
     }
 
     const isUnchangedPrefill =
@@ -135,7 +137,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
 
     if (!isUnchangedPrefill) {
       if (!phone.trim()) {
-        newErrors.phone = 'Phone number is required';
+        newErrors.phone = t('errors.requiredField');
       } else if (digitsOnly.length !== REQUIRED_PHONE_DIGITS) {
         newErrors.phone = `Phone number must be exactly ${REQUIRED_PHONE_DIGITS} digits`;
       }
@@ -183,9 +185,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       const msg = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (error instanceof Error ? error.message : null);
       Alert.alert(
-        'Error',
+        t('common.error'),
         msg || `Failed to ${editCustomer ? 'update' : 'create'} customer. Please try again.`,
-        [{ text: 'OK' }]
+        [{ text: t('common.ok') }]
       );
     } finally {
       setLoading(false);
@@ -243,7 +245,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 {/* Header */}
                 <View style={styles.header}>
                   <Text style={[styles.title, { color: colors.foreground }]}>
-                    {editCustomer ? 'Edit Customer' : 'Add Customer'}
+                    {editCustomer ? t('common.edit') + ' ' + t('khata.customers').slice(0, -1) : t('khata.addCustomer')}
                   </Text>
                   <TouchableOpacity
                     style={styles.closeButton}
@@ -266,7 +268,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     {/* Name Field */}
                     <View style={styles.inputContainer}>
                       <Text style={[styles.label, { color: colors.foreground }]}>
-                        Name <Text style={styles.required}>*</Text>
+                        {t('profile.name')} <Text style={styles.required}>*</Text>
                       </Text>
                       <TextInput
                         style={[
@@ -278,7 +280,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             borderWidth: errors.name ? 1 : 0,
                           },
                         ]}
-                        placeholder="Enter customer name"
+                        placeholder={t('khata.customerName')}
                         placeholderTextColor={colors.mutedForeground}
                         value={name}
                         onChangeText={(text) => {
@@ -297,7 +299,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     {/* Email Field */}
                     <View style={styles.inputContainer}>
                       <Text style={[styles.label, { color: colors.foreground }]}>
-                        Email <Text style={styles.required}>*</Text>
+                        {t('auth.email')} <Text style={styles.required}>*</Text>
                       </Text>
                       <TextInput
                         style={[
@@ -309,7 +311,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                             borderWidth: errors.email ? 1 : 0,
                           },
                         ]}
-                        placeholder="Enter email address"
+                        placeholder={t('auth.enterEmail')}
                         placeholderTextColor={colors.mutedForeground}
                         value={email}
                         onChangeText={(text) => {
@@ -330,7 +332,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     {/* Phone Field - required with country code */}
                     <View style={styles.inputContainer}>
                       <Text style={[styles.label, { color: colors.foreground }]}>
-                        Phone <Text style={styles.required}>*</Text>
+                        {t('profile.phoneNumber')} <Text style={styles.required}>*</Text>
                       </Text>
                       <View style={styles.phoneInputRow}>
                         <TouchableOpacity
@@ -423,7 +425,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         onPress={() => setShowCountryPicker(false)}
                       >
                         <Text style={[styles.cancelCountryButtonText, { color: colors.foreground }]}>
-                          Cancel
+                          {t('common.cancel')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -445,7 +447,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
                       <Text style={styles.submitButtonText}>
-                        {editCustomer ? 'Update Customer' : 'Add Customer'}
+                        {editCustomer ? t('common.update') + ' ' + t('khata.customers').slice(0, -1) : t('khata.addCustomer')}
                       </Text>
                     )}
                   </TouchableOpacity>

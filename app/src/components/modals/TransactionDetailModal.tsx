@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 interface Transaction {
   id: string;
@@ -36,11 +37,12 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   transaction,
   onImagePress,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   if (!transaction) return null;
 
-  const transactionType = transaction.amountGiven ? 'You Gave' : 'You Got';
+  const transactionType = transaction.amountGiven ? t('khata.youGave') : t('khata.youGot');
   const amount = transaction.amountGiven || transaction.amountGot;
   const isGave = !!transaction.amountGiven;
   const amountSign = isGave ? '-' : '+';
@@ -81,7 +83,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 {/* Header */}
                 <View style={styles.header}>
                   <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-                    Transaction Details
+                    {t('modals.transactionDetails')}
                   </Text>
                   <TouchableOpacity
                     onPress={onClose}
@@ -110,7 +112,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                       />
                       <View style={styles.imageOverlay}>
                         <Ionicons name="expand-outline" size={24} color="#FFFFFF" />
-                        <Text style={styles.imageOverlayText}>Tap to view full image</Text>
+                        <Text style={styles.imageOverlayText}>{t('modals.tapToView')}</Text>
                       </View>
                     </TouchableOpacity>
                   )}
@@ -147,7 +149,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                   {/* Amount */}
                   <View style={styles.section}>
                     <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                      Amount
+                      {t('modals.amount')}
                     </Text>
                     <Text
                       style={[
@@ -164,7 +166,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                     <View style={styles.row}>
                       <View style={styles.column}>
                         <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                          Date
+                          {t('modals.date')}
                         </Text>
                         <View style={styles.valueWithIcon}>
                           <Ionicons
@@ -180,7 +182,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
                       <View style={styles.column}>
                         <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                          Time
+                          {t('modals.time')}
                         </Text>
                         <View style={styles.valueWithIcon}>
                           <Ionicons name="time-outline" size={18} color={colors.foreground} />
@@ -195,7 +197,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                   {/* Balance After Transaction */}
                   <View style={styles.section}>
                     <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                      Balance After Transaction
+                      {t('modals.balanceAfter')}
                     </Text>
                     <View style={styles.valueWithIcon}>
                       <Ionicons name="wallet-outline" size={18} color={colors.foreground} />
@@ -208,7 +210,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                   {/* Transaction ID */}
                   <View style={[styles.section, styles.lastSection]}>
                     <Text style={[styles.label, { color: colors.mutedForeground }]}>
-                      Transaction ID
+                      {t('modals.transactionId')}
                     </Text>
                     <Text style={[styles.idValue, { color: colors.mutedForeground }]}>
                       {transaction.id}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActivitiesContext } from '../../../contexts/ActivitiesContext';
 import { SkeletonActivityList } from '../../ui/SkeletonLoader';
@@ -35,6 +36,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   onRefreshRef,
   isAddingExpense = false
 }) => {
+  const { t } = useTranslation();
   const {
     activities,
     totalCount,
@@ -80,8 +82,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   if (showSkeleton) {
     return (
       <GlassListCard
-        title="Recent Activity"
-        subtitle={isAddingExpense ? "Adding expense..." : "Loading activities..."}
+        title={t('dashboard.recentActivity')}
+        subtitle={isAddingExpense ? t('dashboard.addingExpense') : t('common.loading')}
         contentGap={8}
       >
         <SkeletonActivityList count={3} />
@@ -236,7 +238,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                     color: activity.khataType === 'give' ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  {activity.khataType === 'get' ? 'You will give' : 'You will get'}
+                  {activity.khataType === 'get' ? t('khata.youWillGive') : t('khata.youWillGet')}
                 </Text>
               </View>
             )}
@@ -249,7 +251,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                   styles.memberText,
                   { color: getActivityColor(activity.type) }
                 ]}>
-                  {activity.memberCount} members
+                  {t('dashboard.members', { count: activity.memberCount })}
                 </Text>
               </View>
             )}
@@ -287,8 +289,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   return (
     <>
       <GlassListCard
-        title="Recent Activity"
-        subtitle={showSkeleton ? (isAddingExpense ? "Adding expense..." : "Loading...") : "View your recent activities"}
+        title={t('dashboard.recentActivity')}
+        subtitle={showSkeleton ? (isAddingExpense ? t('dashboard.addingExpense') : t('common.loading')) : t('dashboard.viewYourRecentActivities')}
         contentGap={6}
         badge={showSkeleton ? undefined : (totalCount > 0 ? totalCount : undefined)}
         style={styles.glassCard}
@@ -298,7 +300,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         ) : activities.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No recent activity. Start by creating a group or adding an expense.
+              {t('dashboard.noActivityMessage')}
             </Text>
           </View>
         ) : (
@@ -319,7 +321,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                 activeOpacity={0.7}
               >
                 <Text style={[styles.viewAllText, { color: colors.primary }]}>
-                  View All {totalCount} Activities
+                  {t('dashboard.viewAllActivities', { count: totalCount })}
                 </Text>
               </TouchableOpacity>
             )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
@@ -54,23 +55,24 @@ export const InvitationsModal: React.FC<InvitationsModalProps> = ({
   processingToken,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const renderContent = () => {
     if (invitations.length === 0) {
       return (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-            No invitations found
+            {t('modals.noInvitationsFound')}
           </Text>
           <Text style={[styles.emptySubtext, { color: colors.mutedForeground }]}>
-            When someone invites you to join a group, it will appear here.
+            {t('modals.whenSomeoneInvites')}
           </Text>
           <TouchableOpacity
             style={[styles.refreshButton, { backgroundColor: colors.primary }]}
             onPress={onRefresh}
           >
             <Text style={[styles.refreshText, { color: '#FFFFFF' }]}>
-              Refresh
+              {t('modals.refresh')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -92,22 +94,22 @@ export const InvitationsModal: React.FC<InvitationsModalProps> = ({
           >
             {/* Group name as title */}
             <Text style={[styles.groupTitle, { color: colors.foreground }]}>
-              {invitation.group?.name || 'Unknown Group'}
+              {invitation.group?.name || t('modals.unknownGroup')}
             </Text>
-            
+
             {/* Status and Inviter badges */}
             <View style={styles.badgesRow}>
               {/* Status badge */}
               <View style={[styles.statusBadge, { backgroundColor: colors.primary + '20' }]}>
                 <Text style={[styles.statusBadgeText, { color: colors.primary }]}>
-                  {invitation.status}
+                  {t(`modals.${invitation.status}`)}
                 </Text>
               </View>
-              
+
               {/* Inviter badge */}
               <View style={[styles.inviterBadge, { backgroundColor: colors.muted + '20' }]}>
                 <Text style={[styles.inviterBadgeText, { color: colors.mutedForeground }]}>
-                  by {invitation.inviter?.name || 'Unknown User'}
+                  {t('modals.by')} {invitation.inviter?.name || t('modals.unknownUser')}
                 </Text>
               </View>
             </View>
@@ -116,14 +118,14 @@ export const InvitationsModal: React.FC<InvitationsModalProps> = ({
             <ModalButtonContainer
               buttons={[
                 {
-                  title: "Decline",
+                  title: t('modals.decline'),
                   onPress: () => onDecline(invitation.token),
                   variant: "destructive",
                   disabled: processingToken === invitation.token,
                   loading: processingToken === invitation.token,
                 },
                 {
-                  title: "Accept",
+                  title: t('modals.accept'),
                   onPress: () => onAccept(invitation.token),
                   variant: "primary",
                   disabled: processingToken === invitation.token,
@@ -143,7 +145,7 @@ export const InvitationsModal: React.FC<InvitationsModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="Group Invitations"
+      title={t('modals.groupInvitations')}
       showCloseButton={true}
     >
       {renderContent()}

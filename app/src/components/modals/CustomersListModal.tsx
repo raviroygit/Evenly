@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 export interface KhataCustomerItem {
   id: string;
@@ -38,6 +39,7 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
   onCustomerPress,
   loading = false,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   const safeCustomers = Array.isArray(customers) ? customers : [];
@@ -82,7 +84,7 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
             >
               <View style={styles.header}>
                 <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-                  Your Customers
+                  {t('modals.yourCustomers')}
                 </Text>
                 <TouchableOpacity
                   onPress={onClose}
@@ -100,7 +102,7 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
                 {loading ? (
                   <View style={styles.loadingContainer}>
                     <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-                      Loading customers...
+                      {t('modals.loadingCustomers')}
                     </Text>
                   </View>
                 ) : safeCustomers.length === 0 ? (
@@ -111,10 +113,10 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
                       color={colors.mutedForeground}
                     />
                     <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                      No customers yet
+                      {t('modals.noCustomersYet')}
                     </Text>
                     <Text style={[styles.emptySubtext, { color: colors.mutedForeground }]}>
-                      Add customers in Khata to track balances
+                      {t('modals.addCustomersInKhata')}
                     </Text>
                   </View>
                 ) : (
@@ -163,10 +165,10 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
                                 numberOfLines={1}
                               >
                                 {customer.type === 'settled'
-                                  ? 'Settled'
+                                  ? t('khata.settled')
                                   : customer.type === 'give'
-                                    ? `Will get ${formatAmount(customer.balance)}`
-                                    : `Will give ${formatAmount(customer.balance)}`}
+                                    ? `${t('khata.willGet')} ${formatAmount(customer.balance)}`
+                                    : `${t('khata.willGive')} ${formatAmount(customer.balance)}`}
                               </Text>
                             </View>
                           </View>

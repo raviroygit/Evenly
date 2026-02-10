@@ -8,6 +8,7 @@ import { SwipeActionProvider } from '../src/contexts/SwipeActionContext';
 import { AuthInitializer } from '../src/components/auth/AuthInitializer';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+import '../src/i18n/i18n'; // Initialize i18n
 
 // Keep native splash (black) visible until we show the logo animation screen
 SplashScreen.preventAutoHideAsync().catch(() => {});

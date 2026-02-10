@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 const { height } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   onClose,
   customer,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   if (!customer) return null;
@@ -47,7 +49,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('common.notProvided');
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -79,7 +81,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
         </Text>
       </View>
       <Text style={[styles.infoValue, { color: colors.foreground }]}>
-        {value || 'Not provided'}
+        {value || t('common.notProvided')}
       </Text>
     </View>
   );
@@ -113,7 +115,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
           <View style={styles.header}>
             <View style={styles.headerContent}>
               <Text style={[styles.title, { color: colors.foreground }]}>
-                Customer Details
+                {t('modals.customerDetails')}
               </Text>
             </View>
             <TouchableOpacity
@@ -146,9 +148,9 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               </Text>
               <View style={[styles.statusBadge, { backgroundColor: amountColor + '20' }]}>
                 <Text style={[styles.statusText, { color: amountColor }]}>
-                  {customer.type === 'get' ? 'You will give' :
-                   customer.type === 'give' ? 'You will get' :
-                   'Settled'}
+                  {customer.type === 'get' ? t('khata.youWillGive') :
+                   customer.type === 'give' ? t('khata.youWillGet') :
+                   t('khata.settled')}
                 </Text>
               </View>
             </View>
@@ -162,7 +164,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               }
             ]}>
               <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>
-                Total Balance
+                {t('modals.totalBalance')}
               </Text>
               <Text style={[styles.balanceAmount, { color: amountColor }]}>
                 ₹{formatAmount(customer.balance)}
@@ -172,7 +174,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             {/* Contact Information */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                Contact Information
+                {t('modals.contactInformation')}
               </Text>
               <View style={[
                 styles.sectionContent,
@@ -181,12 +183,12 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                   borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
                 }
               ]}>
-                <InfoRow label="Email" value={customer.email || ''} icon="mail-outline" />
+                <InfoRow label={t('profile.email')} value={customer.email || ''} icon="mail-outline" />
                 {(customer.phone || customer.phoneNumber) ? (
-                  <InfoRow label="Phone" value={customer.phone || customer.phoneNumber || ''} icon="call-outline" />
+                  <InfoRow label={t('profile.phone')} value={customer.phone || customer.phoneNumber || ''} icon="call-outline" />
                 ) : null}
                 {customer.address && (
-                  <InfoRow label="Address" value={customer.address} icon="location-outline" />
+                  <InfoRow label={t('profile.address')} value={customer.address} icon="location-outline" />
                 )}
               </View>
             </View>
@@ -195,7 +197,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             {customer.notes && (
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                  Notes
+                  {t('modals.notes')}
                 </Text>
                 <View style={[
                   styles.notesContainer,
@@ -214,7 +216,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             {/* Account Information */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                Account Information
+                {t('modals.accountInformation')}
               </Text>
               <View style={[
                 styles.sectionContent,
@@ -224,12 +226,12 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                 }
               ]}>
                 <InfoRow
-                  label="Created On"
+                  label={t('modals.createdOn')}
                   value={formatDate(customer.createdAt)}
                   icon="calendar-outline"
                 />
                 <InfoRow
-                  label="Last Updated"
+                  label={t('modals.lastUpdated')}
                   value={formatDate(customer.updatedAt)}
                   icon="time-outline"
                 />

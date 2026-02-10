@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, Linking, Alert, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PlatformActionButton } from '../ui/PlatformActionButton';
@@ -14,6 +15,7 @@ interface SupportModalProps {
 
 export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [showEmailSupport, setShowEmailSupport] = useState(false);
   const [showDedicatedChat, setShowDedicatedChat] = useState(false);
   const dedicatedChatRef = useRef<DedicatedChatModalRef>(null);
@@ -37,9 +39,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
     const helpUrl = 'https://evenly.app/help';
     Linking.openURL(helpUrl).catch(err => {
       Alert.alert(
-        'Error',
-        'Unable to open help center. Please try again later.',
-        [{ text: 'OK' }]
+        t('common.error'),
+        t('modals.unableToOpen'),
+        [{ text: t('common.ok') }]
       );
     });
   };
@@ -48,7 +50,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="Contact Support"
+      title={t('modals.contactSupport')}
       showCloseButton={true}
     >
       <View style={styles.content}>
@@ -58,10 +60,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
             <Ionicons name="headset" size={32} color="#FFFFFF" />
           </View>
                   <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>
-                    We&apos;re here to help!
+                    {t('modals.weAreHereToHelp')}
                   </Text>
           <Text style={[styles.welcomeSubtitle, { color: colors.mutedForeground }]}>
-            Choose how you&apos;d like to get support for your Evenly experience.
+            {t('modals.chooseSupportMethod')}
           </Text>
         </View>
 
@@ -69,7 +71,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
         <View style={styles.optionsContainer}>
           {/* AI Chat Support */}
           <PlatformActionButton
-            title="Chat with AI Assistant"
+            title={t('modals.chatWithAI')}
             onPress={handleOpenChatWidget}
             variant="primary"
             size="large"
@@ -79,7 +81,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
 
           {/* Email Support */}
           <PlatformActionButton
-            title="Email Support"
+            title={t('modals.emailSupport')}
             onPress={handleEmailSupport}
             variant="secondary"
             size="large"
@@ -89,7 +91,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
 
           {/* Help Center */}
           <PlatformActionButton
-            title="Help Center"
+            title={t('modals.helpCenter')}
             onPress={handleOpenHelpCenter}
             variant="secondary"
             size="large"
@@ -101,37 +103,37 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
         {/* Additional Info */}
         <View style={styles.infoSection}>
           <Text style={[styles.infoTitle, { color: colors.foreground }]}>
-            What can we help you with?
+            {t('modals.whatCanWeHelp')}
           </Text>
           <View style={styles.infoList}>
             <View style={styles.infoItem}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                Account and profile issues
+                {t('modals.accountIssues')}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                Expense tracking and splitting
+                {t('modals.expenseTracking')}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                Group management and invitations
+                {t('modals.groupManagement')}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                Payment and balance issues
+                {t('modals.paymentIssues')}
               </Text>
             </View>
             <View style={styles.infoItem}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                App features and functionality
+                {t('modals.appFeatures')}
               </Text>
             </View>
           </View>
@@ -142,10 +144,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
           <Ionicons name="time" size={20} color={colors.primary} />
           <View style={styles.responseTimeText}>
             <Text style={[styles.responseTimeTitle, { color: colors.foreground }]}>
-              Response Times
+              {t('modals.responseTimes')}
             </Text>
             <Text style={[styles.responseTimeSubtitle, { color: colors.mutedForeground }]}>
-              AI Assistant: Instant • Email: Within 24 hours
+              {t('modals.responseTimeInfo')}
             </Text>
           </View>
         </View>

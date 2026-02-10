@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, Platform, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useGroupsInfinite } from '../../hooks/useGroupsInfinite';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { GroupItem } from '../../components/features/groups/GroupItem';
@@ -24,6 +25,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
 export const GroupsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const {
     groups,
@@ -109,8 +111,8 @@ export const GroupsScreen: React.FC = () => {
       await refresh();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to create group. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -128,8 +130,8 @@ export const GroupsScreen: React.FC = () => {
       await refresh();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to update group. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -148,9 +150,9 @@ export const GroupsScreen: React.FC = () => {
       // Emit event to notify other screens
       emitGroupDeleted(deletingGroup.id);
       // Modal will close automatically, show success alert
-      Alert.alert('Success', `"${deletingGroup.name}" has been deleted successfully`);
+      Alert.alert(t('common.success'), `"${deletingGroup.name}" has been deleted successfully`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete group. Please try again.');
+      Alert.alert(t('common.error'), t('errors.tryAgain'));
       throw error; // Re-throw to prevent modal from closing
     }
   };
@@ -188,11 +190,11 @@ export const GroupsScreen: React.FC = () => {
     try {
       setProcessingToken(token);
       await acceptInvitation(token);
-      Alert.alert('Success', 'You have joined the group successfully!');
+      Alert.alert(t('common.success'), 'You have joined the group successfully!');
       await refreshInvitations(); // Refresh the invitations list
       await refresh(); // Refresh the groups list to show the new group and updated member counts
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to accept invitation');
+      Alert.alert(t('common.error'), err instanceof Error ? err.message : t('errors.tryAgain'));
     } finally {
       setProcessingToken(null);
     }
@@ -202,10 +204,10 @@ export const GroupsScreen: React.FC = () => {
     try {
       setProcessingToken(token);
       await declineInvitation(token);
-      Alert.alert('Success', 'Invitation declined');
+      Alert.alert(t('common.success'), 'Invitation declined');
       await refreshInvitations(); // Refresh the invitations list
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to decline invitation');
+      Alert.alert(t('common.error'), err instanceof Error ? err.message : t('errors.tryAgain'));
     } finally {
       setProcessingToken(null);
     }
@@ -234,9 +236,9 @@ export const GroupsScreen: React.FC = () => {
       await EvenlyBackendService.createExpense(fullExpenseData);
       // Refresh groups to show updated data
       await refresh();
-      Alert.alert('Success', 'Expense added successfully!');
+      Alert.alert(t('common.success'), t('expenses.addExpenseSuccess'));
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add expense');
+      Alert.alert(t('common.error'), error.message || t('errors.tryAgain'));
       throw error; // Re-throw to let modal handle it
     }
   };
@@ -246,7 +248,7 @@ export const GroupsScreen: React.FC = () => {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <GlassListCard
-          title="Groups"
+          title={t('groups.title')}
           contentGap={8}
         >
           <SkeletonGroupList count={3} />
@@ -285,8 +287,8 @@ export const GroupsScreen: React.FC = () => {
   const ListHeaderComponent = () => (
     <View style={styles.headerContainer}>
       <GlassListCard
-        title="Your Groups"
-        subtitle={totalCount === 0 ? "No groups yet. Create your first group!" : "Manage your expense groups"}
+        title={t('groups.title')}
+        subtitle={totalCount === 0 ? t('groups.createFirstGroup') : t('groups.subtitle', { defaultValue: 'Manage your expense groups' })}
         contentGap={8}
         badge={totalCount > 0 ? totalCount : undefined}
       >
@@ -308,8 +310,8 @@ export const GroupsScreen: React.FC = () => {
           onLoadMore={loadMore}
           onRefresh={onRefresh}
           refreshing={refreshing}
-          emptyMessage="Create a group to start splitting expenses with friends and family."
-          loadingMessage="Loading groups..."
+          emptyMessage={t('groups.createFirstGroup')}
+          loadingMessage={t('common.loading')}
           ListHeaderComponent={ListHeaderComponent}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
@@ -374,7 +376,7 @@ export const GroupsScreen: React.FC = () => {
             setDeletingGroup(null);
           }}
           onConfirm={confirmDeleteGroup}
-          title="Delete Group"
+          title={t('groups.deleteGroup', { defaultValue: 'Delete Group' })}
           description={`Are you sure you want to delete "${deletingGroup?.name}"? This will also delete all expenses in this group. This action cannot be undone.`}
         />
 
@@ -386,7 +388,7 @@ export const GroupsScreen: React.FC = () => {
             setSelectedGroupForShare(null);
           }}
           groupId={selectedGroupForShare?.id || null}
-          groupName={selectedGroupForShare?.name || 'Group'}
+          groupName={selectedGroupForShare?.name || t('groups.title')}
         />
       </View>
 
@@ -395,26 +397,26 @@ export const GroupsScreen: React.FC = () => {
         actions={[
           {
             id: 'add-expense',
-            title: 'Add Expense',
+            title: t('expenses.addExpense'),
             icon: '💰',
             onPress: () => setShowAddExpenseModal(true),
             color: '#10B981',
           },
           {
             id: 'search',
-            title: 'Search',
+            title: t('common.search'),
             icon: '🔍',
             onPress: openSearch,
           },
           {
             id: 'create-group',
-            title: 'Create Group',
+            title: t('groups.createGroup'),
             icon: '👥',
             onPress: () => setShowCreateModal(true),
           },
           {
             id: 'view-invitations',
-            title: 'View Invitations',
+            title: t('groups.viewInvitations', { defaultValue: 'View Invitations' }),
             icon: '📧',
             onPress: () => setShowInvitationsModal(true),
           },

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { shareBalance, ShareMethod } from '../../utils/shareHelper';
+import { useTranslation } from 'react-i18next';
 
 interface ShareBalanceModalProps {
   visible: boolean;
@@ -19,6 +20,7 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
   phoneNumber,
   recipientName,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   const handleShare = async (method: ShareMethod) => {
@@ -39,7 +41,7 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.foreground }]}>
-              Share Balance
+              {t('modals.shareBalance')}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.foreground} />
@@ -47,7 +49,7 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
           </View>
 
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Share balance with {recipientName}
+            {t('modals.shareBalanceWith', { name: recipientName })}
           </Text>
 
           {/* SMS Option */}
@@ -64,10 +66,10 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
             </View>
             <View style={styles.optionText}>
               <Text style={[styles.optionTitle, { color: colors.foreground }]}>
-                Send via SMS
+                {t('modals.sendViaSMS')}
               </Text>
               <Text style={[styles.optionSubtitle, { color: colors.mutedForeground }]}>
-                Open messaging app
+                {t('modals.openMessaging')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -87,10 +89,10 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
             </View>
             <View style={styles.optionText}>
               <Text style={[styles.optionTitle, { color: colors.foreground }]}>
-                Send via WhatsApp
+                {t('modals.sendViaWhatsApp')}
               </Text>
               <Text style={[styles.optionSubtitle, { color: colors.mutedForeground }]}>
-                Share on WhatsApp
+                {t('modals.shareOnWhatsApp')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -102,7 +104,7 @@ export const ShareBalanceModal: React.FC<ShareBalanceModalProps> = ({
             onPress={onClose}
           >
             <Text style={[styles.cancelButtonText, { color: colors.foreground }]}>
-              Cancel
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
         </View>

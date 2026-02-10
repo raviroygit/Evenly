@@ -13,6 +13,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { MemberInfoModal } from './MemberInfoModal';
 import { GroupMember } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface MembersModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   groupId,
   groupName,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -50,8 +52,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       const membersData = await EvenlyBackendService.getGroupMembers(groupId);
       setMembers(membersData.map((m: any) => ({
         id: m.id || m.userId,
-        name: m.user?.name || m.name || 'Unknown',
-        email: m.user?.email || m.email || 'Unknown',
+        name: m.user?.name || m.name || t('common.unknown'),
+        email: m.user?.email || m.email || t('common.unknown'),
         avatar: m.user?.avatar || m.avatar,
         role: m.role || 'member',
       })));
@@ -124,7 +126,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                 {/* Header */}
                 <View style={styles.header}>
                   <Text style={[styles.title, { color: colors.foreground }]}>
-                    Members
+                    {t('modals.members')}
                   </Text>
                   <TouchableOpacity
                     style={styles.closeButton}
@@ -143,13 +145,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   {loadingMembers ? (
                     <View style={styles.emptyState}>
                       <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                        Loading members...
+                        {t('modals.loadingMembers')}
                       </Text>
                     </View>
                   ) : members.length === 0 ? (
                     <View style={styles.emptyState}>
                       <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                        No members found.
+                        {t('modals.noMembersFound')}
                       </Text>
                     </View>
                   ) : (
@@ -180,7 +182,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                                 {member.name}
                               </Text>
                               <Text style={[styles.memberRole, { color: colors.mutedForeground }]}>
-                                {member.role === 'admin' ? 'Admin' : 'Member'}
+                                {member.role === 'admin' ? t('modals.admin') : t('modals.member')}
                               </Text>
                             </View>
                           </View>

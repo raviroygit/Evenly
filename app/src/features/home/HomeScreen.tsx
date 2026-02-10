@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroups } from '../../hooks/useGroups';
@@ -24,6 +25,7 @@ import { useRouter } from 'expo-router';
 import { HomeCache } from '../../utils/homeCache';
 
 export const HomeScreen: React.FC = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { user, isAuthenticated, authState } = useAuth();
@@ -276,8 +278,8 @@ export const HomeScreen: React.FC = () => {
       }
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to create group. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsCreatingGroup(false);
     }
@@ -346,8 +348,8 @@ export const HomeScreen: React.FC = () => {
       }
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to add expense. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsAddingExpense(false);
     }
@@ -440,12 +442,12 @@ export const HomeScreen: React.FC = () => {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.scrollContent}>
           <GlassListCard
-            title="Authentication Required"
-            subtitle="Please log in to access the app"
+            title={t('errors.unauthorized')}
+            subtitle={t('auth.login')}
             contentGap={0}
           >
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              You need to be logged in to access this feature.
+              {t('errors.unauthorized')}
             </Text>
           </GlassListCard>
         </View>
@@ -484,8 +486,8 @@ export const HomeScreen: React.FC = () => {
           style={[platformStyles.headerCard, styles.headerCard] as any}
         >
           <SectionHeader
-            title={`Welcome back, ${user?.name || 'User'}!`}
-            subtitle="Here's your expense overview"
+            title={t('auth.welcomeBack') + ', ' + (user?.name || 'User') + '!'}
+            subtitle={t('dashboard.yourBalance')}
             style={styles.headerContent}
           />
         </ResponsiveLiquidGlassCard>
@@ -518,17 +520,17 @@ export const HomeScreen: React.FC = () => {
             >
               <View style={styles.khataSummaryHeader}>
                 <Text style={[styles.khataSummaryTitle, { color: colors.foreground }]}>
-                  📒 Khata Summary
+                  {'📒 ' + t('khata.title')}
                 </Text>
                 <Text style={[styles.customerCount, { color: '#E91E63' }]}>
-                  {`${customerCount} Customer${customerCount !== 1 ? 's' : ''}`}
+                  {`${customerCount} ${t('khata.customers')}`}
                 </Text>
               </View>
               <View style={styles.khataSummaryContent}>
                 {/* Row 1: Will Give (amount you owe) – red */}
                 <View style={styles.khataSummaryItem}>
                   <Text style={[styles.khataSummaryLabel, { color: colors.mutedForeground }]}>
-                    Will Give
+                    {t('khata.youWillGive')}
                   </Text>
                   <Text style={[styles.khataSummaryValue, { color: '#EF4444' }]}>
                     {(() => {
@@ -541,7 +543,7 @@ export const HomeScreen: React.FC = () => {
                 {/* Row 2: Will Get (amount owed to you) – green */}
                 <View style={styles.khataSummaryItem}>
                   <Text style={[styles.khataSummaryLabel, { color: colors.mutedForeground }]}>
-                    Will Get
+                    {t('khata.youWillGet')}
                   </Text>
                   <Text style={[styles.khataSummaryValue, { color: '#10B981' }]}>
                     {(() => {

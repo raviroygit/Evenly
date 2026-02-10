@@ -3,6 +3,7 @@ import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput,
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
@@ -45,6 +46,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 }) => {
   const { groups, refreshGroups } = useGroups();
   const { colors, theme } = useTheme();
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState('');
@@ -133,9 +135,9 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          'Sorry, we need camera roll permissions to select images!',
-          [{ text: 'OK' }]
+          t('modals.permissionRequired'),
+          t('modals.cameraRollPermission'),
+          [{ text: t('common.ok') }]
         );
         return false;
       }
@@ -148,9 +150,9 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       const { status} = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          'Sorry, we need camera permissions to take photos!',
-          [{ text: 'OK' }]
+          t('modals.permissionRequired'),
+          t('modals.cameraPermission'),
+          [{ text: t('common.ok') }]
         );
         return false;
       }
@@ -176,11 +178,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
         if (!valid) {
           Alert.alert(
-            'Image Too Large',
-            `The selected image (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please select a smaller image.`,
+            t('modals.imageTooLarge'),
+            t('modals.imageTooLargeMessage', { size: sizeMB.toFixed(1), maxSize: MAX_FILE_SIZE_MB }),
             [
-              { text: 'Try Again', onPress: pickImageFromGallery },
-              { text: 'Cancel', style: 'cancel' }
+              { text: t('modals.tryAgain'), onPress: pickImageFromGallery },
+              { text: t('common.cancel'), style: 'cancel' }
             ]
           );
           return;
@@ -189,7 +191,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         setImageUri(selectedUri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      Alert.alert(t('common.error'), 'Failed to pick image. Please try again.');
     }
   };
 
@@ -210,11 +212,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
         if (!valid) {
           Alert.alert(
-            'Image Too Large',
-            `The photo (${sizeMB.toFixed(1)} MB) is too large after compression.\n\nMaximum size is ${MAX_FILE_SIZE_MB} MB. Please try taking the photo again.`,
+            t('modals.imageTooLarge'),
+            t('modals.imageTooLargeMessage', { size: sizeMB.toFixed(1), maxSize: MAX_FILE_SIZE_MB }),
             [
-              { text: 'Try Again', onPress: takePhoto },
-              { text: 'Cancel', style: 'cancel' }
+              { text: t('modals.tryAgain'), onPress: takePhoto },
+              { text: t('common.cancel'), style: 'cancel' }
             ]
           );
           return;
@@ -223,25 +225,25 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         setImageUri(photoUri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      Alert.alert(t('common.error'), 'Failed to take photo. Please try again.');
     }
   };
 
   const showImagePickerOptions = () => {
     Alert.alert(
-      'Select Receipt Image',
-      'Choose an option',
+      t('modals.selectReceiptImage'),
+      t('modals.chooseAnOption'),
       [
         {
-          text: 'Camera',
+          text: t('modals.camera'),
           onPress: takePhoto,
         },
         {
-          text: 'Gallery',
+          text: t('modals.gallery'),
           onPress: pickImageFromGallery,
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ],
@@ -259,17 +261,17 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Expense title is required');
+      Alert.alert(t('common.error'), t('modals.expenseTitleRequired'));
       return;
     }
 
     if (!isEditMode && !selectedGroupId) {
-      Alert.alert('Error', 'Please select a group');
+      Alert.alert(t('common.error'), t('modals.pleaseSelectGroup'));
       return;
     }
 
     if (!totalAmount.trim() || isNaN(parseFloat(totalAmount))) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert(t('common.error'), t('modals.pleaseEnterValidAmount'));
       return;
     }
 
@@ -384,7 +386,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     } catch (error: unknown) {
       const msg = (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (error instanceof Error ? error.message : null);
-      Alert.alert('Error', msg || 'Failed to add expense. Please try again.');
+      Alert.alert(t('common.error'), msg || 'Failed to add expense. Please try again.');
       // Don't close modal on error so user can retry
     } finally {
       setIsLoading(false);
@@ -415,23 +417,23 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={handleClose}
-      title={isEditMode ? "Edit Expense" : "Add New Expense"}
+      title={isEditMode ? t('modals.editExpense') : t('modals.addExpense')}
     >
       <View style={styles.container}>
         {/* Expense Title Input */}
         <View style={styles.input}>
           <Text style={[styles.label, { color: colors.foreground }]}>
-            Expense Title
+            {t('expenses.expenseTitle')}
           </Text>
-          <View style={[styles.inputContainer, { 
+          <View style={[styles.inputContainer, {
             backgroundColor: colors.background,
-            borderColor: colors.border 
+            borderColor: colors.border
           }]}>
             <TextInput
               style={[styles.textInput, { color: colors.foreground }]}
               value={title}
               onChangeText={setTitle}
-              placeholder="Enter expense title"
+              placeholder={t('modals.enterExpenseTitle')}
               placeholderTextColor={colors.mutedForeground}
             />
           </View>
@@ -441,7 +443,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         {!isEditMode && (
           <View style={styles.input}>
             <Text style={[styles.label, { color: colors.foreground }]}>
-              Group *
+              {t('modals.group')} *
             </Text>
             <TouchableOpacity
               style={[styles.inputContainer, {
@@ -452,10 +454,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               onPress={() => !preselectedGroupId && setShowGroupDropdown(!showGroupDropdown)}
               disabled={!!preselectedGroupId}
             >
-              <Text style={[styles.dropdownText, { 
-                color: selectedGroup ? colors.foreground : colors.mutedForeground 
+              <Text style={[styles.dropdownText, {
+                color: selectedGroup ? colors.foreground : colors.mutedForeground
               }]}>
-                {selectedGroup ? selectedGroup.name : 'Select a group'}
+                {selectedGroup ? selectedGroup.name : t('modals.selectAGroup')}
               </Text>
               <Text style={[styles.dropdownArrow, { color: colors.foreground }]}>
                 {showGroupDropdown ? '▲' : '▼'}
@@ -498,7 +500,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         {isEditMode && selectedGroup && (
           <View style={styles.input}>
             <Text style={[styles.label, { color: colors.foreground }]}>
-              Group
+              {t('modals.group')}
             </Text>
             <View style={[styles.inputContainer, { 
               backgroundColor: colors.background,
@@ -514,11 +516,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         {/* Amount Input */}
         <View style={styles.input}>
           <Text style={[styles.label, { color: colors.foreground }]}>
-            Amount
+            {t('expenses.amount')}
           </Text>
-          <View style={[styles.inputContainer, { 
+          <View style={[styles.inputContainer, {
             backgroundColor: colors.background,
-            borderColor: colors.border 
+            borderColor: colors.border
           }]}>
             <TextInput
               style={[styles.textInput, { color: colors.foreground }]}
@@ -534,7 +536,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         {/* Date Input with Calendar Icon */}
         <View style={styles.input}>
           <Text style={[styles.label, { color: colors.foreground }]}>
-            Date
+            {t('expenses.date')}
           </Text>
           <View style={[styles.inputContainer, { 
             backgroundColor: colors.background,
@@ -565,7 +567,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           <View style={styles.datePickerModal}>
             <View style={[styles.datePickerContainer, { backgroundColor: colors.background }]}>
               <Text style={[styles.datePickerTitle, { color: colors.foreground }]}>
-                Select Date
+                {t('modals.selectDate')}
               </Text>
               <TextInput
                 style={[styles.datePickerInput, { 
@@ -584,7 +586,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   onPress={() => setShowDatePicker(false)}
                 >
                   <Text style={[styles.datePickerButtonText, { color: colors.foreground }]}>
-                    Cancel
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -592,7 +594,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   onPress={() => setShowDatePicker(false)}
                 >
                   <Text style={[styles.datePickerButtonText, { color: '#FFFFFF' }]}>
-                    Done
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -604,10 +606,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         <View style={styles.input}>
           <View style={styles.labelWithHint}>
             <Text style={[styles.label, { color: colors.foreground }]}>
-              Receipt Image (Optional)
+              {t('modals.receiptImageOptional')}
             </Text>
             <Text style={styles.maxSizeHint}>
-              Max image size: {MAX_FILE_SIZE_MB}MB
+              {t('modals.maxImageSize', { size: MAX_FILE_SIZE_MB })}
             </Text>
           </View>
 
@@ -631,7 +633,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   <View style={styles.uploadProgressHeader}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
-                      Uploading image... {uploadProgress}%
+                      {t('modals.uploadingImage')} {uploadProgress}%
                     </Text>
                   </View>
                   <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
@@ -662,7 +664,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             >
               <Ionicons name="camera-outline" size={24} color={colors.foreground} />
               <Text style={[styles.imageSinglePickerText, { color: colors.foreground }]}>
-                Select Image
+                {t('modals.selectImage')}
               </Text>
             </TouchableOpacity>
           )}
@@ -672,13 +674,13 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         <ModalButtonContainer
           buttons={[
             {
-              title: "Cancel",
+              title: t('common.cancel'),
               onPress: handleClose,
               variant: "destructive",
               disabled: isLoading || uploadingImage, // Disable cancel button while loading or uploading image
             },
             {
-              title: isEditMode ? "Update Expense" : "Add Expense",
+              title: isEditMode ? t('modals.updateExpense') : t('expenses.addExpense'),
               onPress: handleSubmit,
               variant: "primary",
               loading: isLoading || uploadingImage,

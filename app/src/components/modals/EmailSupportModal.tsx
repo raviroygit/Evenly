@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PlatformActionButton } from '../ui/PlatformActionButton';
@@ -32,6 +33,7 @@ interface SupportFormData {
 
 export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, onClose }) => {
   const { colors, theme } = useTheme();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<SupportFormData>({
     userName: '',
@@ -48,27 +50,27 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
   const validateForm = (): boolean => {
     if (!formData.userName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your name');
+      Alert.alert(t('modals.validationError'), t('modals.pleaseEnterName'));
       return false;
     }
     if (!formData.userEmail.trim()) {
-      Alert.alert('Validation Error', 'Please enter your email address');
+      Alert.alert(t('modals.validationError'), t('modals.pleaseEnterEmail'));
       return false;
     }
     if (!formData.userEmail.includes('@')) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
+      Alert.alert(t('modals.validationError'), t('modals.pleaseEnterValidEmail'));
       return false;
     }
     if (!formData.subject.trim()) {
-      Alert.alert('Validation Error', 'Please enter a subject');
+      Alert.alert(t('modals.validationError'), t('modals.pleaseEnterSubject'));
       return false;
     }
     if (!formData.message.trim()) {
-      Alert.alert('Validation Error', 'Please enter your message');
+      Alert.alert(t('modals.validationError'), t('modals.pleaseEnterMessage'));
       return false;
     }
     if (formData.message.trim().length < 10) {
-      Alert.alert('Validation Error', 'Message must be at least 10 characters long');
+      Alert.alert(t('modals.validationError'), t('modals.messageTooShort'));
       return false;
     }
     return true;
@@ -91,11 +93,11 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
       if (response.ok && result.success) {
         Alert.alert(
-          'Success!',
-          'Your support request has been sent successfully. We\'ll get back to you soon!',
+          t('modals.successExclamation'),
+          t('modals.supportRequestSent'),
           [
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => {
                 // Reset form
                 setFormData({
@@ -116,9 +118,9 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
       }
     } catch (error: any) {
       Alert.alert(
-        'Error',
-        'Failed to send your support request. Please try again or contact us directly.',
-        [{ text: 'OK' }]
+        t('common.error'),
+        t('modals.failedToSend'),
+        [{ text: t('common.ok') }]
       );
     } finally {
       setIsLoading(false);
@@ -126,20 +128,20 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
   };
 
   const priorityOptions = [
-    { value: 'low', label: 'Low', color: '#27ae60' },
-    { value: 'medium', label: 'Medium', color: '#f39c12' },
-    { value: 'high', label: 'High', color: '#e74c3c' },
+    { value: 'low', label: t('modals.low'), color: '#27ae60' },
+    { value: 'medium', label: t('modals.medium'), color: '#f39c12' },
+    { value: 'high', label: t('modals.high'), color: '#e74c3c' },
   ];
 
   const categoryOptions = [
-    { value: 'technical', label: 'Technical Issue', icon: 'bug' },
-    { value: 'billing', label: 'Billing', icon: 'card' },
-    { value: 'feature', label: 'Feature Request', icon: 'bulb' },
-    { value: 'other', label: 'Other', icon: 'help-circle' },
+    { value: 'technical', label: t('modals.technicalIssue'), icon: 'bug' },
+    { value: 'billing', label: t('modals.billing'), icon: 'card' },
+    { value: 'feature', label: t('modals.featureRequest'), icon: 'bulb' },
+    { value: 'other', label: t('modals.other'), icon: 'help-circle' },
   ];
 
   return (
-    <ReusableModal visible={visible} onClose={onClose} title="Contact Support">
+    <ReusableModal visible={visible} onClose={onClose} title={t('modals.contactSupport')}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -148,12 +150,12 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <Text style={[styles.description, { color: colors.mutedForeground }]}>
-              Fill out the form below and we'll get back to you as soon as possible.
+              {t('modals.fillOutForm')}
             </Text>
 
             {/* Name Field */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Name *</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.name')} *</Text>
               <TextInput
                 style={[
                   styles.textInput,
@@ -165,7 +167,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
                 ]}
                 value={formData.userName}
                 onChangeText={(value) => handleInputChange('userName', value)}
-                placeholder="Enter your full name"
+                placeholder={t('modals.enterFullName')}
                 placeholderTextColor={colors.mutedForeground}
                 editable={!isLoading}
               />
@@ -173,7 +175,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
             {/* Email Field */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Email *</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.email')} *</Text>
               <TextInput
                 style={[
                   styles.textInput,
@@ -185,7 +187,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
                 ]}
                 value={formData.userEmail}
                 onChangeText={(value) => handleInputChange('userEmail', value)}
-                placeholder="Enter your email address"
+                placeholder={t('modals.enterEmailAddress')}
                 placeholderTextColor={colors.mutedForeground}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -195,7 +197,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
             {/* Subject Field */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Subject *</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.subject')} *</Text>
               <TextInput
                 style={[
                   styles.textInput,
@@ -207,7 +209,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
                 ]}
                 value={formData.subject}
                 onChangeText={(value) => handleInputChange('subject', value)}
-                placeholder="Brief description of your issue"
+                placeholder={t('modals.briefDescription')}
                 placeholderTextColor={colors.mutedForeground}
                 editable={!isLoading}
               />
@@ -215,7 +217,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
             {/* Category Selection */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Category</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.category')}</Text>
               <View style={styles.categoryContainer}>
                 {categoryOptions.map((option) => (
                   <PlatformActionButton
@@ -234,7 +236,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
             {/* Priority Selection */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Priority</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.priority')}</Text>
               <View style={styles.priorityContainer}>
                 {priorityOptions.map((option) => (
                   <PlatformActionButton
@@ -255,7 +257,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
 
             {/* Message Field */}
             <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Message *</Text>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{t('modals.message')} *</Text>
               <TextInput
                 style={[
                   styles.textArea,
@@ -267,7 +269,7 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
                 ]}
                 value={formData.message}
                 onChangeText={(value) => handleInputChange('message', value)}
-                placeholder="Please describe your issue or question in detail..."
+                placeholder={t('modals.describeIssue')}
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 numberOfLines={6}
@@ -275,13 +277,13 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
                 editable={!isLoading}
               />
               <Text style={[styles.characterCount, { color: colors.mutedForeground }]}>
-                {formData.message.length}/2000 characters
+                {t('modals.charactersCount', { count: formData.message.length })}
               </Text>
             </View>
 
             {/* Submit Button */}
             <PlatformActionButton
-              title={isLoading ? 'Sending...' : 'Send Support Request'}
+              title={isLoading ? t('modals.sending') : t('modals.sendSupportRequest')}
               onPress={handleSubmit}
               variant="primary"
               size="large"
@@ -293,12 +295,10 @@ export const EmailSupportModal: React.FC<EmailSupportModalProps> = ({ visible, o
             {/* Additional Info */}
             <View style={styles.infoSection}>
               <Text style={[styles.infoTitle, { color: colors.foreground }]}>
-                What happens next?
+                {t('modals.whatHappensNext')}
               </Text>
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                • We'll review your request within 24 hours{'\n'}
-                • You'll receive a response at the email address you provided{'\n'}
-                • For urgent issues, please mark priority as "High"
+                {t('modals.supportNextSteps')}
               </Text>
             </View>
           </View>

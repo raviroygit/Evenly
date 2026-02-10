@@ -16,6 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { ChatService, AgentInfo } from '../../services/ChatService';
 import { processExpenseMarkdown, createMarkdownStyles } from '../../utils/markdownUtils';
+import { useTranslation } from 'react-i18next';
 
 interface Message {
   id: string;
@@ -83,13 +84,14 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
   visible,
   onClose,
 }, ref) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState('');
   const [agentInfoFetched, setAgentInfoFetched] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [agentName, setAgentName] = useState('AI Assistant');
+  const [agentName, setAgentName] = useState(t('modals.aiAssistant'));
   
   const flatListRef = useRef<FlatList>(null);
 
@@ -372,7 +374,7 @@ export const DedicatedChatModal = forwardRef<DedicatedChatModalRef, DedicatedCha
               style={[styles.textInput, { color: chatColors.text }]}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Type your message..."
+              placeholder={t('modals.typeMessage')}
               placeholderTextColor={chatColors.textSecondary}
               multiline
               maxLength={1000}

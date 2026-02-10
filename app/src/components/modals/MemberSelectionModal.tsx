@@ -16,6 +16,7 @@ import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { ShareBalanceModal } from './ShareBalanceModal';
 import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
 import { GroupMember } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface MemberSelectionModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
   groupId,
   groupName,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const { user } = useAuth();
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -61,8 +63,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
         .map((m: any) => ({
           id: m.id || m.userId,
           userId: m.userId || m.user?.id, // Store actual user ID for filtering debts
-          name: m.user?.name || m.name || 'Unknown',
-          email: m.user?.email || m.email || 'Unknown',
+          name: m.user?.name || m.name || t('common.unknown'),
+          email: m.user?.email || m.email || t('common.unknown'),
           phone: m.user?.phone || m.phone, // Get phone number if available
           avatar: m.user?.avatar || m.avatar,
           role: m.role || 'member',
@@ -170,10 +172,10 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
                 <View style={styles.header}>
                   <View>
                     <Text style={[styles.title, { color: colors.foreground }]}>
-                      Share Balance
+                      {t('modals.shareBalance')}
                     </Text>
                     <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                      Select a member to share with
+                      {t('modals.selectMemberToShare')}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -194,17 +196,17 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="large" color={colors.primary} />
                       <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-                        Loading members...
+                        {t('modals.loadingMembers')}
                       </Text>
                     </View>
                   ) : members.length === 0 ? (
                     <View style={styles.emptyState}>
                       <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
                       <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                        No other members in this group
+                        {t('modals.noOtherMembers')}
                       </Text>
                       <Text style={[styles.emptySubtext, { color: colors.mutedForeground }]}>
-                        Invite members to share balances with them
+                        {t('modals.inviteMembersToShare')}
                       </Text>
                     </View>
                   ) : (
@@ -243,10 +245,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
                                 </Text>
                                 <Text style={[styles.memberEmail, { color: colors.mutedForeground }]}>
                                   {hasBalance
-                                    ? `${debts.length + credits.length} transaction${
-                                        debts.length + credits.length !== 1 ? 's' : ''
-                                      }`
-                                    : 'Settled'}
+                                    ? `${debts.length + credits.length} ${debts.length + credits.length !== 1 ? t('modals.transactions') : t('modals.transaction')}`
+                                    : t('khata.settled')}
                                 </Text>
                               </View>
                             </View>

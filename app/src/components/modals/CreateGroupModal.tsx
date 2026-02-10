@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Dimensions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { SimpleInput } from '../ui/SimpleInput';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
@@ -31,6 +32,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   editGroup,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [defaultSplitType, setDefaultSplitType] = useState<'equal' | 'percentage' | 'shares' | 'exact'>('equal');
@@ -54,13 +56,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Group name is required');
+      Alert.alert(t('common.error'), t('modals.groupNameRequired'));
       return;
     }
 
     try {
       setIsLoading(true);
-      
+
       if (isEditMode && onUpdateGroup && editGroup) {
         await onUpdateGroup(editGroup.id, {
           name: name.trim(),
@@ -74,10 +76,10 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
           defaultSplitType,
         });
       }
-      
+
       onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} group`);
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} group`);
     } finally {
       setIsLoading(false);
     }
@@ -95,17 +97,17 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={handleClose}
-      title={isEditMode ? "Edit Group" : "Create New Group"}
+      title={isEditMode ? t('modals.editGroup') : t('modals.createGroup')}
       buttons={
         <ModalButtonContainer
           buttons={[
             {
-              title: "Cancel",
+              title: t('common.cancel'),
               onPress: handleClose,
               variant: "destructive",
             },
             {
-              title: isEditMode ? "Update Group" : "Create Group",
+              title: isEditMode ? t('modals.updateGroup') : t('groups.createGroup'),
               onPress: handleSubmit,
               variant: "primary",
               loading: isLoading,
@@ -118,18 +120,18 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
     >
       <View style={styles.container}>
         <SimpleInput
-          label="Group Name"
+          label={t('groups.groupName')}
           value={name}
           onChangeText={setName}
-          placeholder="Enter group name"
+          placeholder={t('modals.enterGroupName')}
           containerStyle={styles.input}
         />
 
         <SimpleInput
-          label="Description (Optional)"
+          label={t('modals.descriptionOptional')}
           value={description}
           onChangeText={setDescription}
-          placeholder="Enter group description"
+          placeholder={t('modals.enterGroupDescription')}
           multiline
           numberOfLines={3}
           containerStyle={styles.input}

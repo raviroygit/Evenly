@@ -539,7 +539,6 @@ export const SkeletonExpenseSummary: React.FC = () => {
     <View style={styles.expenseSummaryContainer}>
       <SkeletonExpenseCard />
       <SkeletonExpenseCard />
-      <SkeletonExpenseCard />
     </View>
   );
 };

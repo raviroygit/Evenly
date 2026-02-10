@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image, Modal, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { SimpleInput } from '../../components/ui/SimpleInput';
@@ -19,6 +20,7 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const EMAIL_MAX_LENGTH = 254;
 
 export const SignupScreen: React.FC = () => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { signupWithOtp, signupVerifyOtp } = useAuth();
   const router = useRouter();
@@ -46,25 +48,25 @@ export const SignupScreen: React.FC = () => {
     const fullPhone = fullPhoneE164();
 
     if (trimmedName.length < 2) {
-      next.name = 'Name must be at least 2 characters';
+      next.name = t('auth.nameMustBe2Chars');
     }
 
     // Email validation
     if (!trimmedEmail) {
-      next.email = 'Email is required';
+      next.email = t('auth.emailRequired');
     } else if (trimmedEmail.length > EMAIL_MAX_LENGTH) {
-      next.email = 'Email address is too long';
+      next.email = t('auth.emailTooLong');
     } else if (!EMAIL_REGEX.test(trimmedEmail)) {
-      next.email = 'Please enter a valid email (e.g. name@example.com)';
+      next.email = t('auth.pleaseEnterValidEmail');
     }
 
     // Phone validation: exactly 10 digits
     if (!phoneNumber.trim()) {
-      next.phoneNumber = 'Phone number is required';
+      next.phoneNumber = t('auth.phoneNumberRequired');
     } else if (digitsOnly.length !== REQUIRED_PHONE_DIGITS) {
-      next.phoneNumber = `Phone number must be exactly ${REQUIRED_PHONE_DIGITS} digits`;
+      next.phoneNumber = t('auth.phoneNumberMustBe10Digits', { count: REQUIRED_PHONE_DIGITS });
     } else if (!PHONE_E164_REGEX.test(fullPhone)) {
-      next.phoneNumber = 'Enter a valid 10-digit phone number';
+      next.phoneNumber = t('auth.enterValid10DigitPhone');
     }
 
     setErrors(next);
@@ -81,12 +83,12 @@ export const SignupScreen: React.FC = () => {
       const result = await signupWithOtp(name.trim(), email.trim().toLowerCase(), fullPhoneE164());
       if (result.success) {
         setStep('otp');
-        Alert.alert('OTP Sent', result.message);
+        Alert.alert(t('auth.otpSent'), result.message);
       } else {
-        setErrors({ email: result.message || 'Failed to send OTP' });
+        setErrors({ email: result.message || t('errors.tryAgain') });
       }
     } catch (error: any) {
-      setErrors({ email: error.message || 'Failed to send OTP' });
+      setErrors({ email: error.message || t('errors.tryAgain') });
     } finally {
       setIsLoading(false);
     }
@@ -95,11 +97,11 @@ export const SignupScreen: React.FC = () => {
   const handleVerifyOtp = async () => {
     const trimmedOtp = otp.trim();
     if (!trimmedOtp) {
-      setErrors({ otp: 'OTP is required' });
+      setErrors({ otp: t('auth.otpRequired') });
       return;
     }
     if (trimmedOtp.length !== 6) {
-      setErrors({ otp: 'OTP must be 6 digits' });
+      setErrors({ otp: t('auth.otpMustBe6Digits') });
       return;
     }
 
@@ -110,15 +112,15 @@ export const SignupScreen: React.FC = () => {
       const result = await signupVerifyOtp(email.trim().toLowerCase(), trimmedOtp);
       if (result.success) {
         Alert.alert(
-          'Account created',
-          'Please sign in with your email to continue.',
-          [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+          t('auth.accountCreated'),
+          t('auth.pleaseSignInToContinue'),
+          [{ text: t('common.ok'), onPress: () => router.replace('/auth/login') }]
         );
         return;
       }
-      setErrors({ otp: result.message || 'Invalid or expired OTP' });
+      setErrors({ otp: result.message || t('errors.tryAgain') });
     } catch (error: any) {
-      setErrors({ otp: error.message || 'Verification failed' });
+      setErrors({ otp: error.message || t('errors.tryAgain') });
     } finally {
       setIsLoading(false);
     }
@@ -136,13 +138,13 @@ export const SignupScreen: React.FC = () => {
     try {
       const result = await signupWithOtp(name.trim(), email.trim().toLowerCase(), fullPhoneE164());
       if (result.success) {
-        Alert.alert('OTP Sent', result.message);
+        Alert.alert(t('auth.otpSent'), result.message);
         setOtp('');
       } else {
-        setErrors({ otp: result.message || 'Failed to resend OTP' });
+        setErrors({ otp: result.message || t('errors.tryAgain') });
       }
     } catch (error: any) {
-      setErrors({ otp: error.message || 'Failed to resend OTP' });
+      setErrors({ otp: error.message || t('errors.tryAgain') });
     } finally {
       setIsLoading(false);
     }
@@ -180,18 +182,18 @@ export const SignupScreen: React.FC = () => {
                   letterSpacing="0.5"
                   fontFamily="System"
                 >
-                  EvenlySplit
+                  {t('auth.appName')}
                 </SvgText>
               </Svg>
             </View>
             <Text style={[styles.title, { color: colors.foreground }]}>
-              {step === 'otp' ? 'Verify Email' : 'Create Account'}
+              {step === 'otp' ? t('auth.verifyEmail') : t('auth.createAccount')}
             </Text>
            
           </View>
 
           <GlassListCard
-            title={step === 'otp' ? 'Verify Code' : 'Sign Up'}
+            title={step === 'otp' ? t('auth.verifyCode') : t('auth.signup')}
             contentGap={20}
             padding={{
               small: 20,
@@ -204,8 +206,8 @@ export const SignupScreen: React.FC = () => {
             {step === 'form' ? (
               <>
                 <SimpleInput
-                  label="Full Name"
-                  placeholder="Enter your name"
+                  label={t('auth.fullName')}
+                  placeholder={t('auth.enterYourName')}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -213,8 +215,8 @@ export const SignupScreen: React.FC = () => {
                   error={errors.name}
                 />
                 <SimpleInput
-                  label="Email Address"
-                  placeholder="Enter your email"
+                  label={t('auth.emailAddress')}
+                  placeholder={t('auth.enterYourEmail')}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -225,7 +227,7 @@ export const SignupScreen: React.FC = () => {
                 />
                 <View style={styles.phoneRow}>
                   <Text style={[styles.inputLabel, { color: colors.foreground }]}>
-                    Phone Number <Text style={[styles.requiredAsterisk, { color: colors.destructive }]}>*</Text>
+                    {t('auth.phoneNumber')} <Text style={[styles.requiredAsterisk, { color: colors.destructive }]}>*</Text>
                   </Text>
                   <View style={styles.phoneInputRow}>
                     <TouchableOpacity
@@ -258,7 +260,7 @@ export const SignupScreen: React.FC = () => {
                 <Modal visible={showCountryPicker} transparent animationType="slide">
                   <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCountryPicker(false)}>
                     <View style={[styles.countryPickerSheet, { backgroundColor: colors.background }]} onStartShouldSetResponder={() => true}>
-                      <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>Select country code</Text>
+                      <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>{t('auth.selectCountryCode')}</Text>
                       <FlatList
                         data={COUNTRY_CODES}
                         keyExtractor={(item) => item.code}
@@ -276,12 +278,12 @@ export const SignupScreen: React.FC = () => {
                         )}
                         style={styles.countryList}
                       />
-                      <PlatformActionButton title="Cancel" onPress={() => setShowCountryPicker(false)} variant="secondary" size="medium" />
+                      <PlatformActionButton title={t('common.cancel')} onPress={() => setShowCountryPicker(false)} variant="secondary" size="medium" />
                     </View>
                   </TouchableOpacity>
                 </Modal>
                 <PlatformActionButton
-                  title="Send Verification Code"
+                  title={t('auth.sendVerificationCode')}
                   onPress={handleSendOtp}
                   variant="primary"
                   size="large"
@@ -293,12 +295,12 @@ export const SignupScreen: React.FC = () => {
               <>
                 <View style={styles.emailDisplay}>
                   <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
-                    Code sent to: {email}
+                    {t('auth.codeSentTo', { email })}
                   </Text>
                 </View>
                 <SimpleInput
-                  label="Verification Code"
-                  placeholder="Enter 6-digit code"
+                  label={t('auth.verificationCode')}
+                  placeholder={t('auth.enter6DigitCode')}
                   value={otp}
                   onChangeText={setOtp}
                   keyboardType="numeric"
@@ -308,7 +310,7 @@ export const SignupScreen: React.FC = () => {
                 />
                 <View style={styles.buttonContainer}>
                   <PlatformActionButton
-                    title="Verify & Create Account"
+                    title={t('auth.verifyAndCreateAccount')}
                     onPress={handleVerifyOtp}
                     variant="primary"
                     size="large"
@@ -316,7 +318,7 @@ export const SignupScreen: React.FC = () => {
                     loading={isLoading}
                   />
                   <PlatformActionButton
-                    title="Resend Code"
+                    title={t('auth.resendCode')}
                     onPress={handleResendOtp}
                     variant="secondary"
                     size="medium"
@@ -324,7 +326,7 @@ export const SignupScreen: React.FC = () => {
                     loading={false}
                   />
                   <PlatformActionButton
-                    title="Back to Form"
+                    title={t('auth.backToForm')}
                     onPress={handleBackToForm}
                     variant="secondary"
                     size="medium"
@@ -337,12 +339,12 @@ export const SignupScreen: React.FC = () => {
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-              Already have an account?{' '}
+              {t('auth.alreadyHaveAccount')}{' '}
               <Text
                 style={[styles.linkText, { color: colors.primary }]}
                 onPress={() => router.push('/auth/login')}
               >
-                Sign in
+                {t('auth.signIn')}
               </Text>
             </Text>
           </View>

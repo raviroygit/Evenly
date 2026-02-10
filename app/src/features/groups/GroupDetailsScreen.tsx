@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useGroups } from '../../hooks/useGroups';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
@@ -21,6 +22,7 @@ import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
 
 export const GroupDetailsScreen: React.FC = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { colors, theme } = useTheme();
@@ -54,9 +56,13 @@ export const GroupDetailsScreen: React.FC = () => {
 
   // Calculate group-specific totals
   const groupTotals = React.useMemo(() => {
+    if (!user) {
+      return { totalExpenses: 0, netBalance: 0 };
+    }
+
     let totalExpenses = 0;
-    let totalIncome = 0;
-    let netBalance = 0;
+    let userPaidTotal = 0;
+    let userShareTotal = 0;
 
     expenses.forEach(expense => {
       // Add to total expenses (all expenses in the group)
@@ -65,24 +71,30 @@ export const GroupDetailsScreen: React.FC = () => {
         : expense.totalAmount;
       totalExpenses += expenseAmount || 0;
 
-      // Calculate income (money lent) and net balance from each expense
-      if (expense.netBalance) {
-        const amount = expense.netBalance.amount;
-        netBalance += amount;
+      // Calculate how much the logged-in user paid
+      if (expense.paidBy === user.id) {
+        userPaidTotal += expenseAmount || 0;
+      }
 
-        // If positive, it's income (user lent money)
-        if (amount > 0) {
-          totalIncome += amount;
-        }
+      // Calculate the logged-in user's share of this expense
+      if (expense.currentUserShare) {
+        const shareAmount = typeof expense.currentUserShare.amount === 'string'
+          ? parseFloat(expense.currentUserShare.amount)
+          : expense.currentUserShare.amount;
+        userShareTotal += shareAmount || 0;
       }
     });
 
+    // Net balance = What user paid - What user owes
+    // Positive = user is owed money (paid more than their share)
+    // Negative = user owes money (paid less than their share)
+    const netBalance = userPaidTotal - userShareTotal;
+
     return {
       totalExpenses,
-      totalIncome,
       netBalance,
     };
-  }, [expenses]);
+  }, [expenses, user]);
 
   const loadExpenses = async (skipLoadingState = false) => {
     if (!groupId) return;
@@ -153,11 +165,11 @@ export const GroupDetailsScreen: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Show success message
-      Alert.alert('Success', 'Expense added successfully!');
+      Alert.alert(t('common.success'), t('expenses.addExpenseSuccess'));
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to add expense. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
       throw err;
     } finally {
       // Hide skeleton loader after everything is done
@@ -192,8 +204,8 @@ export const GroupDetailsScreen: React.FC = () => {
       await loadExpenses();
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to update expense. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsUpdatingExpense(false);
     }
@@ -213,11 +225,11 @@ export const GroupDetailsScreen: React.FC = () => {
       await loadExpenses();
 
       // Modal will close automatically, show success alert
-      Alert.alert('Success', `"${deletingExpense.title}" has been deleted successfully`);
+      Alert.alert(t('common.success'), t('expenses.deleteExpenseSuccess'));
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
-        || (err instanceof Error ? err.message : 'Failed to delete expense. Please try again.');
-      Alert.alert('Error', message);
+        || (err instanceof Error ? err.message : t('errors.tryAgain'));
+      Alert.alert(t('common.error'), message);
       throw err;
     }
   };
@@ -266,10 +278,10 @@ export const GroupDetailsScreen: React.FC = () => {
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-              {group?.name || 'Group Details'}
+              {group?.name || t('groups.groupDetails')}
             </Text>
             <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-              {expenses.length} {expenses.length === 1 ? 'transaction' : 'transactions'}
+              {t('groups.transaction', { count: expenses.length })}
             </Text>
           </View>
           <View style={styles.headerActions}>
@@ -296,7 +308,6 @@ export const GroupDetailsScreen: React.FC = () => {
         ) : (
           <ExpenseSummary
             totalExpenses={groupTotals.totalExpenses}
-            totalIncome={groupTotals.totalIncome}
             netBalance={groupTotals.netBalance}
           />
         )}
@@ -406,7 +417,7 @@ export const GroupDetailsScreen: React.FC = () => {
               <Ionicons name="arrow-back" size={24} color={colors.foreground} />
             </TouchableOpacity>
             <Text style={[styles.errorText, { color: colors.destructive }]}>
-              Group not found
+              {t('errors.notFound')}
             </Text>
             <Text style={[styles.errorSubtext, { color: colors.mutedForeground }]}>
               The group you're looking for doesn't exist or you don't have access to it.
@@ -438,8 +449,8 @@ export const GroupDetailsScreen: React.FC = () => {
             onLoadMore={() => {}}
             onRefresh={onRefresh}
             refreshing={refreshing}
-            emptyMessage="No transactions in this group yet."
-            loadingMessage={isAddingExpense ? "Adding expense..." : "Loading transactions..."}
+            emptyMessage={t('expenses.noExpenses')}
+            loadingMessage={isAddingExpense ? t('expenses.uploadingImage', { defaultValue: 'Adding expense...' }) : t('common.loading')}
             ListHeaderComponent={ListHeaderComponent}
             ListFooterComponent={ListFooterComponent}
             contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
@@ -511,8 +522,8 @@ export const GroupDetailsScreen: React.FC = () => {
           setDeletingExpense(null);
         }}
         onConfirm={confirmDeleteExpense}
-        title="Delete Expense"
-        description={`Are you sure you want to delete "${deletingExpense?.title}"? This action cannot be undone.`}
+        title={t('expenses.deleteExpense')}
+        description={t('expenses.deleteConfirmation', { title: deletingExpense?.title || '' })}
       />
 
       {/* Member Selection Modal for Sharing */}
@@ -520,7 +531,7 @@ export const GroupDetailsScreen: React.FC = () => {
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
         groupId={groupId || null}
-        groupName={group?.name || 'Group'}
+        groupName={group?.name || t('groups.title')}
       />
 
       {/* Floating Action Button */}
@@ -528,7 +539,7 @@ export const GroupDetailsScreen: React.FC = () => {
         actions={[
           {
             id: 'add-expense',
-            title: 'Add Expense',
+            title: t('expenses.addExpense'),
             icon: '💰',
             onPress: () => setShowAddExpenseModal(true),
             color: '#10B981',

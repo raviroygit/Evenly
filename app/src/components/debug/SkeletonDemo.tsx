@@ -133,11 +133,9 @@ export const SkeletonDemo: React.FC = () => {
         {showSkeletons ? (
           <SkeletonExpenseSummary />
         ) : (
-          <ExpenseSummary 
-            totalExpenses={1234.56} 
-            totalIncome={2500.00} 
-            netBalance={1265.44} 
-            loading={false} 
+          <ExpenseSummary
+            totalExpenses={1234.56}
+            netBalance={1265.44}
           />
         )}
       </View>

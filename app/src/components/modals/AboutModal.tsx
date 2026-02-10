@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +12,7 @@ interface AboutModalProps {
 
 export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(() => {});
@@ -20,7 +22,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="About EvenlySplit"
+      title={t('modals.aboutApp')}
       showCloseButton={true}
     >
       <View style={styles.content}>
@@ -31,53 +33,52 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           </View>
           <Text style={[styles.appName, { color: colors.foreground }]}>EvenlySplit</Text>
           <Text style={[styles.appTagline, { color: colors.mutedForeground }]}>
-            Split expenses, share memories
+            {t('modals.appTagline')}
           </Text>
         </View>
 
         {/* App Description */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>About the App</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.aboutTheApp')}</Text>
           <TouchableOpacity style={styles.descriptionContainer} activeOpacity={0.7}>
             <Text style={[styles.description, { color: colors.mutedForeground }]}>
-              EvenlySplit is a modern expense splitting application designed to make sharing costs with friends, 
-              family, and colleagues effortless. Track expenses, manage groups, and settle balances with ease.
+              {t('modals.appDescription')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Features Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Key Features</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.keyFeatures')}</Text>
           <View style={styles.featuresList}>
             <TouchableOpacity style={styles.featureItem} activeOpacity={0.7}>
               <Ionicons name="people" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.mutedForeground }]}>
-                Create and manage expense groups
+                {t('modals.createManageGroups')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.featureItem} activeOpacity={0.7}>
               <Ionicons name="receipt" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.mutedForeground }]}>
-                Track individual and group expenses
+                {t('modals.trackExpenses')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.featureItem} activeOpacity={0.7}>
               <Ionicons name="calculator" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.mutedForeground }]}>
-                Automatic balance calculations
+                {t('modals.automaticCalculations')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.featureItem} activeOpacity={0.7}>
               <Ionicons name="notifications" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.mutedForeground }]}>
-                Real-time notifications and updates
+                {t('modals.realTimeNotifications')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.featureItem} activeOpacity={0.7}>
               <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.mutedForeground }]}>
-                Secure and private data handling
+                {t('modals.secureDataHandling')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -85,24 +86,24 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
 
         {/* Version Information */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Version Information</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.versionInformation')}</Text>
           <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>Version:</Text>
+            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.version')}</Text>
             <Text style={[styles.versionValue, { color: colors.foreground }]}>1.0.0</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>Build:</Text>
+            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.build')}</Text>
             <Text style={[styles.versionValue, { color: colors.foreground }]}>2024.1</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>Platform:</Text>
+            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.platform')}</Text>
             <Text style={[styles.versionValue, { color: colors.foreground }]}>React Native + Expo</Text>
           </TouchableOpacity>
         </View>
 
         {/* Contact Information */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Get in Touch</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.getInTouch')}</Text>
           <View style={styles.contactList}>
             <TouchableOpacity 
               style={styles.contactItem}
@@ -127,22 +128,22 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
 
         {/* Legal Information */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Legal</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.legal')}</Text>
           <View style={styles.legalList}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.legalItem}
               onPress={() => handleOpenLink('https://evenlysplit.nxtgenaidev.com/privacy')}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
-                Privacy Policy
+                {t('modals.privacyPolicy')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.legalItem}
               onPress={() => handleOpenLink('https://evenlysplit.nxtgenaidev.com/terms')}
             >
               <Text style={[styles.legalText, { color: colors.primary }]}>
-                Terms of Service
+                {t('modals.termsOfService')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -151,10 +152,10 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            Made with ❤️ for better expense sharing
+            {t('modals.madeWithLove')}
           </Text>
           <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>
-            © 2024 EvenlySplit. All rights reserved.
+            {t('modals.allRightsReserved')}
           </Text>
         </View>
       </View>

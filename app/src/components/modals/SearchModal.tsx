@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 export interface SearchItem {
   id: string;
@@ -39,6 +40,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   placeholder = "Search...",
   title = "Search",
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<SearchItem[]>([]);
@@ -243,13 +245,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 {searchQuery.trim() === '' ? (
                   <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                      Start typing to search...
+                      {t('modals.startTyping')}
                     </Text>
                   </View>
                 ) : filteredItems.length === 0 ? (
                   <View style={styles.emptyState}>
                     <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                      No results found for "{searchQuery}"
+                      {t('modals.noResultsFound', { query: searchQuery })}
                     </Text>
                   </View>
                 ) : (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -9,10 +10,11 @@ interface ProtectedRouteProps {
   fallback?: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  fallback 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  fallback
 }) => {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -34,7 +36,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.foreground }]}>
-          Checking authentication...
+          {t('common.checkingAuthentication')}
         </Text>
       </View>
     );

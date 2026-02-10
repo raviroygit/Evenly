@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { AuthStorage } from '../../utils/storage';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
+import { useTranslation } from 'react-i18next';
 
 const REQUIRED_PHONE_DIGITS = 10;
 
@@ -17,6 +18,7 @@ interface PersonalInfoModalProps {
 }
 
 export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const { user, setUser, refreshUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
@@ -75,17 +77,17 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       // Validate name
       const trimmedName = name.trim();
       if (!trimmedName) {
-        newErrors.name = 'Name is required';
+        newErrors.name = t('modals.nameRequired');
       } else if (trimmedName.length < 2) {
-        newErrors.name = 'Name must be at least 2 characters';
+        newErrors.name = t('modals.nameMinLength');
       }
 
       // Validate email
       const trimmedEmail = email.trim();
       if (!trimmedEmail) {
-        newErrors.email = 'Email is required';
+        newErrors.email = t('modals.emailRequired');
       } else if (!validateEmail(trimmedEmail)) {
-        newErrors.email = 'Please enter a valid email address';
+        newErrors.email = t('modals.emailInvalid');
       }
 
       // Validate phone only when user has changed it from pre-filled value
@@ -98,9 +100,9 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
       if (!isUnchangedPrefill) {
         const digitsOnly = phone.replace(/\D/g, '');
         if (!phone.trim()) {
-          newErrors.phoneNumber = 'Phone number is required';
+          newErrors.phoneNumber = t('modals.phoneRequired');
         } else if (digitsOnly.length !== REQUIRED_PHONE_DIGITS) {
-          newErrors.phoneNumber = `Phone number must be exactly ${REQUIRED_PHONE_DIGITS} digits`;
+          newErrors.phoneNumber = t('modals.phoneDigits', { digits: REQUIRED_PHONE_DIGITS });
         }
       }
 
@@ -176,11 +178,11 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
 
         // Show success alert with callback to close modal
         Alert.alert(
-          'Success',
-          result.message || 'Profile updated successfully',
+          t('common.success'),
+          result.message || t('modals.profileUpdated'),
           [
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => {
                 onClose();
               },
@@ -188,21 +190,21 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
           ]
         );
       } else {
-        Alert.alert('Error', result.message || 'Failed to update profile');
+        Alert.alert(t('common.error'), result.message || t('modals.profileUpdateFailed'));
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update profile';
-      Alert.alert('Error', `${errorMessage}\n\nStatus: ${error?.response?.status || 'Network Error'}`);
+      const errorMessage = error?.response?.data?.message || error?.message || t('modals.profileUpdateFailed');
+      Alert.alert(t('common.error'), `${errorMessage}\n\nStatus: ${error?.response?.status || t('common.networkError')}`);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ReusableModal visible={visible} onClose={onClose} title="Edit Personal Info">
+    <ReusableModal visible={visible} onClose={onClose} title={t('modals.editPersonalInfo')}>
       <View style={styles.content}>
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.foreground }]}>Full Name</Text>
+          <Text style={[styles.label, { color: colors.foreground }]}>{t('profile.fullName')}</Text>
           <View style={[styles.inputContainer, {
             backgroundColor: colors.background,
             borderColor: errors.name ? '#FF3B30' : colors.border
@@ -214,7 +216,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
                 setName(text);
                 if (errors.name) setErrors({ ...errors, name: undefined });
               }}
-              placeholder="Enter your name"
+              placeholder={t('profile.enterName')}
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="words"
             />
@@ -225,7 +227,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
+          <Text style={[styles.label, { color: colors.foreground }]}>{t('profile.email')}</Text>
           <View style={[styles.inputContainer, {
             backgroundColor: colors.background,
             borderColor: errors.email ? '#FF3B30' : colors.border
@@ -237,7 +239,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
                 setEmail(text);
                 if (errors.email) setErrors({ ...errors, email: undefined });
               }}
-              placeholder="Enter your email"
+              placeholder={t('profile.enterEmail')}
               placeholderTextColor={colors.mutedForeground}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -249,7 +251,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.foreground }]}>Phone Number <Text style={styles.required}>*</Text></Text>
+          <Text style={[styles.label, { color: colors.foreground }]}>{t('profile.phone')} <Text style={styles.required}>*</Text></Text>
           <View style={styles.phoneInputRow}>
             <TouchableOpacity
               style={[
@@ -307,7 +309,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
               style={[styles.countryPickerSheet, { backgroundColor: colors.background }]}
               onStartShouldSetResponder={() => true}
             >
-              <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>Select country code</Text>
+              <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>{t('modals.selectCountryCode')}</Text>
               <FlatList
                 data={COUNTRY_CODES}
                 keyExtractor={(item) => item.code}
@@ -331,15 +333,15 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
                 style={[styles.cancelCountryButton, { backgroundColor: colors.muted }]}
                 onPress={() => setShowCountryPicker(false)}
               >
-                <Text style={[styles.cancelCountryButtonText, { color: colors.foreground }]}>Cancel</Text>
+                <Text style={[styles.cancelCountryButtonText, { color: colors.foreground }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </Modal>
 
         <View style={styles.actions}>
-          <PlatformActionButton title="Cancel" onPress={onClose} variant="secondary" />
-          <PlatformActionButton title={saving ? 'Saving...' : 'Save Changes'} onPress={handleSave} variant="primary" disabled={saving} />
+          <PlatformActionButton title={t('common.cancel')} onPress={onClose} variant="secondary" />
+          <PlatformActionButton title={saving ? t('common.saving') : t('modals.saveChanges')} onPress={handleSave} variant="primary" disabled={saving} />
         </View>
 
         {/* Delete Account moved to Profile screen Account section */}

@@ -17,6 +17,7 @@ import { useAllExpenses } from '../../hooks/useAllExpenses';
 import { SkeletonExpenseList } from '../ui/SkeletonLoader';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { MembersModal } from './MembersModal';
+import { useTranslation } from 'react-i18next';
 
 interface GroupInfoModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
   onClose,
   groupId,
 }) => {
+  const { t } = useTranslation();
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { groups, loading: groupsLoading } = useGroups();
@@ -62,20 +64,20 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
       
       if (creatorMember) {
         setCreator({
-          name: creatorMember.user?.name || creatorMember.name || 'Unknown',
-          email: creatorMember.user?.email || creatorMember.email || 'Unknown',
+          name: creatorMember.user?.name || creatorMember.name || t('common.unknown'),
+          email: creatorMember.user?.email || creatorMember.email || t('common.unknown'),
         });
       } else {
         // If not found in members, we'll just show the ID or try to get from auth
         setCreator({
-          name: 'Unknown',
-          email: 'Unknown',
+          name: t('common.unknown'),
+          email: t('common.unknown'),
         });
       }
     } catch (error) {
       setCreator({
-        name: 'Unknown',
-        email: 'Unknown',
+        name: t('common.unknown'),
+        email: t('common.unknown'),
       });
     } finally {
       setLoadingCreator(false);
@@ -135,7 +137,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                  Group Information
+                  {t('modals.groupInfo')}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -165,68 +167,68 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                     {/* Group Information */}
                     <View style={styles.section}>
                       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                        Group Details
+                        {t('modals.groupDetails')}
                       </Text>
                       <View style={styles.groupInfo}>
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Group Name
+                            {t('groups.groupName')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
                             {group.name}
                           </Text>
                         </View>
-                        
+
                         {group.description && (
                           <View style={styles.infoRow}>
                             <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                              Description
+                              {t('groups.description')}
                             </Text>
                             <Text style={[styles.infoValue, { color: colors.foreground }]}>
                               {group.description}
                             </Text>
                           </View>
                         )}
-                        
+
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Created By
+                            {t('modals.createdBy')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                            {loadingCreator ? 'Loading...' : (creator?.name || 'Unknown')}
+                            {loadingCreator ? t('common.loading') : (creator?.name || t('common.unknown'))}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Members
+                            {t('groups.members')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
-                            {group.memberCount} members
+                            {group.memberCount} {t('modals.members')}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Default Split
+                            {t('modals.defaultSplit')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
                             {group.defaultSplitType.charAt(0).toUpperCase() + group.defaultSplitType.slice(1)}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Currency
+                            {t('modals.currency')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
                             {group.currency}
                           </Text>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                            Created
+                            {t('modals.created')}
                           </Text>
                           <Text style={[styles.infoValue, { color: colors.foreground }]}>
                             {new Date(group.createdAt).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
@@ -249,7 +251,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                           onPress={handleViewMembers}
                         >
                           <Text style={[styles.viewButtonText, { color: colors.primary }]}>
-                            View members
+                            {t('modals.viewMembers')}
                       </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -260,7 +262,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                           onPress={handleViewExpenses}
                         >
                           <Text style={[styles.viewButtonText, { color: colors.primary }]}>
-                            View group expenses
+                            {t('modals.viewGroupExpenses')}
                           </Text>
                         </TouchableOpacity>
                         </View>
@@ -269,7 +271,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                 ) : (
                   <View style={styles.errorContainer}>
                     <Text style={[styles.errorText, { color: colors.destructive }]}>
-                      Group not found
+                      {t('modals.groupNotFound')}
                     </Text>
                   </View>
                 )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -28,6 +29,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
   onShareBalance,
   onActionExecuted
 }) => {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
@@ -73,9 +75,9 @@ export const GroupItem: React.FC<GroupItemProps> = ({
   // Show permission alert for non-creators
   const showPermissionAlert = (action: string) => {
     Alert.alert(
-      'Permission Denied',
-      `You don't have permission to ${action} this group because you are not the creator. Only the group creator can ${action} the group.`,
-      [{ text: 'OK', style: 'default' }]
+      t('common.error'),
+      `${t('groups.permissionDenied')} ${action}`,
+      [{ text: t('common.ok'), style: 'default' }]
     );
   };
 
@@ -83,7 +85,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
   const swipeActions = [
     ...(onInviteUser ? [{
       id: 'invite',
-      title: 'Invite',
+      title: t('groups.invite'),
       icon: 'person-add-outline',
       color: '#FFFFFF',
       backgroundColor: '#007AFF', // Blue for invite
@@ -93,7 +95,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
     }] : []),
     ...(onEditGroup ? [{
       id: 'edit',
-      title: 'Edit',
+      title: t('common.edit'),
       icon: 'pencil-outline',
       color: '#FFFFFF',
       backgroundColor: '#FF9500', // Orange for edit
@@ -101,13 +103,13 @@ export const GroupItem: React.FC<GroupItemProps> = ({
         if (isCreator) {
           onEditGroup(group);
         } else {
-          showPermissionAlert('edit');
+          showPermissionAlert(t('common.edit'));
         }
       },
     }] : []),
     ...(onDeleteGroup ? [{
       id: 'delete',
-      title: 'Delete',
+      title: t('common.delete'),
       icon: 'trash-outline',
       color: '#FFFFFF',
       backgroundColor: '#FF3B30', // Red for delete
@@ -115,7 +117,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
         if (isCreator) {
           onDeleteGroup(group.id, group.name);
         } else {
-          showPermissionAlert('delete');
+          showPermissionAlert(t('common.delete'));
         }
       },
     }] : []),
@@ -149,7 +151,7 @@ export const GroupItem: React.FC<GroupItemProps> = ({
             {group.name}
           </Text>
           <Text style={[styles.members, { color: colors.mutedForeground }]}>
-            {group.memberCount} members • {group.currency}
+            {t('dashboard.members', { count: group.memberCount })} • {group.currency}
           </Text>
           {group.description && (
             <Text style={[styles.description, { color: colors.mutedForeground }]}>
@@ -175,7 +177,11 @@ export const GroupItem: React.FC<GroupItemProps> = ({
             )}
           </View>
           <Text style={[styles.amountText, { color: colors.foreground }]}>
-            {group.defaultSplitType}
+            {group.defaultSplitType === 'equal' ? t('expenses.splitTypeEqual') :
+             group.defaultSplitType === 'percentage' ? t('expenses.splitTypePercentage') :
+             group.defaultSplitType === 'shares' ? t('expenses.splitTypeShares') :
+             group.defaultSplitType === 'exact' ? t('expenses.splitTypeExact') :
+             group.defaultSplitType}
           </Text>
           {!!(group as any).updatedAt || !!(group as any).createdAt ? (
             <View style={[styles.metaBadge, { backgroundColor: colors.border + '20' }]}>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, Text, TouchableOpacity, TextInput, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { ResponsiveButtonRow } from '../ui/ResponsiveButtonRow';
 import { ModalButtonContainer } from '../ui/ModalButtonContainer';
@@ -20,19 +21,20 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   groupName,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+      Alert.alert(t('common.error'), t('modals.pleaseEnterEmail'));
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('common.error'), t('modals.pleaseEnterValidEmail'));
       return;
     }
 
@@ -45,11 +47,11 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
       // Show success alert with callback to close modal
       Alert.alert(
-        'Success',
-        'Invitation sent successfully!',
+        t('common.success'),
+        t('modals.invitationSentSuccess'),
         [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               onClose();
             },
@@ -57,7 +59,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
         ]
       );
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send invitation');
+      Alert.alert(t('common.error'), error instanceof Error ? error.message : 'Failed to send invitation');
     } finally {
       setIsLoading(false);
     }
@@ -72,14 +74,14 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     <ReusableModal
       visible={visible}
       onClose={handleClose}
-      title="Invite User"
-      subtitle={`Invite someone to join "${groupName}"`}
+      title={t('modals.inviteUser')}
+      subtitle={t('modals.inviteSomeone', { groupName })}
     >
       <View style={styles.container}>
         {/* Email Input */}
         <View style={styles.input}>
           <Text style={[styles.label, { color: colors.foreground }]}>
-            Email Address
+            {t('modals.emailAddress')}
           </Text>
           <View style={[styles.inputContainer, {
             backgroundColor: colors.background,
@@ -95,7 +97,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
               style={[styles.textInput, { color: colors.foreground }]}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter email address"
+              placeholder={t('modals.enterEmailAddress')}
               placeholderTextColor={colors.mutedForeground}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -113,8 +115,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             style={styles.infoIcon}
           />
           <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-            The person will receive an email invitation. If they don't have an account, 
-            they'll be able to create one when they accept the invitation.
+            {t('modals.inviteInfo')}
           </Text>
         </View>
 
@@ -122,12 +123,12 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
         <ModalButtonContainer
           buttons={[
             {
-              title: "Cancel",
+              title: t('common.cancel'),
               onPress: handleClose,
               variant: "destructive",
             },
             {
-              title: "Send",
+              title: t('modals.send'),
               onPress: handleSend,
               variant: "primary",
               loading: isLoading,

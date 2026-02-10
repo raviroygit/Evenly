@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ShareBalanceModal } from './ShareBalanceModal';
 import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
+import { useTranslation } from 'react-i18next';
 
 interface MemberInfoModalProps {
   visible: boolean;
@@ -33,6 +34,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
   groupId,
   simplifiedDebts = [],
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -107,7 +109,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                  Member Information
+                  {t('modals.memberInformation')}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -123,7 +125,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
                 <View style={styles.infoSection}>
                   <View style={styles.infoRow}>
                     <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                      Name
+                      {t('profile.name')}
                     </Text>
                     <Text style={[styles.infoValue, { color: colors.foreground }]}>
                       {member.name}
@@ -132,7 +134,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
 
                   <View style={styles.infoRow}>
                     <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-                      Email
+                      {t('profile.email')}
                     </Text>
                     <Text style={[styles.infoValue, { color: colors.foreground }]}>
                       {member.email}
@@ -150,7 +152,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
                   activeOpacity={0.7}
                 >
                   <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.shareButtonText}>Share Balance</Text>
+                  <Text style={styles.shareButtonText}>{t('modals.shareBalance')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

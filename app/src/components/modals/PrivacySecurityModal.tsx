@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,13 +12,14 @@ interface PrivacySecurityModalProps {
 
 export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(err => {
       Alert.alert(
-        'Error',
-        'Unable to open link. Please try again later.',
-        [{ text: 'OK' }]
+        t('common.error'),
+        t('modals.unableToOpenLink'),
+        [{ text: t('common.ok') }]
       );
     });
   };
@@ -32,19 +34,19 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
   const handleDataExport = () => {
     Alert.alert(
-      'Data Export',
-      'Your data export request has been submitted. You will receive an email with your data within 24 hours.',
-      [{ text: 'OK' }]
+      t('modals.dataExportTitle'),
+      t('modals.dataExportMessage'),
+      [{ text: t('common.ok') }]
     );
   };
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
+      t('modals.deleteAccountTitle'),
+      t('modals.deleteAccountConfirmation'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: () => {
           // Handle account deletion
         }}
       ]
@@ -55,7 +57,7 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="Privacy & Security"
+      title={t('modals.privacySecurity')}
       showCloseButton={true}
     >
       <View style={styles.content}>
@@ -65,25 +67,25 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
             <Ionicons name="shield-checkmark" size={32} color="#FFFFFF" />
           </View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Your Privacy Matters
+            {t('modals.yourPrivacyMatters')}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-            We're committed to protecting your personal information and ensuring your data is secure.
+            {t('modals.privacyCommitment')}
           </Text>
         </View>
 
         {/* Data Protection Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Data Protection</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.dataProtection')}</Text>
           <View style={styles.protectionList}>
             <View style={styles.protectionItem}>
               <Ionicons name="lock-closed" size={20} color={colors.primary} />
               <View style={styles.protectionText}>
                 <Text style={[styles.protectionTitle, { color: colors.foreground }]}>
-                  End-to-End Encryption
+                  {t('modals.endToEndEncryption')}
                 </Text>
                 <Text style={[styles.protectionDescription, { color: colors.mutedForeground }]}>
-                  All your financial data is encrypted using industry-standard AES-256 encryption
+                  {t('modals.encryptionDescription')}
                 </Text>
               </View>
             </View>
@@ -91,10 +93,10 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
               <Ionicons name="server" size={20} color={colors.primary} />
               <View style={styles.protectionText}>
                 <Text style={[styles.protectionTitle, { color: colors.foreground }]}>
-                  Secure Servers
+                  {t('modals.secureServers')}
                 </Text>
                 <Text style={[styles.protectionDescription, { color: colors.mutedForeground }]}>
-                  Your data is stored on secure, SOC 2 compliant servers with regular security audits
+                  {t('modals.secureServersDescription')}
                 </Text>
               </View>
             </View>
@@ -102,10 +104,10 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
               <Ionicons name="eye-off" size={20} color={colors.primary} />
               <View style={styles.protectionText}>
                 <Text style={[styles.protectionTitle, { color: colors.foreground }]}>
-                  No Data Selling
+                  {t('modals.noDataSelling')}
                 </Text>
                 <Text style={[styles.protectionDescription, { color: colors.mutedForeground }]}>
-                  We never sell, rent, or share your personal information with third parties
+                  {t('modals.noDataSellingDescription')}
                 </Text>
               </View>
             </View>
@@ -114,25 +116,25 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
         {/* Privacy Controls Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Privacy Controls</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.privacyControls')}</Text>
           <View style={styles.controlsList}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.controlItem, { borderBottomColor: colors.border }]}
               onPress={handleDataExport}
             >
               <Ionicons name="download" size={20} color={colors.primary} />
               <View style={styles.controlText}>
                 <Text style={[styles.controlTitle, { color: colors.foreground }]}>
-                  Export Your Data
+                  {t('modals.exportYourData')}
                 </Text>
                 <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
-                  Download a copy of all your data
+                  {t('modals.exportDataDescription')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.controlItem, { borderBottomColor: colors.border }]}
               onPress={() => {
                 // Handle notifications
@@ -141,16 +143,16 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
               <Ionicons name="notifications" size={20} color={colors.primary} />
               <View style={styles.controlText}>
                 <Text style={[styles.controlTitle, { color: colors.foreground }]}>
-                  Notification Preferences
+                  {t('modals.notificationPreferences')}
                 </Text>
                 <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
-                  Control what notifications you receive
+                  {t('modals.notificationPreferencesDescription')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.controlItem, { borderBottomColor: colors.border }]}
               onPress={() => {
                 // Handle visibility
@@ -159,10 +161,10 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
               <Ionicons name="eye" size={20} color={colors.primary} />
               <View style={styles.controlText}>
                 <Text style={[styles.controlTitle, { color: colors.foreground }]}>
-                  Profile Visibility
+                  {t('modals.profileVisibility')}
                 </Text>
                 <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
-                  Control who can see your profile information
+                  {t('modals.profileVisibilityDescription')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -172,30 +174,30 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
         {/* Security Features Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Security Features</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.securityFeatures')}</Text>
           <View style={styles.securityList}>
             <View style={styles.securityItem}>
               <Ionicons name="finger-print" size={20} color={colors.primary} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
-                Biometric authentication support
+                {t('modals.biometricAuth')}
               </Text>
             </View>
             <View style={styles.securityItem}>
               <Ionicons name="key" size={20} color={colors.primary} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
-                Two-factor authentication (2FA)
+                {t('modals.twoFactorAuth')}
               </Text>
             </View>
             <View style={styles.securityItem}>
               <Ionicons name="shield" size={20} color={colors.primary} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
-                Regular security updates and patches
+                {t('modals.securityUpdates')}
               </Text>
             </View>
             <View style={styles.securityItem}>
               <Ionicons name="analytics" size={20} color={colors.primary} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
-                Continuous security monitoring
+                {t('modals.securityMonitoring')}
               </Text>
             </View>
           </View>
@@ -203,25 +205,25 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
         {/* Legal Documents Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Legal Documents</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.legalDocuments')}</Text>
           <View style={styles.legalList}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.legalItem, { borderBottomColor: colors.border }]}
               onPress={handlePrivacyPolicy}
             >
               <Ionicons name="document-text" size={20} color={colors.primary} />
               <Text style={[styles.legalText, { color: colors.primary }]}>
-                Privacy Policy
+                {t('modals.privacyPolicy')}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.legalItem, { borderBottomColor: colors.border }]}
               onPress={handleTermsOfService}
             >
               <Ionicons name="document-text" size={20} color={colors.primary} />
               <Text style={[styles.legalText, { color: colors.primary }]}>
-                Terms of Service
+                {t('modals.termsOfService')}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -230,18 +232,18 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
 
         {/* Account Actions Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Account Actions</Text>
-          <TouchableOpacity 
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.accountActions')}</Text>
+          <TouchableOpacity
             style={[styles.dangerItem, { borderBottomColor: colors.border }]}
             onPress={handleDeleteAccount}
           >
             <Ionicons name="trash" size={20} color="#ef4444" />
             <View style={styles.controlText}>
               <Text style={[styles.dangerTitle, { color: '#ef4444' }]}>
-                Delete Account
+                {t('modals.deleteAccount')}
               </Text>
               <Text style={[styles.controlDescription, { color: colors.mutedForeground }]}>
-                Permanently delete your account and all data
+                {t('modals.deleteAccountDescription')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
@@ -251,10 +253,10 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            Last updated: December 2024
+            {t('modals.lastUpdated')}
           </Text>
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            Questions? Contact us at privacy@evenly.app
+            {t('modals.privacyContact')}
           </Text>
         </View>
       </View>

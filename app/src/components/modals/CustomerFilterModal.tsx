@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 export type FilterType = 'all' | 'get' | 'give' | 'settled';
 export type SortType = 'most-recent' | 'oldest' | 'highest-amount' | 'least-amount' | 'name-az';
@@ -28,6 +29,7 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
   currentFilter,
   currentSort,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>(currentFilter);
   const [selectedSort, setSelectedSort] = useState<SortType>(currentSort);
@@ -38,18 +40,18 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
   };
 
   const filterOptions: { label: string; value: FilterType }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'You will get', value: 'give' },
-    { label: 'You will give', value: 'get' },
-    { label: 'Settled', value: 'settled' },
+    { label: t('common.all'), value: 'all' },
+    { label: t('khata.youWillGet'), value: 'give' },
+    { label: t('khata.youWillGive'), value: 'get' },
+    { label: t('khata.settled'), value: 'settled' },
   ];
 
   const sortOptions: { label: string; value: SortType }[] = [
-    { label: 'Most Recent', value: 'most-recent' },
-    { label: 'Oldest', value: 'oldest' },
-    { label: 'Highest Amount', value: 'highest-amount' },
-    { label: 'Least Amount', value: 'least-amount' },
-    { label: 'By Name (A-Z)', value: 'name-az' },
+    { label: t('modals.mostRecent'), value: 'most-recent' },
+    { label: t('modals.oldest'), value: 'oldest' },
+    { label: t('modals.highestAmount'), value: 'highest-amount' },
+    { label: t('modals.leastAmount'), value: 'least-amount' },
+    { label: t('modals.byNameAZ'), value: 'name-az' },
   ];
 
   return (
@@ -86,7 +88,7 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
               {/* Header */}
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
-                  Filter & Sort
+                  {t('modals.filterAndSort')}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -100,7 +102,7 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
               {/* Filter BY TYPE Section */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                  FILTER BY TYPE
+                  {t('modals.filterByType')}
                 </Text>
                 <View style={styles.filterButtonsContainer}>
                   {filterOptions.map((option) => (
@@ -140,7 +142,7 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
               {/* SORT BY Section */}
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                  SORT BY
+                  {t('modals.sortBy')}
                 </Text>
                 <View style={styles.sortOptionsContainer}>
                   {sortOptions.map((option) => (
@@ -182,7 +184,7 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
                 style={[styles.applyButton, { backgroundColor: colors.primary }]}
                 onPress={handleApply}
               >
-                <Text style={styles.applyButtonText}>View Result</Text>
+                <Text style={styles.applyButtonText}>{t('modals.viewResult')}</Text>
               </TouchableOpacity>
             </View>
           </View>

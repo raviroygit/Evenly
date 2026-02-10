@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -53,6 +54,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   editTransaction = null,
   onUpdateTransaction,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -527,8 +529,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <View style={styles.header}>
                 <Text style={[styles.title, { color: colors.foreground }]}>
                   {editTransaction
-                    ? 'Edit Transaction'
-                    : (transactionType === 'give' ? 'You Gave' : 'You Got')}
+                    ? t('common.edit') + ' ' + t('khata.transactions').slice(0, -1)
+                    : (transactionType === 'give' ? t('khata.youGave') : t('khata.youGot'))}
                 </Text>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -577,7 +579,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                             },
                           ]}
                         >
-                          You Gave
+                          {t('khata.youGave')}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -602,7 +604,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                             },
                           ]}
                         >
-                          You Got
+                          {t('khata.youGot')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -612,7 +614,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 {/* Amount Field */}
                 <View style={styles.inputContainer}>
                   <Text style={[styles.label, { color: colors.foreground }]}>
-                    Amount (₹) <Text style={styles.required}>*</Text>
+                    {t('expenses.amount')} (₹) <Text style={styles.required}>*</Text>
                   </Text>
                   <TextInput
                     style={[
@@ -624,7 +626,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         borderWidth: errors.amount ? 1 : 0,
                       },
                     ]}
-                    placeholder="Enter amount"
+                    placeholder={t('expenses.enterAmount')}
                     placeholderTextColor={colors.mutedForeground}
                     value={amount}
                     onChangeText={(text) => {
@@ -646,7 +648,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 {/* Description Field */}
                 <View style={styles.inputContainer}>
                   <Text style={[styles.label, { color: colors.foreground }]}>
-                    Description
+                    {t('groups.description')}
                   </Text>
                   <TextInput
                     style={[
@@ -657,7 +659,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         color: colors.foreground,
                       },
                     ]}
-                    placeholder="Enter description (optional)"
+                    placeholder={t('groups.description') + ' (' + t('expenses.optional') + ')'}
                     placeholderTextColor={colors.mutedForeground}
                     value={description}
                     onChangeText={setDescription}
@@ -672,10 +674,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <View style={styles.inputContainer}>
                   <View style={styles.labelWithHint}>
                     <Text style={[styles.label, { color: colors.foreground }]}>
-                      Image (Optional)
+                      {t('expenses.receiptImage')} ({t('expenses.optional')})
                     </Text>
                     <Text style={styles.maxSizeHint}>
-                      Max image size: {MAX_FILE_SIZE_MB}MB
+                      {t('expenses.maxImageSize', { size: MAX_FILE_SIZE_MB })}
                     </Text>
                   </View>
                   {imageUri ? (
@@ -703,7 +705,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     >
                       <Ionicons name="camera-outline" size={24} color={colors.foreground} />
                       <Text style={[styles.imagePickerText, { color: colors.foreground }]}>
-                        Select Image
+                        {t('expenses.selectImage')}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -712,7 +714,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       <View style={styles.uploadProgressHeader}>
                         <ActivityIndicator size="small" color={colors.primary} />
                         <Text style={[styles.uploadProgressText, { color: colors.foreground }]}>
-                          Uploading image... {uploadProgress}%
+                          {t('expenses.uploadingImage')}... {uploadProgress}%
                         </Text>
                       </View>
                       <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
@@ -747,7 +749,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
                     <Text style={styles.submitButtonText}>
-                      {editTransaction ? 'Update Transaction' : 'Add Transaction'}
+                      {editTransaction ? t('common.update') + ' ' + t('khata.transactions').slice(0, -1) : t('khata.addTransaction')}
                     </Text>
                   )}
                 </TouchableOpacity>

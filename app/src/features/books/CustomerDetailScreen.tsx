@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../components/ui/ResponsiveLiquidGlassCard';
@@ -41,6 +42,7 @@ interface Transaction {
 }
 
 export const CustomerDetailScreen: React.FC = () => {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerInitials?: string }>();
   const { colors, theme } = useTheme();
@@ -274,7 +276,7 @@ export const CustomerDetailScreen: React.FC = () => {
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err instanceof Error ? err.message : 'Failed to update transaction. Please try again.');
-      Alert.alert('Error', message);
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -324,12 +326,12 @@ export const CustomerDetailScreen: React.FC = () => {
 
       setLoading(false);
       // Modal will close automatically, show success alert
-      Alert.alert('Success', 'Transaction deleted successfully');
+      Alert.alert(t('common.success'), t('khata.transactionAdded').replace('added', 'deleted'));
     } catch (err: unknown) {
       setLoading(false);
       const message = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err instanceof Error ? err.message : 'Failed to delete transaction. Please try again.');
-      Alert.alert('Error', message);
+      Alert.alert(t('common.error'), message);
       throw err;
     }
   };
@@ -392,7 +394,7 @@ export const CustomerDetailScreen: React.FC = () => {
             </TouchableOpacity>
             <View style={styles.headerInfo}>
               <Text style={[styles.headerName, { color: colors.foreground }]}>{customerName}</Text>
-              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>View details</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>{t('khata.customerDetails')}</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -427,7 +429,7 @@ export const CustomerDetailScreen: React.FC = () => {
               <Text style={[styles.summaryLabel, {
                 color: customer?.type === 'give' ? '#10B981' : customer?.type === 'get' ? '#FF3B30' : colors.foreground
               }]}>
-                {customer?.type === 'get' ? 'You will give' : customer?.type === 'give' ? 'You will get' : 'Settled'}
+                {customer?.type === 'get' ? t('khata.youWillGive') : customer?.type === 'give' ? t('khata.youWillGet') : t('khata.settled')}
               </Text>
               <Text style={[styles.summaryAmount, {
                 color: customer?.type === 'give' ? '#10B981' : customer?.type === 'get' ? '#FF3B30' : colors.foreground
@@ -445,7 +447,7 @@ export const CustomerDetailScreen: React.FC = () => {
           ) : transactions.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                No transactions found
+                {t('khata.noTransactions')}
               </Text>
             </View>
           ) : (
@@ -456,7 +458,7 @@ export const CustomerDetailScreen: React.FC = () => {
               actions={[
                 {
                   id: 'edit',
-                  title: 'Edit',
+                  title: t('common.edit'),
                   icon: 'pencil-outline',
                   color: '#FFFFFF',
                   backgroundColor: '#FF9500',
@@ -466,7 +468,7 @@ export const CustomerDetailScreen: React.FC = () => {
                 },
                 {
                   id: 'delete',
-                  title: 'Delete',
+                  title: t('common.delete'),
                   icon: 'trash-outline',
                   color: '#FFFFFF',
                   backgroundColor: '#FF3B30',
@@ -556,14 +558,14 @@ export const CustomerDetailScreen: React.FC = () => {
           actions={[
             {
               id: 'you-gave',
-              title: 'You Gave ₹',
+              title: t('khata.youGave'),
               icon: '💰',
               onPress: handleYouGave,
               color: '#D9433D',
             },
             {
               id: 'you-got',
-              title: 'You Got ₹',
+              title: t('khata.youGot'),
               icon: '💵',
               onPress: handleYouGot,
               color: '#519F51',
@@ -596,7 +598,7 @@ export const CustomerDetailScreen: React.FC = () => {
             setDeletingTransactionId(null);
           }}
           onConfirm={confirmDeleteTransaction}
-          title="Delete Transaction"
+          title={t('common.delete') + ' ' + t('khata.transactions').slice(0, -1)}
           description="Are you sure you want to delete this transaction? This action cannot be undone."
         />
 

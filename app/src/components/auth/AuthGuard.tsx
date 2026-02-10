@@ -1,6 +1,7 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -9,6 +10,7 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
   const { colors } = useTheme();
 
@@ -18,7 +20,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.text }]}>
-          Checking authentication...
+          {t('common.checkingAuthentication')}
         </Text>
       </View>
     );

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { sessionEvents, SESSION_EVENTS } from '../../utils/sessionEvents';
 
@@ -9,6 +10,7 @@ interface AuthInitializerProps {
 }
 
 export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) => {
+  const { t } = useTranslation();
   const { logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -20,11 +22,11 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
     handlingExpired.current = true;
     pendingUnauthorized.current = false;
     Alert.alert(
-      'Unauthorized Access',
-      'Your session is no longer valid. Please log in again.',
+      t('common.unauthorizedAccess'),
+      t('common.sessionNoLongerValid'),
       [
         {
-          text: 'OK',
+          text: t('common.ok'),
           onPress: async () => {
             try {
               await logout();
@@ -37,7 +39,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
       ],
       { cancelable: false }
     );
-  }, [logout, router]);
+  }, [t, logout, router]);
 
   // When SESSION_EXPIRED fires, mark pending. Show alert only after splash is done (not on '/').
   useEffect(() => {

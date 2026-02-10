@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,19 +21,20 @@ export const PersonalInfoPreviewModal: React.FC<PersonalInfoPreviewModalProps> =
   user,
 }) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title="Personal Information"
+      title={t('modals.personalInformation')}
       showCloseButton={true}
     >
       <View style={styles.content}>
         <View style={styles.row}>
           <Ionicons name="person-outline" size={22} color={colors.primary} style={styles.icon} />
           <View style={styles.labelValue}>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Name</Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('modals.name')}</Text>
             <Text style={[styles.value, { color: colors.foreground }]}>{user?.name || '—'}</Text>
           </View>
         </View>
@@ -40,7 +42,7 @@ export const PersonalInfoPreviewModal: React.FC<PersonalInfoPreviewModalProps> =
         <View style={styles.row}>
           <Ionicons name="mail-outline" size={22} color={colors.primary} style={styles.icon} />
           <View style={styles.labelValue}>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('modals.email')}</Text>
             <Text style={[styles.value, { color: colors.foreground }]}>{user?.email || '—'}</Text>
           </View>
         </View>
@@ -48,7 +50,7 @@ export const PersonalInfoPreviewModal: React.FC<PersonalInfoPreviewModalProps> =
         <View style={styles.row}>
           <Ionicons name="call-outline" size={22} color={colors.primary} style={styles.icon} />
           <View style={styles.labelValue}>
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Phone</Text>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('modals.phone')}</Text>
             <Text style={[styles.value, { color: colors.foreground }]}>{user?.phoneNumber || '—'}</Text>
           </View>
         </View>
