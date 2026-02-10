@@ -394,12 +394,32 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
 
-
-          formData.append('image', {
+          console.log('[AddTransactionModal] Preparing image for upload:', {
             uri: imageUri,
+            filename,
+            type,
+            fileExists: fileInfo.exists,
+            fileSize: fileInfo.size,
+            platform: Platform.OS,
+          });
+
+          // Ensure proper URI format for both platforms
+          // Android needs the full URI including file:// prefix
+          // iOS also works with file:// prefix
+          let normalizedUri = imageUri;
+          if (!imageUri.startsWith('file://') && !imageUri.startsWith('content://')) {
+            normalizedUri = `file://${imageUri}`;
+          }
+
+          const fileObject: any = {
+            uri: normalizedUri,
             name: filename,
             type,
-          } as any);
+          };
+
+          console.log('[AddTransactionModal] FormData file object:', fileObject);
+
+          formData.append('image', fileObject);
         }
 
         // Create transaction with progress callback

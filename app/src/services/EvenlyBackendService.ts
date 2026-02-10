@@ -169,7 +169,7 @@ export class EvenlyBackendService {
 
   private static async makeRequest<T>(
     endpoint: string,
-    options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[]; transformRequest?: any } = {},
+    options: RequestInit & { cacheTTLMs?: number; cacheKey?: string; invalidatePrefixes?: string[]; transformRequest?: any; timeout?: number; onUploadProgress?: (progressEvent: any) => void } = {},
     retryCount: number = 0
   ): Promise<ApiResponse<T>> {
     const methodUpper = (options.method || 'GET').toUpperCase();
@@ -177,14 +177,34 @@ export class EvenlyBackendService {
       // Convert RequestInit to Axios config
       const axiosConfig: any = {
         method: options.method || 'GET',
-        ...options,
       };
+
+      // Handle timeout if provided
+      if (options.timeout) {
+        axiosConfig.timeout = options.timeout;
+        console.log('[EvenlyBackendService] Setting timeout:', options.timeout);
+      }
+
+      // Handle upload progress callback
+      if (options.onUploadProgress) {
+        axiosConfig.onUploadProgress = options.onUploadProgress;
+        console.log('[EvenlyBackendService] Upload progress callback attached');
+      }
 
       // Handle body for POST/PUT requests
       if (options.body) {
-        // If it's FormData, pass it directly to axios
+        // If it's FormData, pass it directly to axios WITHOUT transformRequest
         if (options.body instanceof FormData) {
+          console.log('[EvenlyBackendService] makeRequest with FormData', {
+            endpoint,
+            method: methodUpper,
+            hasTimeout: !!axiosConfig.timeout,
+            hasProgressCallback: !!axiosConfig.onUploadProgress,
+          });
+
           axiosConfig.data = options.body;
+          // Don't include transformRequest for FormData on React Native - it breaks Android uploads
+          // axios will handle multipart/form-data automatically
         } else {
           const parsedData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
           axiosConfig.data = parsedData;
@@ -879,17 +899,18 @@ export class EvenlyBackendService {
   }> {
     const isFormData = data instanceof FormData;
 
+    console.log('[EvenlyBackendService] createKhataTransaction called', {
+      isFormData,
+      hasProgressCallback: !!onUploadProgress,
+    });
+
     // If FormData, send as multipart/form-data, otherwise send as JSON
     const requestConfig: any = {};
 
     if (isFormData) {
       // For FormData, we need special handling for React Native
-      requestConfig.headers = {
-        'Accept': 'application/json',
-        // Don't set Content-Type - axios will set it automatically with boundary for FormData
-      };
-      // Ensure axios treats this as multipart
-      requestConfig.transformRequest = [(data: any) => data];
+      // Don't set custom headers or transformRequest - let axios handle it automatically
+      // This is crucial for Android compatibility
 
       // Increase timeout for image uploads (2 minutes instead of 30 seconds)
       requestConfig.timeout = 120000;
@@ -899,6 +920,7 @@ export class EvenlyBackendService {
         requestConfig.onUploadProgress = (progressEvent: any) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log('[EvenlyBackendService] Upload progress:', progress + '%');
             onUploadProgress(progress);
           }
         };
@@ -936,6 +958,7 @@ export class EvenlyBackendService {
       }
     );
 
+    console.log('[EvenlyBackendService] createKhataTransaction success');
     return response.data;
   }
 
@@ -971,12 +994,8 @@ export class EvenlyBackendService {
 
     if (isFormData) {
       // For FormData, we need special handling for React Native
-      requestConfig.headers = {
-        'Accept': 'application/json',
-        // Don't set Content-Type - axios will set it automatically with boundary for FormData
-      };
-      // Ensure axios treats this as multipart
-      requestConfig.transformRequest = [(data: any) => data];
+      // Don't set custom headers or transformRequest - let axios handle it automatically
+      // This is crucial for Android compatibility
 
       // Increase timeout for image uploads (2 minutes instead of 30 seconds)
       requestConfig.timeout = 120000;

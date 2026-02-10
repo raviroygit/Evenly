@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { Platform } from 'react-native';
 import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
@@ -26,6 +27,8 @@ class EvenlyApiClient {
         'ngrok-skip-browser-warning': 'true',
         'x-client-type': 'mobile', // Identify as mobile client for never-expiring tokens
       },
+      // Important: Don't use transformRequest/transformResponse for FormData on React Native Android
+      // Let axios handle multipart/form-data automatically
     });
 
     this.setupInterceptors();
@@ -37,14 +40,31 @@ class EvenlyApiClient {
     this.client.interceptors.request.use(
       async (config) => {
         try {
-          // Debug: Log data type
-
-          // For FormData, don't set Content-Type - let axios handle it automatically
+          // For FormData, special handling needed for React Native
           if (config.data instanceof FormData) {
-            // Remove Content-Type header if it exists, axios will set it with boundary
+            console.log('[EvenlyApiClient] Preparing FormData request:', {
+              url: config.url,
+              method: config.method,
+              platform: Platform.OS,
+              hasData: !!config.data,
+              baseURL: config.baseURL,
+              fullURL: `${config.baseURL}${config.url}`,
+            });
+
             if (config.headers) {
-              delete (config.headers as any)['Content-Type'];
+              if (Platform.OS === 'android') {
+                // On Android, axios incorrectly sets Content-Type to application/x-www-form-urlencoded
+                // We MUST explicitly set it to multipart/form-data (axios will add the boundary)
+                config.headers['Content-Type'] = 'multipart/form-data';
+                console.log('[EvenlyApiClient] Android: Set Content-Type to multipart/form-data');
+              } else {
+                // On iOS, remove Content-Type to let axios auto-detect
+                delete (config.headers as any)['Content-Type'];
+                console.log('[EvenlyApiClient] iOS: Removed Content-Type, letting axios auto-detect');
+              }
             }
+
+            console.log('[EvenlyApiClient] FormData headers after setup:', Object.keys(config.headers || {}));
           }
 
           // Get auth data from storage
@@ -88,6 +108,15 @@ class EvenlyApiClient {
 
         // Enhanced error logging for FormData uploads
         if (error.config?.data instanceof FormData || error.code === 'ERR_NETWORK') {
+          console.log('[EvenlyApiClient] Upload Error Details:', {
+            code: error.code,
+            message: error.message,
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: error.config?.headers,
+            hasFormData: error.config?.data instanceof FormData,
+            platform: Platform.OS,
+          });
         }
 
         // Handle 401 Unauthorized
