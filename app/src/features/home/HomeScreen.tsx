@@ -486,7 +486,7 @@ export const HomeScreen: React.FC = () => {
           style={[platformStyles.headerCard, styles.headerCard] as any}
         >
           <SectionHeader
-            title={t('auth.welcomeBack') + ', ' + (user?.name || 'User') + '!'}
+            title={t('auth.welcomeBack') + ', ' + (user?.name || 'User')}
             subtitle={t('dashboard.yourBalance')}
             style={styles.headerContent}
           />
