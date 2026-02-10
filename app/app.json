@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly-split",
-    "version": "1.1.0",
+    "version": "1.8.0",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -44,7 +44,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -89,6 +89,15 @@
           ]
         }
       ]
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fc0aacb4-e183-4e83-ab94-5f8a8cc427f6",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD",
+      "enabled": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "router": {},

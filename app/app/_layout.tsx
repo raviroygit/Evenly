@@ -8,6 +8,7 @@ import { SwipeActionProvider } from '../src/contexts/SwipeActionContext';
 import { AuthInitializer } from '../src/components/auth/AuthInitializer';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
+import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import '../src/i18n/i18n'; // Initialize i18n
 
 // Keep native splash (black) visible until we show the logo animation screen
@@ -18,6 +19,9 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const router = useRouter();
+
+  // Check for app updates on launch
+  useAppUpdates();
 
   useEffect(() => {
     // Handle deep links when app is opened from a link
