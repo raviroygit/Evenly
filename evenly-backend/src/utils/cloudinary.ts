@@ -96,19 +96,31 @@ export const uploadSingleImage = async (
   // Validate image file
   try {
     validateImageFile(fileBuffer, mimetype);
+    console.log(`[Cloudinary] Validation passed - File size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)}MB, MIME: ${mimetype || 'unknown'}`);
   } catch (validationError: any) {
+    console.error('[Cloudinary] Validation failed:', validationError.message);
     throw validationError;
   }
 
+  console.log('[Cloudinary] Starting upload to folder:', folder);
+
 
   return new Promise((resolve, reject) => {
+    // Set a timeout for the upload (60 seconds)
+    const uploadTimeout = setTimeout(() => {
+      reject(new Error('Cloudinary upload timeout: Upload took longer than 60 seconds'));
+    }, 60000);
+
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: `evenly/${folder}`,
         resource_type: 'image',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'],
+        timeout: 60000, // 60 second timeout for Cloudinary API
       },
       (error, result) => {
+        clearTimeout(uploadTimeout); // Clear timeout on completion
+
         if (error) {
           return reject(new Error(`Cloudinary upload failed: ${error.message} (HTTP ${error.http_code || 'N/A'})`));
         }
@@ -117,6 +129,7 @@ export const uploadSingleImage = async (
           return reject(new Error('Cloudinary upload failed: Invalid response from Cloudinary'));
         }
 
+        console.log('[Cloudinary] Image uploaded successfully:', result.secure_url);
 
         resolve({
           url: result.secure_url,
@@ -127,6 +140,7 @@ export const uploadSingleImage = async (
 
     // Handle stream errors
     stream.on('error', (streamError) => {
+      clearTimeout(uploadTimeout);
       reject(new Error(`Cloudinary stream error: ${streamError.message}`));
     });
 
