@@ -11,7 +11,8 @@ import * as Linking from 'expo-linking';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
 import '../src/i18n/i18n'; // Initialize i18n
 
-// Keep native splash (black) visible until we show the logo animation screen
+// Keep native splash visible until video splash is ready to play
+// This prevents showing a loading spinner between native splash and video
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Temporarily disabled - requires native modules (expo prebuild)

@@ -69,7 +69,7 @@ function IndexScreen() {
         <Suspense
           fallback={
             <View style={styles.logoContainer}>
-              <ActivityIndicator size="large" color="#fff" />
+              {/* Black screen - matches video background, no spinner flash */}
             </View>
           }
         >
