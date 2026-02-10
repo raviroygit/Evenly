@@ -231,7 +231,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                   icon="calendar-outline"
                 />
                 <InfoRow
-                  label={t('modals.lastUpdated')}
+                  label={t('modals.lastUpdatedLabel')}
                   value={formatDate(customer.updatedAt)}
                   icon="time-outline"
                 />

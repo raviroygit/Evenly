@@ -253,7 +253,10 @@ export const PrivacySecurityModal: React.FC<PrivacySecurityModalProps> = ({ visi
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            {t('modals.lastUpdated')}
+            {t('modals.lastUpdated', {
+              month: new Date().toLocaleDateString('en-US', { month: 'long' }),
+              year: new Date().getFullYear()
+            })}
           </Text>
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
             {t('modals.privacyContact')}

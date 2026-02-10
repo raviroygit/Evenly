@@ -93,7 +93,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
             <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.build')}</Text>
-            <Text style={[styles.versionValue, { color: colors.foreground }]}>2024.1</Text>
+            <Text style={[styles.versionValue, { color: colors.foreground }]}>{new Date().getFullYear()}.1</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
             <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.platform')}</Text>
@@ -155,7 +155,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {t('modals.madeWithLove')}
           </Text>
           <Text style={[styles.copyrightText, { color: colors.mutedForeground }]}>
-            {t('modals.allRightsReserved')}
+            {t('modals.allRightsReserved', { year: new Date().getFullYear() })}
           </Text>
         </View>
       </View>
