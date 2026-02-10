@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useTranslation } from 'react-i18next';
 import { ReusableModal } from '../ui/ReusableModal';
@@ -130,6 +131,66 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     }
   };
 
+  // Compress and resize image to reduce file size and prevent timeouts
+  const compressImage = async (uri: string): Promise<string> => {
+    try {
+      console.log('[Image Compression] Starting compression for:', uri);
+
+      // Get file info to determine compression strategy
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      const fileSizeMB = fileInfo.size ? fileInfo.size / (1024 * 1024) : 0;
+
+      console.log('[Image Compression] Original file size:', fileSizeMB.toFixed(2), 'MB');
+
+      // Determine compression settings based on file size
+      let maxWidth = 1920; // Default max width
+      let compressionQuality = 0.7; // Default quality
+
+      if (fileSizeMB > 10) {
+        // Very large files: aggressive compression
+        maxWidth = 1920;
+        compressionQuality = 0.6;
+      } else if (fileSizeMB > 5) {
+        // Large files: moderate compression
+        maxWidth = 1920;
+        compressionQuality = 0.7;
+      } else if (fileSizeMB > 2) {
+        // Medium files: light compression
+        maxWidth = 1920;
+        compressionQuality = 0.75;
+      } else {
+        // Small files: minimal compression
+        maxWidth = 2048;
+        compressionQuality = 0.8;
+      }
+
+      console.log('[Image Compression] Settings:', { maxWidth, compressionQuality });
+
+      // Compress and resize image
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: maxWidth } }], // Resize to max width, maintains aspect ratio
+        {
+          compress: compressionQuality,
+          format: ImageManipulator.SaveFormat.JPEG, // Always save as JPEG for best compression
+        }
+      );
+
+      // Get compressed file size
+      const compressedInfo = await FileSystem.getInfoAsync(manipulatedImage.uri);
+      const compressedSizeMB = compressedInfo.size ? compressedInfo.size / (1024 * 1024) : 0;
+
+      console.log('[Image Compression] Compressed file size:', compressedSizeMB.toFixed(2), 'MB');
+      console.log('[Image Compression] Size reduction:', ((fileSizeMB - compressedSizeMB) / fileSizeMB * 100).toFixed(1), '%');
+
+      return manipulatedImage.uri;
+    } catch (error) {
+      console.error('[Image Compression] Error compressing image:', error);
+      // Fallback to original image if compression fails
+      return uri;
+    }
+  };
+
   const requestImagePermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -168,13 +229,26 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 0.7,
+        quality: 1, // High quality initially (we'll compress with ImageManipulator)
         exif: false,
       });
 
       if (!result.canceled && result.assets[0]) {
         const selectedUri = result.assets[0].uri;
-        const { valid, sizeMB } = await validateImageSize(selectedUri);
+        const width = result.assets[0].width;
+        const height = result.assets[0].height;
+
+        console.log('[Image Selection] Original dimensions:', width, 'x', height);
+
+        // Compress and resize image using ImageManipulator
+        const compressedUri = await compressImage(selectedUri);
+
+        // Check file size after compression
+        const { valid, sizeMB } = await validateImageSize(compressedUri);
+
+        if (sizeMB > 0) {
+          console.log('[Image Selection] Final file size:', sizeMB.toFixed(2), 'MB');
+        }
 
         if (!valid) {
           Alert.alert(
@@ -188,9 +262,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           return;
         }
 
-        setImageUri(selectedUri);
+        setImageUri(compressedUri);
+        console.log('[Image Selection] Image successfully compressed and set');
       }
     } catch (error) {
+      console.error('[Image Selection] Error picking image:', error);
       Alert.alert(t('common.error'), 'Failed to pick image. Please try again.');
     }
   };
@@ -202,13 +278,26 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
-        quality: 0.7,
+        quality: 1, // High quality initially (we'll compress with ImageManipulator)
         exif: false,
       });
 
       if (!result.canceled && result.assets[0]) {
         const photoUri = result.assets[0].uri;
-        const { valid, sizeMB } = await validateImageSize(photoUri);
+        const width = result.assets[0].width;
+        const height = result.assets[0].height;
+
+        console.log('[Photo Capture] Original dimensions:', width, 'x', height);
+
+        // Compress and resize image using ImageManipulator
+        const compressedUri = await compressImage(photoUri);
+
+        // Check file size after compression
+        const { valid, sizeMB } = await validateImageSize(compressedUri);
+
+        if (sizeMB > 0) {
+          console.log('[Photo Capture] Final file size:', sizeMB.toFixed(2), 'MB');
+        }
 
         if (!valid) {
           Alert.alert(
@@ -222,9 +311,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           return;
         }
 
-        setImageUri(photoUri);
+        setImageUri(compressedUri);
+        console.log('[Photo Capture] Photo successfully compressed and set');
       }
     } catch (error) {
+      console.error('[Photo Capture] Error taking photo:', error);
       Alert.alert(t('common.error'), 'Failed to take photo. Please try again.');
     }
   };
