@@ -555,4 +555,90 @@ export class AuthController {
       });
     }
   }
+
+  /**
+   * Update user's preferred language
+   */
+  static async updateUserLanguage(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const updateLanguageSchema = z.object({
+        language: z.enum(['en', 'hi'], { errorMap: () => ({ message: 'Language must be "en" or "hi"' }) }),
+      });
+
+      const { language } = updateLanguageSchema.parse(request.body);
+      const userId = (request as any).user?.id;
+
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      await UserService.updateUserLanguage(userId, language);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Language preference updated successfully',
+        data: { language },
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to update language preference',
+      });
+    }
+  }
+
+  /**
+   * Update user's preferred currency
+   */
+  static async updateUserCurrency(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const updateCurrencySchema = z.object({
+        currency: z.enum(['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CNY', 'AED', 'SAR'], {
+          errorMap: () => ({ message: 'Invalid currency code' }),
+        }),
+      });
+
+      const { currency } = updateCurrencySchema.parse(request.body);
+      const userId = (request as any).user?.id;
+
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          message: 'Unauthorized',
+        });
+      }
+
+      await UserService.updateUserCurrency(userId, currency);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Currency preference updated successfully',
+        data: { currency },
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to update currency preference',
+      });
+    }
+  }
 }

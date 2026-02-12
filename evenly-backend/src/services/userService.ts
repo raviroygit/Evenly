@@ -248,4 +248,54 @@ export class UserService {
       throw new DatabaseError('Failed to fetch user statistics');
     }
   }
+
+  /**
+   * Update user's preferred language
+   */
+  static async updateUserLanguage(userId: string, language: string): Promise<void> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          preferredLanguage: language,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new NotFoundError('User not found');
+      }
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError('Failed to update user language preference');
+    }
+  }
+
+  /**
+   * Update user's preferred currency
+   */
+  static async updateUserCurrency(userId: string, currency: string): Promise<void> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          preferredCurrency: currency,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new NotFoundError('User not found');
+      }
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError('Failed to update user currency preference');
+    }
+  }
 }

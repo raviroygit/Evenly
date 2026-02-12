@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -17,6 +18,7 @@ import { ShareBalanceModal } from './ShareBalanceModal';
 import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
 import { GroupMember } from '../../types';
 import { useTranslation } from 'react-i18next';
+import { shareBalance } from '../../utils/shareHelper';
 
 interface MemberSelectionModalProps {
   visible: boolean;
@@ -90,7 +92,46 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
 
   const handleMemberSelect = (member: GroupMember) => {
     setSelectedMember(member);
-    setShowShareModal(true);
+
+    // If phone exists, show alert to directly share via SMS or WhatsApp
+    if (member.phone) {
+      Alert.alert(
+        t('modals.shareBalance'),
+        t('modals.shareBalanceWith', { name: member.name }),
+        [
+          {
+            text: t('modals.sendViaSMS'),
+            onPress: () => handleDirectShare(member, 'sms'),
+          },
+          {
+            text: t('modals.sendViaWhatsApp'),
+            onPress: () => handleDirectShare(member, 'whatsapp'),
+          },
+          {
+            text: t('common.cancel'),
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      // If no phone, show the modal for manual sharing
+      setShowShareModal(true);
+    }
+  };
+
+  const handleDirectShare = async (member: GroupMember, method: 'sms' | 'whatsapp') => {
+    const { debts, credits } = getMemberBalance(member);
+
+    const message = generateGroupBalanceMessage(
+      member.name,
+      groupName,
+      debts,
+      credits,
+      groupId || undefined,
+      t
+    );
+
+    await shareBalance(method, message, member.phone);
   };
 
   const handleShareModalClose = () => {
@@ -279,7 +320,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
               groupName,
               debts,
               credits,
-              groupId || undefined
+              groupId || undefined,
+              t
             )}
             phoneNumber={selectedMember.phone}
             recipientName={selectedMember.name}

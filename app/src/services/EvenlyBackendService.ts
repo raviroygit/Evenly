@@ -1142,4 +1142,24 @@ export class EvenlyBackendService {
     const limit = options?.limit ?? 10;
     return allTransactions.slice(0, limit);
   }
+
+  /**
+   * Update user's preferred language
+   */
+  static async updateUserLanguage(language: string): Promise<void> {
+    const response = await evenlyApiClient.put<ApiResponse<{ success: boolean }>>('/auth/user/language', {
+      language,
+    });
+    return response.data.data;
+  }
+
+  /**
+   * Update user's preferred currency
+   */
+  static async updateUserCurrency(currency: string): Promise<void> {
+    const response = await evenlyApiClient.put<ApiResponse<{ success: boolean }>>('/auth/user/currency', {
+      currency,
+    });
+    return response.data.data;
+  }
 }

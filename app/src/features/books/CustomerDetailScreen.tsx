@@ -29,6 +29,7 @@ import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { generateKhataBalanceMessage } from '../../utils/messageTemplates';
+import { shareBalance } from '../../utils/shareHelper';
 
 interface Transaction {
   id: string;
@@ -358,6 +359,50 @@ export const CustomerDetailScreen: React.FC = () => {
     }, 300);
   };
 
+  const handleSharePress = () => {
+    if (!customer) return;
+
+    // If phone exists, show options to directly share via SMS or WhatsApp
+    if (customer.phone) {
+      Alert.alert(
+        t('modals.shareBalance'),
+        t('modals.shareBalanceWith', { name: customer.name }),
+        [
+          {
+            text: t('modals.sendViaSMS'),
+            onPress: () => handleDirectShare('sms'),
+          },
+          {
+            text: t('modals.sendViaWhatsApp'),
+            onPress: () => handleDirectShare('whatsapp'),
+          },
+          {
+            text: t('common.cancel'),
+            style: 'cancel',
+          },
+        ]
+      );
+    } else {
+      // If no phone, show the modal for manual sharing
+      setShowShareModal(true);
+    }
+  };
+
+  const handleDirectShare = async (method: 'sms' | 'whatsapp') => {
+    if (!customer) return;
+
+    const message = generateKhataBalanceMessage(
+      {
+        name: customer.name,
+        amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
+        type: customer.type,
+      },
+      t
+    );
+
+    await shareBalance(method, message, customer.phone);
+  };
+
   const onRefresh = useCallback(async () => {
     await loadData(true);
   }, [loadData]);
@@ -634,11 +679,14 @@ export const CustomerDetailScreen: React.FC = () => {
           <ShareBalanceModal
             visible={showShareModal}
             onClose={() => setShowShareModal(false)}
-            message={generateKhataBalanceMessage({
-              name: customer.name,
-              amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
-              type: customer.type,
-            })}
+            message={generateKhataBalanceMessage(
+              {
+                name: customer.name,
+                amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
+                type: customer.type,
+              },
+              t
+            )}
             phoneNumber={customer.phone}
             recipientName={customer.name}
           />

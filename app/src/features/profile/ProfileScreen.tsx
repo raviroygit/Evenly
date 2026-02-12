@@ -23,7 +23,10 @@ import { GroupInfoModal } from '../../components/modals/GroupInfoModal';
 import { CustomersListModal } from '../../components/modals/CustomersListModal';
 import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
 import { LanguageSelectionModal } from '../../components/modals/LanguageSelectionModal';
+import { CurrencySelectionModal } from '../../components/modals/CurrencySelectionModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
+import { getCurrencyName, DEFAULT_CURRENCY } from '../../utils/currency';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, currentOrganization, authState, refreshUser } = useAuth();
@@ -41,7 +44,9 @@ export const ProfileScreen: React.FC = () => {
   const [showGroupsListModal, setShowGroupsListModal] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [currentCurrency, setCurrentCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
   const [khataSummary, setKhataSummary] = useState<{ totalGive: string; totalGet: string } | null>(null);
   const [customers, setCustomers] = useState<Array<{ id: string; name: string; email?: string; phone?: string; balance: string; type: 'give' | 'get' | 'settled'; createdAt?: string; updatedAt?: string }>>([]);
@@ -82,6 +87,18 @@ export const ProfileScreen: React.FC = () => {
 
   useEffect(() => {
     fetchKhataSummary();
+    // Load current currency from AsyncStorage
+    const loadCurrency = async () => {
+      try {
+        const savedCurrency = await AsyncStorage.getItem('userCurrency');
+        if (savedCurrency) {
+          setCurrentCurrency(savedCurrency);
+        }
+      } catch (error) {
+        console.error('Failed to load currency:', error);
+      }
+    };
+    loadCurrency();
   }, []);
 
   const onRefresh = async () => {
@@ -141,6 +158,15 @@ export const ProfileScreen: React.FC = () => {
     const lang = i18n.language || 'en';
     return lang === 'hi' ? 'हिंदी' : 'English';
   }, [i18n.language]);
+
+  // Get current currency display
+  const currentCurrencyDisplay = useMemo(() => {
+    return getCurrencyName(currentCurrency);
+  }, [currentCurrency]);
+
+  const handleCurrencyChange = (currency: string) => {
+    setCurrentCurrency(currency);
+  };
 
 
   const handleLogout = async () => {
@@ -413,6 +439,11 @@ export const ProfileScreen: React.FC = () => {
             onPress: () => setShowLanguageModal(true),
           },
           {
+            title: t('profile.currency'),
+            subtitle: currentCurrencyDisplay,
+            onPress: () => setShowCurrencyModal(true),
+          },
+          {
             title: t('profile.privacy'),
             subtitle: t('profile.privacy'),
             onPress: () => setShowPrivacySecurityModal(true),
@@ -526,6 +557,14 @@ export const ProfileScreen: React.FC = () => {
       <LanguageSelectionModal
         visible={showLanguageModal}
         onClose={() => setShowLanguageModal(false)}
+      />
+
+      {/* Currency Selection Modal */}
+      <CurrencySelectionModal
+        visible={showCurrencyModal}
+        onClose={() => setShowCurrencyModal(false)}
+        currentCurrency={currentCurrency}
+        onCurrencyChange={handleCurrencyChange}
       />
     </>
   );

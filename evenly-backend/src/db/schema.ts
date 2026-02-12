@@ -13,6 +13,8 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   avatar: text('avatar'),
   phoneNumber: text('phone_number'), // Phone number from auth service
+  preferredLanguage: text('preferred_language').default('en'), // User's preferred language for emails and notifications
+  preferredCurrency: text('preferred_currency').default('INR'), // User's preferred currency (INR, USD, EUR, etc.)
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

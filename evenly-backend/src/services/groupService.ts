@@ -82,6 +82,7 @@ export class GroupService {
             email: users.email,
             name: users.name,
             avatar: users.avatar,
+            phoneNumber: users.phoneNumber,
           },
         })
         .from(groupMembers)
@@ -516,6 +517,7 @@ export class GroupService {
             email: users.email,
             name: users.name,
             avatar: users.avatar,
+            phoneNumber: users.phoneNumber,
           },
         })
         .from(groupMembers)

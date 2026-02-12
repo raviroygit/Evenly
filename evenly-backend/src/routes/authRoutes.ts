@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { AuthController } from '../controllers/authController';
+import { authenticateToken } from '../middlewares/auth';
 
 export async function authRoutes(fastify: FastifyInstance) {
   // Signup - Send magic link
@@ -275,6 +276,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // Get Current User
   fastify.get('/me', {
+    preHandler: authenticateToken,
     schema: {
       description: 'Get current authenticated user info',
       tags: ['Authentication'],
@@ -332,6 +334,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // Update Current User
   fastify.put('/me', {
+    preHandler: authenticateToken,
     schema: {
       description: 'Update current authenticated user info',
       tags: ['Authentication'],
@@ -348,11 +351,126 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // Delete Current User
   fastify.delete('/me', {
+    preHandler: authenticateToken,
     schema: {
       description: 'Delete current authenticated user',
       tags: ['Authentication'],
     },
   }, AuthController.deleteCurrentUser);
+
+  // Update User Language Preference
+  fastify.put('/user/language', {
+    preHandler: authenticateToken,
+    schema: {
+      description: 'Update user preferred language for emails and notifications',
+      tags: ['User'],
+      body: {
+        type: 'object',
+        required: ['language'],
+        properties: {
+          language: {
+            type: 'string',
+            enum: ['en', 'hi'],
+            description: 'Language code (en for English, hi for Hindi)',
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                language: { type: 'string' },
+              },
+            },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            errors: { type: 'array' },
+          },
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+        500: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, AuthController.updateUserLanguage);
+
+  // Update User Currency Preference
+  fastify.put('/user/currency', {
+    preHandler: authenticateToken,
+    schema: {
+      description: 'Update user preferred currency for displaying amounts',
+      tags: ['User'],
+      body: {
+        type: 'object',
+        required: ['currency'],
+        properties: {
+          currency: {
+            type: 'string',
+            enum: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'JPY', 'CNY', 'AED', 'SAR'],
+            description: 'Currency code (INR, USD, EUR, etc.)',
+          },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              properties: {
+                currency: { type: 'string' },
+              },
+            },
+          },
+        },
+        400: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            errors: { type: 'array' },
+          },
+        },
+        401: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+        500: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, AuthController.updateUserCurrency);
 
   // Social Login - Google
   fastify.post('/social/google', {
@@ -450,6 +568,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // Mobile-specific: Check session expiry
   fastify.get('/mobile/session-expiry', {
+    preHandler: authenticateToken,
     schema: {
       description: 'Check when current session expires (for mobile apps to schedule refresh)',
       tags: ['Mobile Authentication'],

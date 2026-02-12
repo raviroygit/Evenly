@@ -4,9 +4,9 @@ export const CommonSchemas = {
     properties: {
       id: { type: 'string' as const, format: 'uuid' },
       email: { type: 'string' as const, format: 'email' },
-      firstName: { type: 'string' as const },
-      lastName: { type: 'string' as const },
-      profilePicture: { type: 'string' as const },
+      name: { type: 'string' as const },
+      avatar: { type: 'string' as const },
+      phoneNumber: { type: 'string' as const },
       createdAt: { type: 'string' as const, format: 'date-time' },
       updatedAt: { type: 'string' as const, format: 'date-time' },
     },

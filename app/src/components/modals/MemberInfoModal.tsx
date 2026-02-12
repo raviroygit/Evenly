@@ -12,6 +12,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { ShareBalanceModal } from './ShareBalanceModal';
 import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
 import { useTranslation } from 'react-i18next';
+import { shareBalance } from '../../utils/shareHelper';
 
 interface MemberInfoModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ interface MemberInfoModalProps {
     id: string;
     name: string;
     email: string;
+    phone?: string;
   } | null;
   groupName?: string;
   groupId?: string;
@@ -40,6 +42,21 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
 
   const handleClose = () => {
     onClose();
+  };
+
+  const handleDirectShare = async (method: 'sms' | 'whatsapp') => {
+    if (!member) return;
+
+    const message = generateGroupBalanceMessage(
+      member.name,
+      groupName,
+      memberDebts,
+      memberCredits,
+      groupId,
+      t
+    );
+
+    await shareBalance(method, message, member.phone);
   };
 
   // Calculate member-specific debts and credits
@@ -79,7 +96,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={handleClose}
       statusBarTranslucent={true}
     >
@@ -87,7 +104,9 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
         style={[
           styles.overlay,
           {
-            backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            elevation: 10000,
           },
         ]}
       >
@@ -140,20 +159,61 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
                       {member.email}
                     </Text>
                   </View>
+
+                  {member.phone && (
+                    <View style={styles.infoRow}>
+                      <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
+                        {t('profile.phone')}
+                      </Text>
+                      <Text style={[styles.infoValue, { color: colors.foreground }]}>
+                        {member.phone}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {/* Share Balance Button */}
-                <TouchableOpacity
-                  style={[styles.shareButton, {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.border
-                  }]}
-                  onPress={() => setShowShareModal(true)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="share-outline" size={20} color="#FFFFFF" />
-                  <Text style={styles.shareButtonText}>{t('modals.shareBalance')}</Text>
-                </TouchableOpacity>
+                {/* Share Balance Buttons */}
+                {member.phone ? (
+                  <View style={styles.shareButtonsContainer}>
+                    <TouchableOpacity
+                      style={[styles.shareButton, {
+                        backgroundColor: '#007AFF',
+                        borderColor: colors.border,
+                        flex: 1
+                      }]}
+                      onPress={() => handleDirectShare('sms')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+                      <Text style={styles.shareButtonText}>{t('modals.sendViaSMS')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.shareButton, {
+                        backgroundColor: '#25D366',
+                        borderColor: colors.border,
+                        flex: 1
+                      }]}
+                      onPress={() => handleDirectShare('whatsapp')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
+                      <Text style={styles.shareButtonText}>{t('modals.sendViaWhatsApp')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.shareButton, {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.border
+                    }]}
+                    onPress={() => setShowShareModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="share-outline" size={20} color="#FFFFFF" />
+                    <Text style={styles.shareButtonText}>{t('modals.shareBalance')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -170,7 +230,8 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
             groupName,
             memberDebts,
             memberCredits,
-            groupId
+            groupId,
+            t
           )}
           recipientName={member.name}
         />
@@ -247,6 +308,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
+  shareButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -259,7 +325,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   shareButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },

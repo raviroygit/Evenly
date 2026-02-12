@@ -374,6 +374,27 @@ async function createTablesFromSchema(sql: any): Promise<void> {
     END $$;
   `;
 
+  // Add user preferences columns
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'en';
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_currency TEXT DEFAULT 'INR';
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  // Create indexes for user preferences
+  await sql`CREATE INDEX IF NOT EXISTS users_preferred_language_idx ON users(preferred_language)`;
+  await sql`CREATE INDEX IF NOT EXISTS users_preferred_currency_idx ON users(preferred_currency)`;
+
   // Add missing columns to group_members table
   await sql`
     DO $$ BEGIN

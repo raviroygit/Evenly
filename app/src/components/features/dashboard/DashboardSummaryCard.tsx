@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface DashboardSummaryCardProps {
@@ -19,6 +20,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
   loading = false,
   onPress,
 }) => {
+  const { t } = useTranslation();
   const { colors, theme } = useTheme();
 
   // Safety checks - ensure all values are valid numbers before toFixed()
@@ -43,14 +45,14 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
       >
         <View style={styles.summaryHeader}>
           <Text style={[styles.summaryTitle, { color: colors.foreground }]}>
-            👥 Groups Summary
+            👥 {t('dashboard.groupsSummary')}
           </Text>
         </View>
         <View style={styles.summaryContent}>
           {/* Total Groups */}
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-              Groups
+              {t('dashboard.groups')}
             </Text>
             <Text style={[styles.summaryValue, { color: '#2196F3' }]}>
               {loading ? '...' : totalGroups}
@@ -63,7 +65,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           {/* Net Balance */}
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-              Net
+              {t('dashboard.net')}
             </Text>
             <Text
               style={[
@@ -81,7 +83,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           {/* You Owe */}
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-              You Owe
+              {t('dashboard.youOwe')}
             </Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
               {loading ? '...' : `₹${safeYouOwe.toFixed(0)}`}
@@ -94,7 +96,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           {/* You're Owed */}
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-              You Get
+              {t('dashboard.youGet')}
             </Text>
             <Text style={[styles.summaryValue, { color: '#10B981' }]}>
               {loading ? '...' : `₹${safeYoureOwed.toFixed(0)}`}

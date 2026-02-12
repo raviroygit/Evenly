@@ -32,7 +32,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const { colors, theme } = useTheme();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string; id: string } | null>(null);
+  const [selectedMember, setSelectedMember] = useState<{ name: string; email: string; phone?: string; id: string } | null>(null);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [simplifiedDebts, setSimplifiedDebts] = useState<any[]>([]);
 
@@ -54,6 +54,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         id: m.id || m.userId,
         name: m.user?.name || m.name || t('common.unknown'),
         email: m.user?.email || m.email || t('common.unknown'),
+        phone: m.user?.phoneNumber || m.phone || m.user?.phone,
         avatar: m.user?.avatar || m.avatar,
         role: m.role || 'member',
       })));
@@ -83,6 +84,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       id: member.id,
       name: member.name,
       email: member.email,
+      phone: member.phone,
     });
     setShowMemberModal(true);
   };
@@ -94,7 +96,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   return (
     <>
       <Modal
-        visible={visible}
+        visible={visible && !showMemberModal}
         transparent
         animationType="none"
         onRequestClose={handleClose}
@@ -157,19 +159,21 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   ) : (
                     <View style={styles.membersList}>
                       {members.map((member) => (
-                        <View
+                        <TouchableOpacity
                           key={member.id}
                           style={[
                             styles.memberRow,
                             {
-                              backgroundColor: theme === 'dark' 
-                                ? '#1A1A1A' 
+                              backgroundColor: theme === 'dark'
+                                ? '#1A1A1A'
                                 : '#F8F8F8',
-                              borderColor: theme === 'dark' 
-                                ? '#333333' 
+                              borderColor: theme === 'dark'
+                                ? '#333333'
                                 : '#E0E0E0',
                             },
                           ]}
+                          onPress={() => handleMemberPress(member)}
+                          activeOpacity={0.7}
                         >
                           <View style={styles.memberInfo}>
                             <View style={[styles.memberAvatar, { backgroundColor: colors.primary + '20' }]}>
@@ -186,14 +190,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                               </Text>
                             </View>
                           </View>
-                          <TouchableOpacity
-                            style={styles.memberEyeButton}
-                            onPress={() => handleMemberPress(member)}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          >
+                          <View style={styles.memberEyeButton}>
                             <Ionicons name="eye-outline" size={20} color={colors.foreground} />
-                          </TouchableOpacity>
-                        </View>
+                          </View>
+                        </TouchableOpacity>
                       ))}
                     </View>
                   )}

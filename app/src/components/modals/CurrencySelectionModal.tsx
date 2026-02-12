@@ -1,57 +1,59 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ReusableModal } from '../ui/ReusableModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSupportedCurrencies, DEFAULT_CURRENCY } from '../../utils/currency';
 
-interface LanguageSelectionModalProps {
+interface CurrencySelectionModalProps {
   visible: boolean;
   onClose: () => void;
+  currentCurrency?: string;
+  onCurrencyChange?: (currency: string) => void;
 }
 
-const LANGUAGES = [
-  { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिंदी' },
-];
-
-export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
+export const CurrencySelectionModal: React.FC<CurrencySelectionModalProps> = ({
   visible,
   onClose,
+  currentCurrency,
+  onCurrencyChange,
 }) => {
   const { colors, theme } = useTheme();
-  const { t, i18n } = useTranslation();
-  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+  const { t } = useTranslation();
+  const [selectedCurrency, setSelectedCurrency] = useState(currentCurrency || DEFAULT_CURRENCY);
   const [isChanging, setIsChanging] = useState(false);
 
-  const handleLanguageChange = async (languageCode: string) => {
+  const handleCurrencyChange = async (currencyCode: string) => {
     if (isChanging) return;
     setIsChanging(true);
     try {
-      setSelectedLanguage(languageCode);
-
-      // Update language in i18n
-      await i18n.changeLanguage(languageCode);
+      setSelectedCurrency(currencyCode);
 
       // Save to AsyncStorage
-      await AsyncStorage.setItem('userLanguage', languageCode);
+      await AsyncStorage.setItem('userCurrency', currencyCode);
 
       // Update in backend database
       try {
-        await EvenlyBackendService.updateUserLanguage(languageCode);
+        await EvenlyBackendService.updateUserCurrency(currencyCode);
       } catch (backendError) {
-        // Log error but don't block language change if backend fails
-        console.error('Failed to update language in backend:', backendError);
+        // Log error but don't block currency change if backend fails
+        console.error('Failed to update currency in backend:', backendError);
+      }
+
+      // Notify parent component
+      if (onCurrencyChange) {
+        onCurrencyChange(currencyCode);
       }
 
       Alert.alert(
         t('common.success'),
-        t('profile.languageChanged')
+        t('profile.currencyChanged')
       );
       onClose();
-    } catch (error) {
+    } catch {
       Alert.alert(
         t('common.error'),
         t('errors.tryAgain')
@@ -61,36 +63,42 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
     }
   };
 
+  const currencies = getSupportedCurrencies();
+
   return (
     <ReusableModal
       visible={visible}
       onClose={onClose}
-      title={t('profile.selectLanguage')}
+      title={t('profile.selectCurrency')}
     >
-      <View style={styles.container}>
-        {LANGUAGES.map((language) => (
+      <View style={styles.wrapper}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {currencies.map((currency) => (
           <TouchableOpacity
-            key={language.code}
+            key={currency.code}
             style={[
-              styles.languageOption,
+              styles.currencyOption,
               {
                 backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                borderColor: selectedLanguage === language.code ? colors.primary : 'transparent',
-                borderWidth: selectedLanguage === language.code ? 2 : 0,
+                borderColor: selectedCurrency === currency.code ? colors.primary : 'transparent',
+                borderWidth: selectedCurrency === currency.code ? 2 : 0,
               },
             ]}
-            onPress={() => handleLanguageChange(language.code)}
+            onPress={() => handleCurrencyChange(currency.code)}
             disabled={isChanging}
           >
-            <View style={styles.languageInfo}>
-              <Text style={[styles.languageName, { color: colors.foreground }]}>
-                {language.nativeName}
-              </Text>
-              <Text style={[styles.languageSubtext, { color: colors.mutedForeground }]}>
-                {language.name}
-              </Text>
+            <View style={styles.currencyLeft}>
+              <Text style={styles.currencyFlag}>{currency.flag}</Text>
+              <View style={styles.currencyInfo}>
+                <Text style={[styles.currencyName, { color: colors.foreground }]}>
+                  {currency.name}
+                </Text>
+                <Text style={[styles.currencySubtext, { color: colors.mutedForeground }]}>
+                  {currency.nativeName} ({currency.symbol})
+                </Text>
+              </View>
             </View>
-            {selectedLanguage === language.code && !isChanging && (
+            {selectedCurrency === currency.code && !isChanging && (
               <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
             )}
           </TouchableOpacity>
@@ -99,10 +107,11 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
         <View style={styles.infoBox}>
           <Ionicons name="information-circle-outline" size={20} color={colors.mutedForeground} />
           <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-            {t('profile.languageInfo')}
+            {t('profile.currencyInfo')}
           </Text>
         </View>
 
+        </ScrollView>
         {isChanging && (
           <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -117,11 +126,14 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     position: 'relative',
-    gap: 12,
+    maxHeight: 500,
   },
-  languageOption: {
+  container: {
+    maxHeight: 500,
+  },
+  currencyOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -129,16 +141,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  languageInfo: {
+  currencyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
-  languageName: {
-    fontSize: 18,
+  currencyFlag: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  currencyInfo: {
+    flex: 1,
+  },
+  currencyName: {
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
-  languageSubtext: {
-    fontSize: 14,
+  currencySubtext: {
+    fontSize: 13,
   },
   infoBox: {
     flexDirection: 'row',
