@@ -76,12 +76,17 @@ export const GroupDetailsScreen: React.FC = () => {
         userPaidTotal += expenseAmount || 0;
       }
 
-      // Calculate the logged-in user's share of this expense
-      if (expense.currentUserShare) {
-        const shareAmount = typeof expense.currentUserShare.amount === 'string'
-          ? parseFloat(expense.currentUserShare.amount)
-          : expense.currentUserShare.amount;
-        userShareTotal += shareAmount || 0;
+      // Calculate the logged-in user's share of this expense from splits
+      // Note: currentUserShare.amount is the NET amount (lent/borrowed), not the share
+      // We need to find the user's split amount from the splits array
+      if (expense.splits && expense.splits.length > 0) {
+        const userSplit = expense.splits.find(split => split.userId === user.id);
+        if (userSplit) {
+          const shareAmount = typeof userSplit.amount === 'string'
+            ? parseFloat(userSplit.amount)
+            : userSplit.amount;
+          userShareTotal += shareAmount || 0;
+        }
       }
     });
 
