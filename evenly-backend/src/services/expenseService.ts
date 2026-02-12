@@ -129,17 +129,25 @@ export class ExpenseService {
         throw new DatabaseError('Failed to retrieve created expense');
       }
 
-      // Send email notifications to other group members
+      // Send email notifications to other group members (never fail expense creation)
       try {
         await this.sendExpenseNotifications(expenseWithSplits, createdBy);
       } catch (emailError) {
-        // Log email error but don't fail the expense creation
+        console.error('[ExpenseService] sendExpenseNotifications failed:', emailError instanceof Error ? emailError.message : String(emailError));
+        if (emailError instanceof Error && emailError.stack) {
+          console.error('[ExpenseService] stack:', emailError.stack);
+        }
       }
 
       return expenseWithSplits;
     } catch (error) {
       if (error instanceof ForbiddenError || error instanceof ValidationError) {
         throw error;
+      }
+      // Log original error so it appears in GCP logs
+      console.error('[ExpenseService] createExpense failed:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        console.error('[ExpenseService] stack:', error.stack);
       }
       throw new DatabaseError('Failed to create expense');
     }
@@ -173,7 +181,7 @@ export class ExpenseService {
         return null;
       }
 
-      // Get expense splits with user details
+      // Get expense splits with user details (include preferredLanguage/preferredCurrency for email i18n)
       const splits = await db
         .select({
           id: expenseSplits.id,
@@ -188,6 +196,8 @@ export class ExpenseService {
             email: users.email,
             name: users.name,
             avatar: users.avatar,
+            preferredLanguage: users.preferredLanguage,
+            preferredCurrency: users.preferredCurrency,
           },
         })
         .from(expenseSplits)
@@ -761,7 +771,7 @@ export class ExpenseService {
       const emailPromises = splitsToNotify.map(async (split) => {
         try {
           await sendExpenseNotificationEmail(
-            split.user.email,
+            split.user?.email,
             {
               id: expense.id,
               title: expense.title,
@@ -781,15 +791,21 @@ export class ExpenseService {
             },
             {
               amount: split.amount.toString(),
-            }
+            },
+            split.user ? { preferredLanguage: (split.user as any).preferredLanguage ?? null, preferredCurrency: (split.user as any).preferredCurrency ?? null } : undefined
           );
-        } catch (error) {
+        } catch (err) {
+          console.error('[ExpenseService] sendExpenseNotificationEmail failed for', split.user?.email, err instanceof Error ? err.message : err);
         }
       });
 
       await Promise.all(emailPromises);
     } catch (error) {
-      throw error;
+      // Never throw: log and swallow so expense creation never fails due to email/i18n
+      console.error('[ExpenseService] sendExpenseNotifications error:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        console.error('[ExpenseService] sendExpenseNotifications stack:', error.stack);
+      }
     }
   }
 }

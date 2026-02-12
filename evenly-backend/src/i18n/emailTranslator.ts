@@ -16,7 +16,9 @@ function loadTranslations(lang: string): any {
       if (lang !== 'en') {
         return loadTranslations('en');
       }
-      throw new Error(`Translation file not found for language: ${lang}`);
+      // If en.json is missing (e.g. deploy without i18n copy), use empty object so t() returns keyPath and never throws
+      console.error('[emailTranslator] Translation file not found for language: en. Using fallback. Ensure dist/i18n/email/en.json exists in deploy.');
+      translations[lang] = {};
     }
   }
   return translations[lang];
@@ -61,8 +63,8 @@ export function t(lang: string, keyPath: string, params: Record<string, any> = {
 /**
  * Get user's preferred language, fallback to English
  */
-export function getUserLanguage(user: { preferredLanguage?: string | null }): string {
-  return user.preferredLanguage || 'en';
+export function getUserLanguage(user?: { preferredLanguage?: string | null } | null): string {
+  return user?.preferredLanguage || 'en';
 }
 
 /**

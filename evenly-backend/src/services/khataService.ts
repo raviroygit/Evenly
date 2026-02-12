@@ -246,10 +246,18 @@ export class KhataService {
               .limit(1);
 
             if (user) {
+              // Look up recipient (customer) in users table for preferred language
+              const [recipientUserRow] = await db
+                .select({ preferredLanguage: users.preferredLanguage })
+                .from(users)
+                .where(eq(users.email, customerEmail))
+                .limit(1);
+              const recipientUser = recipientUserRow ? { preferredLanguage: recipientUserRow.preferredLanguage ?? null } : undefined;
               await sendCustomerAddedEmail(
                 customerEmail,
                 customer.name,
-                user.name || 'User'
+                user.name || 'User',
+                recipientUser
               );
             }
           } catch {
@@ -427,6 +435,13 @@ export class KhataService {
           try {
             const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
+              // Look up recipient (customer) in users table to get preferred language for email
+              const [recipientUserRow] = await db
+                .select({ preferredLanguage: users.preferredLanguage, preferredCurrency: users.preferredCurrency })
+                .from(users)
+                .where(eq(users.email, customerEmail))
+                .limit(1);
+              const recipientUser = recipientUserRow ? { preferredLanguage: recipientUserRow.preferredLanguage ?? null, preferredCurrency: recipientUserRow.preferredCurrency ?? null } : undefined;
               // Pass customer's current balance (negated): email is to customer so show their view (negative = they owe, positive = they will get)
               const customerBalance = -newBalance;
               await sendKhataTransactionEmail(
@@ -440,7 +455,8 @@ export class KhataService {
                   description: transactionData.description,
                   balance: customerBalance.toFixed(2),
                   date: transaction.transactionDate.toISOString(),
-                }
+                },
+                recipientUser
               );
             }
           } catch {

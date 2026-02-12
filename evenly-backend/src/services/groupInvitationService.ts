@@ -99,13 +99,15 @@ export class GroupInvitationService {
         // Resend email (don't fail if email fails, but log prominently)
         let emailSent = false;
         try {
+          const recipientUser = existingUser.length > 0 ? { preferredLanguage: existingUser[0].preferredLanguage ?? null } : undefined;
           await sendGroupInvitationEmail(
             invitedEmail,
             group[0].name,
             inviterName,
             invitationLink,
             existingUser.length > 0,
-            invitation.token // Pass the invitation token
+            invitation.token, // Pass the invitation token
+            recipientUser
           );
           emailSent = true;
         } catch (emailError: any) {
@@ -148,13 +150,15 @@ export class GroupInvitationService {
       // Send email (don't fail invitation creation if email fails, but log prominently)
       let emailSent = false;
       try {
+        const recipientUser = existingUser.length > 0 ? { preferredLanguage: existingUser[0].preferredLanguage ?? null } : undefined;
         await sendGroupInvitationEmail(
           invitedEmail,
           group[0].name,
           inviterName,
           invitationLink,
           existingUser.length > 0,
-          token // Pass the invitation token
+          token, // Pass the invitation token
+          recipientUser
         );
         emailSent = true;
       } catch (emailError: any) {

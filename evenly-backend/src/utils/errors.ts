@@ -1,4 +1,4 @@
-import { FastifyError, FastifyReply } from 'fastify';
+import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 
 export class AppError extends Error {
@@ -63,7 +63,17 @@ export class AuthServiceError extends AppError {
   }
 }
 
-export const handleError = (error: Error, reply: FastifyReply) => {
+export const handleError = (error: Error, reply: FastifyReply, request?: FastifyRequest) => {
+  // Log error for debugging (shows in GCP Cloud Run logs)
+  const errPayload = {
+    message: error.message,
+    name: error.name,
+    stack: error.stack,
+    ...(error as any).code != null && { code: (error as any).code },
+  };
+  if (request?.log?.error) {
+    request.log.error(errPayload, 'Request error');
+  }
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
@@ -143,7 +153,7 @@ export const handleError = (error: Error, reply: FastifyReply) => {
 export const asyncHandler = (fn: Function) => {
   return (request: any, reply: any, next?: any) => {
     Promise.resolve(fn(request, reply, next)).catch((error) => {
-      handleError(error, reply);
+      handleError(error, reply, request);
     });
   };
 };

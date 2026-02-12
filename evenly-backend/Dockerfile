@@ -58,13 +58,19 @@ COPY --from=builder /app/dist ./dist
 # The code looks for templates relative to __dirname which is dist/services
 COPY --from=builder /app/src/templates ./dist/templates
 
-# Verify dist folder and templates
+# Copy i18n email translation JSON (emailTranslator loads from __dirname/email/*.json at runtime)
+COPY --from=builder /app/src/i18n/email ./dist/i18n/email
+
+# Verify dist folder, templates, and i18n email files
 RUN echo "✅ Final verification..." && \
     ls -la dist/ && \
     test -f dist/server.js && \
     echo "✅ server.js found" || echo "❌ server.js NOT found" && \
     ls -la dist/templates/ && \
-    echo "✅ Email templates found"
+    echo "✅ Email templates found" && \
+    ls -la dist/i18n/email/ && \
+    test -f dist/i18n/email/en.json && test -f dist/i18n/email/hi.json && \
+    echo "✅ i18n email translations found"
 
 # Change ownership of the app directory
 RUN chown -R evenly:nodejs /app
