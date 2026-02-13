@@ -424,9 +424,11 @@ export class AuthService {
             email: syncedUser.email,
             name: syncedUser.name,
             avatar: syncedUser.avatar,
-            phoneNumber: syncedUser.phoneNumber, // Return phoneNumber from synced user
+            phoneNumber: syncedUser.phoneNumber,
+            preferredLanguage: syncedUser.preferredLanguage ?? undefined,
+            preferredCurrency: syncedUser.preferredCurrency ?? undefined,
           },
-          organization: response.data.organization, // Include organization from auth service
+          organization: response.data.organization,
         };
       }
 

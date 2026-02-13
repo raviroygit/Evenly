@@ -14,6 +14,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { EnhancedExpense } from '../../types';
 import { formatHumanDateTime } from '../../utils/date';
 import { useTranslation } from 'react-i18next';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface ExpenseDetailModalProps {
   visible: boolean;
@@ -30,13 +31,13 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { formatAmount } = usePreferredCurrency();
 
   if (!expense) return null;
 
   const amount = typeof expense.totalAmount === 'string'
     ? parseFloat(expense.totalAmount)
     : expense.totalAmount;
-  const currency = expense.currency || 'INR';
   const paidByName = expense.paidByUser?.name ?? expense.paidByDisplay ?? t('common.unknown');
   const dateFormatted = formatHumanDateTime(expense.date as string | Date);
   // Match expense item: use netBalance color for amount (You Lent / You Borrowed / Even)
@@ -131,8 +132,7 @@ export const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
                     {statusText}
                   </Text>
                   <Text style={[styles.amountValue, { color: amountColor }]}>
-                    {currency === 'INR' ? '₹' : currency === 'USD' ? '$' : currency + ' '}
-                    {Number.isFinite(amount) ? amount.toFixed(2) : '0.00'}
+                    {formatAmount(Number.isFinite(amount) ? amount : 0)}
                   </Text>
                 </View>
 

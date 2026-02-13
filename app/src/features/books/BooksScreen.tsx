@@ -24,6 +24,7 @@ import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface Customer {
   id: string;
@@ -42,6 +43,7 @@ export const BooksScreen: React.FC = () => {
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { setActiveSwipeId } = useSwipeAction();
+  const { formatAmount: formatCurrency } = usePreferredCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -299,7 +301,7 @@ export const BooksScreen: React.FC = () => {
                 {t('khata.youWillGet')}
               </Text>
               <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
-                ₹{formatAmount(summary.totalGet)}
+                {formatCurrency(parseFloat(summary.totalGet))}
               </Text>
 
             </ResponsiveLiquidGlassCard>
@@ -317,7 +319,7 @@ export const BooksScreen: React.FC = () => {
                 {t('khata.youWillGive')}
               </Text>
               <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
-                ₹{formatAmount(summary.totalGive)}
+                {formatCurrency(parseFloat(summary.totalGive))}
               </Text>
 
             </ResponsiveLiquidGlassCard>
@@ -423,7 +425,7 @@ export const BooksScreen: React.FC = () => {
                       <Text style={[styles.amountText, {
                         color: customer.type === 'give' ? '#10B981' : customer.type === 'get' ? '#FF3B30' : colors.mutedForeground
                       }]}>
-                        ₹{formatAmount(Math.abs(parseFloat(customer.balance)))}
+                        {formatCurrency(Math.abs(parseFloat(customer.balance)))}
                       </Text>
                       <Text style={[styles.amountLabel, {
                         color: customer.type === 'give' ? '#10B981' : customer.type === 'get' ? '#FF3B30' : colors.mutedForeground

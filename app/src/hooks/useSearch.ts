@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { SearchItem } from '../components/modals/SearchModal';
+import { usePreferredCurrency } from './usePreferredCurrency';
 
 export type SearchScreenType = 'expenses' | 'groups' | 'activities' | 'home';
 
@@ -19,6 +20,7 @@ export const useSearch = ({
   users = [],
 }: UseSearchProps) => {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const { formatAmount } = usePreferredCurrency();
 
   const searchItems = useMemo(() => {
     const items: SearchItem[] = [];
@@ -26,10 +28,11 @@ export const useSearch = ({
     switch (screenType) {
       case 'expenses':
         expenses.forEach((expense) => {
+          const amt = typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0') || 0;
           items.push({
             id: expense.id,
             title: expense.description || expense.title || 'Untitled Expense',
-            subtitle: `₹${expense.amount?.toFixed(2) || '0.00'} • ${expense.groupName || 'No Group'}`,
+            subtitle: `${formatAmount(amt)} • ${expense.groupName || 'No Group'}`,
             type: 'expense',
             data: expense,
           });
@@ -63,10 +66,11 @@ export const useSearch = ({
       case 'home':
         // Combine all data for home screen search
         expenses.forEach((expense) => {
+          const amt = typeof expense.amount === 'number' ? expense.amount : parseFloat(expense.amount || '0') || 0;
           items.push({
             id: `expense-${expense.id}`,
             title: expense.description || expense.title || 'Untitled Expense',
-            subtitle: `Expense • ₹${expense.amount?.toFixed(2) || '0.00'}`,
+            subtitle: `Expense • ${formatAmount(amt)}`,
             type: 'expense',
             data: expense,
           });
@@ -95,7 +99,7 @@ export const useSearch = ({
     }
 
     return items;
-  }, [screenType, expenses, groups, activities, users]);
+  }, [screenType, expenses, groups, activities, users, formatAmount]);
 
   const openSearch = () => setIsSearchVisible(true);
   const closeSearch = () => setIsSearchVisible(false);

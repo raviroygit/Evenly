@@ -33,7 +33,8 @@ export interface MemberBalanceData {
 
 export const generateKhataBalanceMessage = (
   data: CustomerBalanceData,
-  t?: (key: string, params?: any) => string
+  t?: (key: string, params?: any) => string,
+  currencySymbol: string = '₹'
 ): string => {
   const { name, amount, type, businessName = 'Evenly' } = data;
 
@@ -47,17 +48,15 @@ export const generateKhataBalanceMessage = (
       : `Hi ${name},\n\nYour account with ${businessName} is settled.\n\nThank you for your business!${appLink}`;
   }
 
-  // type 'give' = You gave to customer → customer owes you → tell them "outstanding to pay"
   if (type === 'give') {
     return t
       ? `${t('messages.hi', { name })}\n\n${t('messages.reminderOutstanding', { amount })}\n\n${t('messages.account')}: ${businessName}\n\n${t('messages.pleaseSettle')}${appLink}`
-      : `Hi ${name},\n\nReminder: You have an outstanding balance of ₹${amount} to pay.\n\nAccount: ${businessName}\n\nPlease settle at your earliest convenience.${appLink}`;
+      : `Hi ${name},\n\nReminder: You have an outstanding balance of ${currencySymbol}${amount} to pay.\n\nAccount: ${businessName}\n\nPlease settle at your earliest convenience.${appLink}`;
   }
 
-  // type 'get' = You got from customer → you owe customer → tell them "in your favor"
   return t
     ? `${t('messages.hi', { name })}\n\n${t('messages.balanceInFavor', { amount })}\n\n${t('messages.account')}: ${businessName}\n\n${t('messages.thankYou')}${appLink}`
-    : `Hi ${name},\n\nYour account shows a balance of ₹${amount} in your favor.\n\nAccount: ${businessName}\n\nThank you!${appLink}`;
+    : `Hi ${name},\n\nYour account shows a balance of ${currencySymbol}${amount} in your favor.\n\nAccount: ${businessName}\n\nThank you!${appLink}`;
 };
 
 export interface SimplifiedDebt {
@@ -71,7 +70,8 @@ export const generateGroupBalanceMessage = (
   debts: SimplifiedDebt[],
   credits: SimplifiedDebt[],
   groupId?: string,
-  t?: (key: string, params?: any) => string
+  t?: (key: string, params?: any) => string,
+  currencySymbol: string = '₹'
 ): string => {
   // Use backend open URL so link is tappable in WhatsApp/SMS – opens app or store
   const downloadUrl = getAppDownloadUrl();
@@ -95,8 +95,8 @@ export const generateGroupBalanceMessage = (
     message += t ? `💸 ${t('messages.youOwe')}:\n` : `💸 You owe:\n`;
     debts.forEach(debt => {
       message += t
-        ? `• ₹${debt.amount} ${t('messages.to')} ${debt.owesTo}\n`
-        : `• ₹${debt.amount} to ${debt.owesTo}\n`;
+        ? `• ${currencySymbol}${debt.amount} ${t('messages.to')} ${debt.owesTo}\n`
+        : `• ${currencySymbol}${debt.amount} to ${debt.owesTo}\n`;
     });
     message += '\n';
   }
@@ -106,8 +106,8 @@ export const generateGroupBalanceMessage = (
     message += t ? `💰 ${t('messages.youAreOwed')}:\n` : `💰 You are owed:\n`;
     credits.forEach(credit => {
       message += t
-        ? `• ₹${credit.amount} ${t('messages.from')} ${credit.owesTo}\n`
-        : `• ₹${credit.amount} from ${credit.owesTo}\n`;
+        ? `• ${currencySymbol}${credit.amount} ${t('messages.from')} ${credit.owesTo}\n`
+        : `• ${currencySymbol}${credit.amount} from ${credit.owesTo}\n`;
     });
     message += '\n';
   }

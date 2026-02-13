@@ -5,6 +5,8 @@ export interface User {
   email: string;
   phoneNumber?: string;
   avatar?: string;
+  preferredLanguage?: string;
+  preferredCurrency?: string;
   stats: UserStats;
   organizations?: Organization[];
   currentOrganization?: Organization;

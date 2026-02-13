@@ -12,7 +12,7 @@ interface CurrencySelectionModalProps {
   visible: boolean;
   onClose: () => void;
   currentCurrency?: string;
-  onCurrencyChange?: (currency: string) => void;
+  onCurrencyChange?: (currency: string) => void | Promise<void>;
 }
 
 export const CurrencySelectionModal: React.FC<CurrencySelectionModalProps> = ({
@@ -43,9 +43,9 @@ export const CurrencySelectionModal: React.FC<CurrencySelectionModalProps> = ({
         console.error('Failed to update currency in backend:', backendError);
       }
 
-      // Notify parent component
+      // Notify parent so it can refresh user and persist; await so context + storage are updated before closing
       if (onCurrencyChange) {
-        onCurrencyChange(currencyCode);
+        await Promise.resolve(onCurrencyChange(currencyCode));
       }
 
       Alert.alert(

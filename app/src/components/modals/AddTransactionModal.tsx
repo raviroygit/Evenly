@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useTheme } from '../../contexts/ThemeContext';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 
 interface Transaction {
@@ -57,6 +58,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { symbol, currencyCode } = usePreferredCurrency();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -401,7 +403,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         // Update existing transaction
         formData.append('type', selectedType);
         formData.append('amount', parseFloat(amount).toFixed(2));
-        formData.append('currency', 'INR');
+        formData.append('currency', currencyCode);
 
         if (description.trim()) {
           formData.append('description', description.trim());
@@ -447,7 +449,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         formData.append('customerId', customerId);
         formData.append('type', transactionType);
         formData.append('amount', parseFloat(amount).toFixed(2));
-        formData.append('currency', 'INR');
+        formData.append('currency', currencyCode);
 
         if (description.trim()) {
           formData.append('description', description.trim());
@@ -681,7 +683,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 {/* Amount Field */}
                 <View style={styles.inputContainer}>
                   <Text style={[styles.label, { color: colors.foreground }]}>
-                    {t('expenses.amount')} (₹) <Text style={styles.required}>*</Text>
+                    {t('expenses.amount')} ({symbol}) <Text style={styles.required}>*</Text>
                   </Text>
                   <TextInput
                     style={[

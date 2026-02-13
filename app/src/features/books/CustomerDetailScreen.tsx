@@ -30,6 +30,7 @@ import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { generateKhataBalanceMessage } from '../../utils/messageTemplates';
 import { shareBalance } from '../../utils/shareHelper';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface Transaction {
   id: string;
@@ -48,6 +49,7 @@ export const CustomerDetailScreen: React.FC = () => {
   const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerInitials?: string }>();
   const { colors, theme } = useTheme();
   const { setActiveSwipeId } = useSwipeAction();
+  const { formatAmount, symbol } = usePreferredCurrency();
   const [customer, setCustomer] = useState<{
     id: string;
     name: string;
@@ -89,10 +91,6 @@ export const CustomerDetailScreen: React.FC = () => {
     const dateStr = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     const timeStr = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     return { date: dateStr, time: timeStr };
-  };
-
-  const formatAmount = (amount: string): string => {
-    return new Intl.NumberFormat('en-IN').format(parseFloat(amount));
   };
 
   const loadData = useCallback(async (isRefresh = false) => {
@@ -161,7 +159,7 @@ export const CustomerDetailScreen: React.FC = () => {
 
   const customerName = customer?.name || params.customerName || 'Customer';
   const customerInitials = customer?.initials || params.customerInitials || 'CU';
-  const totalAmount = customer ? formatAmount(Math.abs(parseFloat(customer.balance)).toString()) : '0';
+  const totalAmount = customer ? Math.abs(parseFloat(customer.balance)) : 0;
 
   const handleBack = () => {
     router.back();
@@ -394,10 +392,11 @@ export const CustomerDetailScreen: React.FC = () => {
     const message = generateKhataBalanceMessage(
       {
         name: customer.name,
-        amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
+        amount: Math.abs(parseFloat(customer.balance)).toFixed(2),
         type: customer.type,
       },
-      t
+      t,
+      symbol
     );
 
     await shareBalance(method, message, customer.phone);
@@ -479,7 +478,7 @@ export const CustomerDetailScreen: React.FC = () => {
               <Text style={[styles.summaryAmount, {
                 color: customer?.type === 'give' ? '#10B981' : customer?.type === 'get' ? '#FF3B30' : colors.foreground
               }]}>
-                ₹{totalAmount}
+                {formatAmount(totalAmount)}
               </Text>
             </View>
           </ResponsiveLiquidGlassCard>
@@ -570,7 +569,7 @@ export const CustomerDetailScreen: React.FC = () => {
                         borderWidth: 1,
                       }]}>
                         <Text style={[styles.balanceBadgeText, { color: '#FF3B30' }]}>
-                          ₹{transaction.balance}
+                          {formatAmount(parseFloat(transaction.balance))}
                         </Text>
                       </View>
                     </View>
@@ -580,12 +579,12 @@ export const CustomerDetailScreen: React.FC = () => {
                   <View style={styles.transactionRight}>
                     {transaction.amountGiven ? (
                       <Text style={[styles.transactionAmount, { color: '#FF3B30' }]}>
-                        -₹{transaction.amountGiven}
+                        -{formatAmount(transaction.amountGiven)}
                       </Text>
                     ) : null}
                     {transaction.amountGot ? (
                       <Text style={[styles.transactionAmount, { color: '#10B981' }]}>
-                        +₹{transaction.amountGot}
+                        +{formatAmount(transaction.amountGot)}
                       </Text>
                     ) : null}
                   </View>
@@ -682,10 +681,11 @@ export const CustomerDetailScreen: React.FC = () => {
             message={generateKhataBalanceMessage(
               {
                 name: customer.name,
-                amount: formatAmount(Math.abs(parseFloat(customer.balance)).toString()),
+                amount: Math.abs(parseFloat(customer.balance)).toFixed(2),
                 type: customer.type,
               },
-              t
+              t,
+              symbol
             )}
             phoneNumber={customer.phone}
             recipientName={customer.name}

@@ -26,10 +26,13 @@ import { LanguageSelectionModal } from '../../components/modals/LanguageSelectio
 import { CurrencySelectionModal } from '../../components/modals/CurrencySelectionModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 import { getCurrencyName, DEFAULT_CURRENCY } from '../../utils/currency';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthStorage } from '../../utils/storage';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, logout, currentOrganization, authState, refreshUser } = useAuth();
+  const { user, setUser, logout, currentOrganization, authState, refreshUser } = useAuth();
+  const { formatAmount: formatCurrency } = usePreferredCurrency();
   const { colors, toggleTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -87,19 +90,21 @@ export const ProfileScreen: React.FC = () => {
 
   useEffect(() => {
     fetchKhataSummary();
-    // Load current currency from AsyncStorage
+    // Load current currency: prefer user.preferredCurrency (from backend), then AsyncStorage
     const loadCurrency = async () => {
+      if (user?.preferredCurrency) {
+        setCurrentCurrency(user.preferredCurrency);
+        return;
+      }
       try {
         const savedCurrency = await AsyncStorage.getItem('userCurrency');
-        if (savedCurrency) {
-          setCurrentCurrency(savedCurrency);
-        }
+        if (savedCurrency) setCurrentCurrency(savedCurrency);
       } catch (error) {
         console.error('Failed to load currency:', error);
       }
     };
     loadCurrency();
-  }, []);
+  }, [user?.preferredCurrency]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -164,8 +169,31 @@ export const ProfileScreen: React.FC = () => {
     return getCurrencyName(currentCurrency);
   }, [currentCurrency]);
 
-  const handleCurrencyChange = (currency: string) => {
+  const handleCurrencyChange = async (currency: string) => {
     setCurrentCurrency(currency);
+    // Optimistic update: update context + storage immediately so UI reflects new currency like language
+    if (user) {
+      const updatedUser = { ...user, preferredCurrency: currency };
+      setUser(updatedUser);
+      try {
+        const authData = await AuthStorage.getAuthData();
+        if (authData?.accessToken) {
+          await AuthStorage.saveAuthData(
+            updatedUser,
+            authData.accessToken,
+            authData.organizations ?? user.organizations
+          );
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+    // Sync from server in background to stay in sync
+    try {
+      await refreshUser?.();
+    } catch {
+      // Non-blocking
+    }
   };
 
 
@@ -378,7 +406,7 @@ export const ProfileScreen: React.FC = () => {
                     color: overallBalance.netBalance >= 0 ? '#10B981' : '#EF4444'
                   }
                 ]}>
-                  ₹{overallBalance.netBalance.toFixed(2)}
+                  {formatCurrency(overallBalance.netBalance)}
                 </Text>
                 <Text style={[
                   styles.balanceLabel,
@@ -396,7 +424,7 @@ export const ProfileScreen: React.FC = () => {
             subtitle: balanceLoading ? t('common.loading') : undefined,
             rightElement: balanceLoading ? undefined : (
               <Text style={[styles.balanceAmount, { color: '#10B981' }]}>
-                ₹{overallBalance.totalOwed.toFixed(2)}
+                {formatCurrency(overallBalance.totalOwed)}
               </Text>
             ),
           },
@@ -405,7 +433,7 @@ export const ProfileScreen: React.FC = () => {
             subtitle: balanceLoading ? t('common.loading') : undefined,
             rightElement: balanceLoading ? undefined : (
               <Text style={[styles.balanceAmount, { color: '#EF4444' }]}>
-                ₹{overallBalance.totalOwing.toFixed(2)}
+                {formatCurrency(overallBalance.totalOwing)}
               </Text>
             ),
           },

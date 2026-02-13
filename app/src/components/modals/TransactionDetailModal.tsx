@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface Transaction {
   id: string;
@@ -39,6 +40,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { symbol, formatAmount } = usePreferredCurrency();
 
   if (!transaction) return null;
 
@@ -46,7 +48,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   const amount = transaction.amountGiven || transaction.amountGot;
   const isGave = !!transaction.amountGiven;
   const amountSign = isGave ? '-' : '+';
-  const amountWithSign = `${amountSign}₹${amount}`;
+  const amountWithSign = `${amountSign}${symbol}${amount}`;
 
   return (
     <>
@@ -202,7 +204,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                     <View style={styles.valueWithIcon}>
                       <Ionicons name="wallet-outline" size={18} color={colors.foreground} />
                       <Text style={[styles.balanceValue, { color: colors.foreground }]}>
-                        ₹{transaction.balance}
+                        {formatAmount(parseFloat(transaction.balance))}
                       </Text>
                     </View>
                   </View>

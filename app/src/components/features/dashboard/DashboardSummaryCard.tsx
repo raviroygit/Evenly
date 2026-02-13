@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { usePreferredCurrency } from '../../../hooks/usePreferredCurrency';
 
 interface DashboardSummaryCardProps {
   totalGroups: number;
@@ -22,6 +23,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { formatAmount } = usePreferredCurrency();
 
   // Safety checks - ensure all values are valid numbers before toFixed()
   const safeNetBalance = typeof netBalance === 'number' && !isNaN(netBalance) ? netBalance : 0;
@@ -73,7 +75,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
                 { color: safeNetBalance >= 0 ? '#10B981' : '#EF4444' },
               ]}
             >
-              {loading ? '...' : `₹${Math.abs(safeNetBalance).toFixed(0)}`}
+              {loading ? '...' : formatAmount(Math.abs(safeNetBalance))}
             </Text>
           </View>
 
@@ -86,7 +88,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
               {t('dashboard.youOwe')}
             </Text>
             <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-              {loading ? '...' : `₹${safeYouOwe.toFixed(0)}`}
+              {loading ? '...' : formatAmount(safeYouOwe)}
             </Text>
           </View>
 
@@ -99,7 +101,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
               {t('dashboard.youGet')}
             </Text>
             <Text style={[styles.summaryValue, { color: '#10B981' }]}>
-              {loading ? '...' : `₹${safeYoureOwed.toFixed(0)}`}
+              {loading ? '...' : formatAmount(safeYoureOwed)}
             </Text>
           </View>
         </View>

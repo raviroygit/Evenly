@@ -6,6 +6,7 @@ import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
 import { SwipeActionRow } from '../../ui/SwipeActionRow';
 import { EnhancedExpense } from '../../../types';
 import { formatHumanDateTime } from '../../../utils/date';
+import { usePreferredCurrency } from '../../../hooks/usePreferredCurrency';
 
 interface ExpenseItemProps {
   item: EnhancedExpense;
@@ -26,6 +27,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { formatAmount } = usePreferredCurrency();
 
   // Check if current user is the one who paid for the expense
   const isPayer = user && item.paidBy === user.id;
@@ -110,7 +112,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
               {item.title}
             </Text>
             <Text style={[styles.paidBy, { color: colors.mutedForeground }]}>
-              {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} ₹{item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount).toFixed(2) : '0.00'}
+              {item.paidByDisplay || (item.paidByUser ? `${item.paidByUser.name.split(' ')[0]} paid` : 'Paid')} {formatAmount(item.totalAmount ? (typeof item.totalAmount === 'string' ? parseFloat(item.totalAmount) : item.totalAmount) : 0)}
             </Text>
             {/* Badges Column: Group + Date-Time stacked vertically */}
             <View style={styles.groupBadgeContainer}>
@@ -141,7 +143,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
                    item.netBalance.text}
                 </Text>
                 <Text style={[styles.amountText, { color: item.netBalance.color }]}>
-                  ₹{item.netBalance.amount.toFixed(2)}
+                  {formatAmount(item.netBalance.amount)}
                 </Text>
               </>
             ) : (
@@ -150,7 +152,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
                   Even
                 </Text>
                 <Text style={[styles.amountText, { color: colors.mutedForeground }]}>
-                  ₹0.00
+                  {formatAmount(0)}
                 </Text>
               </>
             )}

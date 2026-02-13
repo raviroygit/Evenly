@@ -371,7 +371,9 @@ console.log(response,'response.user current user', response.user);
           email: response.user.email,
           name: response.user.name,
           phoneNumber: phoneNumber,
-          stats: { groups: 0, totalSpent: 0, owed: 0 }, // Will be updated from evenly-backend
+          preferredLanguage: response.user.preferredLanguage,
+          preferredCurrency: response.user.preferredCurrency,
+          stats: { groups: 0, totalSpent: 0, owed: 0 },
           organizations: organizations,
           defaultOrganizationId: response.user.defaultOrganizationId,
           lastOrganizationId: response.user.lastOrganizationId,

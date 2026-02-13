@@ -19,6 +19,7 @@ import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/message
 import { GroupMember } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { shareBalance } from '../../utils/shareHelper';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface MemberSelectionModalProps {
   visible: boolean;
@@ -36,6 +37,7 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
   const { user } = useAuth();
+  const { symbol } = usePreferredCurrency();
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [simplifiedDebts, setSimplifiedDebts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,7 +130,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
       debts,
       credits,
       groupId || undefined,
-      t
+      t,
+      symbol
     );
 
     await shareBalance(method, message, member.phone);
@@ -321,7 +324,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
               debts,
               credits,
               groupId || undefined,
-              t
+              t,
+              symbol
             )}
             phoneNumber={selectedMember.phone}
             recipientName={selectedMember.name}

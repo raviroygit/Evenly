@@ -13,6 +13,7 @@ import { ShareBalanceModal } from './ShareBalanceModal';
 import { generateGroupBalanceMessage, SimplifiedDebt } from '../../utils/messageTemplates';
 import { useTranslation } from 'react-i18next';
 import { shareBalance } from '../../utils/shareHelper';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface MemberInfoModalProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { symbol } = usePreferredCurrency();
   const [showShareModal, setShowShareModal] = useState(false);
 
   const handleClose = () => {
@@ -53,7 +55,8 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
       memberDebts,
       memberCredits,
       groupId,
-      t
+      t,
+      symbol
     );
 
     await shareBalance(method, message, member.phone);
@@ -231,7 +234,8 @@ export const MemberInfoModal: React.FC<MemberInfoModalProps> = ({
             memberDebts,
             memberCredits,
             groupId,
-            t
+            t,
+            symbol
           )}
           recipientName={member.name}
         />

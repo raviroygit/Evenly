@@ -10,7 +10,7 @@ interface ActivityItem {
   type: 'expense' | 'payment' | 'group' | 'invitation' | 'khata';
   title: string;
   description: string;
-  amount?: string;
+  amount?: number;
   memberCount?: number;
   groupName?: string;
   customerName?: string;
@@ -241,7 +241,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           type: 'expense',
           title: expense.description || expense.title || 'Untitled Expense',
           description: 'Expense added',
-          amount: `₹${amount.toFixed(2)}`,
+          amount,
           groupName: group?.name,
           date: expenseDisplayDate.toLocaleString(),
           dateTimestamp: expenseSortDate.getTime(),
@@ -267,7 +267,7 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           type: 'khata',
           title: transaction.description || `Transaction with ${transaction.customerName}`,
           description: transaction.type === 'give' ? 'You gave money' : 'You got money',
-          amount: `₹${amount.toFixed(2)}`,
+          amount,
           customerName: transaction.customerName,
           khataType: transaction.type,
           date: transactionDate.toLocaleString(),

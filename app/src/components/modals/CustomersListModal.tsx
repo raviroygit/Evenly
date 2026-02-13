@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 export interface KhataCustomerItem {
   id: string;
@@ -41,13 +42,9 @@ export const CustomersListModal: React.FC<CustomersListModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { formatAmount } = usePreferredCurrency();
 
   const safeCustomers = Array.isArray(customers) ? customers : [];
-
-  const formatAmount = (amount: string) => {
-    const num = parseFloat(amount);
-    return `₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   if (!visible) return null;
 

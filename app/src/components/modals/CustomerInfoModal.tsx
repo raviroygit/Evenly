@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 const { height } = Dimensions.get('window');
 
@@ -40,13 +41,9 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, theme } = useTheme();
+  const { formatAmount } = usePreferredCurrency();
 
   if (!customer) return null;
-
-  const formatAmount = (amount: string) => {
-    const numAmount = parseFloat(amount);
-    return new Intl.NumberFormat('en-IN').format(Math.abs(numAmount));
-  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return t('common.notProvided');
@@ -167,7 +164,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                 {t('modals.totalBalance')}
               </Text>
               <Text style={[styles.balanceAmount, { color: amountColor }]}>
-                ₹{formatAmount(customer.balance)}
+                {formatAmount(parseFloat(customer.balance))}
               </Text>
             </View>
 

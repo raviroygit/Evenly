@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActivitiesContext } from '../../../contexts/ActivitiesContext';
+import { usePreferredCurrency } from '../../../hooks/usePreferredCurrency';
 import { SkeletonActivityList } from '../../ui/SkeletonLoader';
 import { GlassListCard } from '../../ui/GlassListCard';
 import { GroupInfoModal } from '../../modals/GroupInfoModal';
@@ -12,7 +13,7 @@ interface ActivityItem {
   type: 'expense' | 'payment' | 'group' | 'invitation' | 'khata';
   title: string;
   description: string;
-  amount?: string;
+  amount?: number;
   memberCount?: number;
   groupName?: string; // Group name for expense activities
   customerName?: string; // Customer name for khata activities
@@ -62,6 +63,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   }, [activities, totalCount]);
 
   const { colors, theme } = useTheme();
+  const { formatAmount } = usePreferredCurrency();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
 
@@ -165,7 +167,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
           <Text style={[styles.activityTitle, { color: colors.foreground }]}>
             {activity.title}
           </Text>
-          {activity.amount && (
+          {(activity.amount !== undefined && activity.amount !== null) && (
             <Text style={[
               styles.activityAmount,
               {
@@ -174,7 +176,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                   : getActivityColor(activity.type)
               }
             ]}>
-              {activity.amount}
+              {formatAmount(activity.amount ?? 0)}
             </Text>
           )}
         </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { ResponsiveLiquidGlassCard } from '../../ui/ResponsiveLiquidGlassCard';
+import { usePreferredCurrency } from '../../../hooks/usePreferredCurrency';
 
 interface ExpenseSummaryProps {
   totalExpenses: number;
@@ -13,17 +14,13 @@ export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({
   netBalance,
 }) => {
   const { colors } = useTheme();
+  const { formatAmount, symbol } = usePreferredCurrency();
 
-  // Format net balance with sign
   const formatNetBalance = (balance: number) => {
-    const formattedAmount = Math.abs(balance).toFixed(2);
-    if (balance > 0) {
-      return `+₹${formattedAmount}`;
-    } else if (balance < 0) {
-      return `-₹${formattedAmount}`;
-    } else {
-      return `₹${formattedAmount}`;
-    }
+    const abs = Math.abs(balance);
+    if (balance > 0) return `+${symbol}${abs.toFixed(2)}`;
+    if (balance < 0) return `-${symbol}${abs.toFixed(2)}`;
+    return formatAmount(0);
   };
 
   return (
@@ -47,7 +44,7 @@ export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({
           Total Expenses
         </Text>
         <Text style={[styles.amount, { color: colors.destructive }]}>
-          ₹{totalExpenses.toFixed(2)}
+          {formatAmount(totalExpenses)}
         </Text>
       </ResponsiveLiquidGlassCard>
 

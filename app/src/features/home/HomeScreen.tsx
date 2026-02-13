@@ -23,12 +23,14 @@ import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScroll
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { useRouter } from 'expo-router';
 import { HomeCache } from '../../utils/homeCache';
+import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors, theme } = useTheme();
   const { user, isAuthenticated, authState } = useAuth();
+  const { formatAmount } = usePreferredCurrency();
 
   // Use only useGroups and useUserBalances directly - no useDashboard to avoid duplicate calls
   const { groups, createGroup, refreshGroups, loading: groupsLoading } = useGroups();
@@ -535,7 +537,7 @@ export const HomeScreen: React.FC = () => {
                   <Text style={[styles.khataSummaryValue, { color: '#EF4444' }]}>
                     {(() => {
                       const value = parseFloat(khataSummary?.totalGive || '0');
-                      return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;
+                      return formatAmount(isNaN(value) ? 0 : value);
                     })()}
                   </Text>
                 </View>
@@ -548,7 +550,7 @@ export const HomeScreen: React.FC = () => {
                   <Text style={[styles.khataSummaryValue, { color: '#10B981' }]}>
                     {(() => {
                       const value = parseFloat(khataSummary?.totalGet || '0');
-                      return `₹${(isNaN(value) ? 0 : value).toFixed(2)}`;
+                      return formatAmount(isNaN(value) ? 0 : value);
                     })()}
                   </Text>
                 </View>
