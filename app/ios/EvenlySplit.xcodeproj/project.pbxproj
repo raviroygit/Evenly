@@ -23,7 +23,7 @@
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = EvenlySplit/SplashScreen.storyboard; sourceTree = "<group>"; };
 		B0C7823FFCD5AFC12375430C /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-EvenlySplit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		E71656E3A537B2EB9B29B962 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = EvenlySplit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		E71656E3A537B2EB9B29B962 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = EvenlySplit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E7255652B89513568D210BB7 /* Pods-EvenlySplit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvenlySplit.release.xcconfig"; path = "Target Support Files/Pods-EvenlySplit/Pods-EvenlySplit.release.xcconfig"; sourceTree = "<group>"; };
 		EC01319994CC83FB0A2E2E56 /* Pods-EvenlySplit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-EvenlySplit.debug.xcconfig"; path = "Target Support Files/Pods-EvenlySplit/Pods-EvenlySplit.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -111,7 +111,6 @@
 				EC01319994CC83FB0A2E2E56 /* Pods-EvenlySplit.debug.xcconfig */,
 				E7255652B89513568D210BB7 /* Pods-EvenlySplit.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -369,7 +368,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nxtgenaidev.evenly;
-				PRODUCT_NAME = "EvenlySplit";
+				PRODUCT_NAME = EvenlySplit;
 				SWIFT_OBJC_BRIDGING_HEADER = "EvenlySplit/EvenlySplit-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -401,7 +400,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nxtgenaidev.evenly;
-				PRODUCT_NAME = "EvenlySplit";
+				PRODUCT_NAME = EvenlySplit;
 				SWIFT_OBJC_BRIDGING_HEADER = "EvenlySplit/EvenlySplit-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

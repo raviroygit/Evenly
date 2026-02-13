@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly-split",
-    "version": "1.9.0",
+    "version": "2.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -13,14 +13,13 @@
     "plugins": [
       "expo-asset",
       "expo-router",
-      "expo-video"
+      "expo-video",
+      "./plugins/withSplashScreenLogo"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
@@ -44,7 +43,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
