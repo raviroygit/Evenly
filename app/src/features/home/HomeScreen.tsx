@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   khataSummaryValue: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '700',
   },
 });

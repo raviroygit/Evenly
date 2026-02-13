@@ -36,7 +36,7 @@ interface Transaction {
   id: string;
   date: string;
   time: string;
-  balance: string;
+  balance: string; // Raw balance value (will be formatted when displayed)
   amountGiven: string;
   amountGot: string;
   hasAttachment: boolean;
@@ -126,9 +126,9 @@ export const CustomerDetailScreen: React.FC = () => {
             id: t.id,
             date,
             time,
-            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
-            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
-            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            balance: Math.abs(parseFloat(t.balance)).toString(), // Store raw value, format on display
+            amountGiven: t.type === 'give' ? t.amount : '',
+            amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
           };
@@ -202,9 +202,9 @@ export const CustomerDetailScreen: React.FC = () => {
             id: t.id,
             date,
             time,
-            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
-            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
-            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            balance: Math.abs(parseFloat(t.balance)).toString(), // Store raw value, format on display
+            amountGiven: t.type === 'give' ? t.amount : '',
+            amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
           };
@@ -261,9 +261,9 @@ export const CustomerDetailScreen: React.FC = () => {
             id: t.id,
             date,
             time,
-            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
-            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
-            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            balance: Math.abs(parseFloat(t.balance)).toString(), // Store raw value, format on display
+            amountGiven: t.type === 'give' ? t.amount : '',
+            amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
           };
@@ -312,9 +312,9 @@ export const CustomerDetailScreen: React.FC = () => {
             id: t.id,
             date,
             time,
-            balance: formatAmount(Math.abs(parseFloat(t.balance)).toString()),
-            amountGiven: t.type === 'give' ? formatAmount(t.amount) : '',
-            amountGot: t.type === 'get' ? formatAmount(t.amount) : '',
+            balance: Math.abs(parseFloat(t.balance)).toString(), // Store raw value, format on display
+            amountGiven: t.type === 'give' ? t.amount : '',
+            amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
           };

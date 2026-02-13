@@ -660,7 +660,7 @@ export class ExpenseService {
 
       // Calculate total split amount (sum of all splits)
       const totalSplitAmount = expense.splits.reduce((sum, split) => sum + parseFloat(split.amount), 0);
-      
+
       // Validate that total split amount equals total expense amount
       if (Math.abs(totalSplitAmount - totalAmount) > 0.01) {
         throw new ValidationError('Total split amount does not match expense amount');
@@ -712,7 +712,18 @@ export class ExpenseService {
         }
       }
     } catch (error) {
-      throw new DatabaseError('Failed to update user balances');
+      // Log the actual error details for debugging
+      console.error('[ExpenseService] updateUserBalances error:', error);
+      if (error instanceof Error) {
+        console.error('[ExpenseService] Error name:', error.name);
+        console.error('[ExpenseService] Error message:', error.message);
+        console.error('[ExpenseService] Error stack:', error.stack);
+        // @ts-ignore - PostgreSQL error details
+        if (error.code) console.error('[ExpenseService] Error code:', error.code);
+        // @ts-ignore
+        if (error.detail) console.error('[ExpenseService] Error detail:', error.detail);
+      }
+      throw new DatabaseError(`Failed to update user balances: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

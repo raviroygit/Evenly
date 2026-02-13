@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -51,7 +52,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [title, setTitle] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date()); // Store as Date object with current date and time
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [oldImageUrl, setOldImageUrl] = useState<string | null>(null); // Track original image from edit
   const [imageRemoved, setImageRemoved] = useState(false); // Track if user removed the image
@@ -60,6 +61,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showGroupDropdown, setShowGroupDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
 
   const isEditMode = !!editExpense;
 
@@ -80,12 +83,12 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setTitle(editExpense.title);
       setSelectedGroupId(editExpense.groupId);
       setTotalAmount(editExpense.totalAmount.toString());
-      // Normalize to YYYY-MM-DD regardless of incoming format
+      // Parse the date from the expense
       try {
-        const normalized = new Date(editExpense.date as any).toISOString().split('T')[0];
-        setDate(normalized);
+        const expenseDate = new Date(editExpense.date as any);
+        setDate(expenseDate);
       } catch {
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(new Date());
       }
       // Set image URI and track old image URL for deletion
       const receiptUrl = (editExpense as any).receipt || (editExpense as any).receiptUrl;
@@ -98,11 +101,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       }
       setImageRemoved(false);
     } else {
-      // Reset form when creating
+      // Reset form when creating - use current date and time
       setTitle('');
       setSelectedGroupId(preselectedGroupId || '');
       setTotalAmount('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(new Date()); // Current date and time
       setImageUri(null);
       setOldImageUrl(null);
       setImageRemoved(false);
@@ -381,9 +384,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
           formData.append('title', title.trim());
           formData.append('totalAmount', totalAmount.trim());
-          // Convert YYYY-MM-DD to ISO 8601 datetime format
-          const isoDate = new Date(date).toISOString();
-          formData.append('date', isoDate);
+          // Use the date object directly (already has time)
+          formData.append('date', date.toISOString());
 
           // Add new image
           const filename = imageUri.split('/').pop() || 'receipt.jpg';
@@ -400,24 +402,22 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           await onUpdateExpense(editExpense.id, formData, oldImageUrl || undefined);
         } else if (imageRemoved) {
           // User removed the image - clear receipt in DB and delete from Cloudinary (oldImageUrl triggers delete in parent)
-          const isoDate = new Date(date).toISOString();
           await onUpdateExpense(
             editExpense.id,
             {
               title: title.trim(),
               totalAmount: totalAmount.trim(),
-              date: isoDate,
+              date: date.toISOString(),
               receipt: null, // Clear receipt in DB; parent deletes from Cloudinary via oldImageUrl
             },
             oldImageUrl || undefined
           );
         } else {
           // No image changes - regular update
-          const isoDate = new Date(date).toISOString();
           await onUpdateExpense(editExpense.id, {
             title: title.trim(),
             totalAmount: totalAmount.trim(),
-            date: isoDate,
+            date: date.toISOString(),
           });
         }
         // Reset form and close modal after successful update
@@ -432,9 +432,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           formData.append('groupId', selectedGroupId);
           formData.append('title', title.trim());
           formData.append('totalAmount', totalAmount.trim());
-          // Convert YYYY-MM-DD to ISO 8601 datetime format
-          const isoDate = new Date(date).toISOString();
-          formData.append('date', isoDate);
+          // Use the date object directly (already has time)
+          formData.append('date', date.toISOString());
           formData.append('splitType', 'equal'); // Default split type
 
           // Add image
@@ -451,12 +450,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           await onAddExpense(formData);
         } else {
           // No image - use regular object
-          const isoDate = new Date(date).toISOString();
           await onAddExpense({
             groupId: selectedGroupId,
             title: title.trim(),
             totalAmount: totalAmount.trim(),
-            date: isoDate,
+            date: date.toISOString(),
           });
         }
 
@@ -464,7 +462,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         setTitle('');
         setSelectedGroupId(preselectedGroupId || '');
         setTotalAmount('');
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(new Date()); // Reset to current date and time
         setImageUri(null);
         setOldImageUrl(null);
         setImageRemoved(false);
@@ -494,11 +492,13 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     setTitle('');
     setSelectedGroupId(preselectedGroupId || '');
     setTotalAmount('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(new Date()); // Reset to current date and time
     setImageUri(null);
     setOldImageUrl(null);
     setImageRemoved(false);
     setShowGroupDropdown(false);
+    setShowDatePicker(false);
+    setShowTimePicker(false);
     onClose();
   };
 
@@ -624,73 +624,117 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           </View>
         </View>
 
-        {/* Date Input with Calendar Icon */}
+        {/* Date and Time Selection */}
         <View style={styles.input}>
           <Text style={[styles.label, { color: colors.foreground }]}>
             {t('expenses.date')}
           </Text>
-          <View style={[styles.inputContainer, { 
-            backgroundColor: colors.background,
-            borderColor: colors.border 
-          }]}>
-          <TextInput
-              style={[styles.textInput, { color: colors.foreground }]}
-            value={new Date(date).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-            placeholder="DD Mon YYYY, HH:MM AM/PM"
-              placeholderTextColor={colors.mutedForeground}
-              editable={false}
+
+          {/* Date Display and Picker Button */}
+          <TouchableOpacity
+            style={[styles.inputContainer, {
+              backgroundColor: colors.background,
+              borderColor: colors.border
+            }]}
+            onPress={() => {
+              setPickerMode('date');
+              setShowDatePicker(true);
+            }}
+          >
+            <Text style={[styles.textInput, { color: colors.foreground }]}>
+              {date.toLocaleDateString(undefined, {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              })}
+            </Text>
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.foreground}
             />
-            <TouchableOpacity 
-              style={styles.calendarIcon}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Ionicons 
-                name="calendar-outline" 
-                size={20} 
-                color={colors.foreground} 
-              />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+
+          {/* Time Display and Picker Button */}
+          <TouchableOpacity
+            style={[styles.inputContainer, {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+              marginTop: 8
+            }]}
+            onPress={() => {
+              setPickerMode('time');
+              setShowTimePicker(true);
+            }}
+          >
+            <Text style={[styles.textInput, { color: colors.foreground }]}>
+              {date.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })}
+            </Text>
+            <Ionicons
+              name="time-outline"
+              size={20}
+              color={colors.foreground}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Date Picker Modal */}
+        {/* Native Date Picker */}
         {showDatePicker && (
-          <View style={styles.datePickerModal}>
-            <View style={[styles.datePickerContainer, { backgroundColor: colors.background }]}>
-              <Text style={[styles.datePickerTitle, { color: colors.foreground }]}>
-                {t('modals.selectDate')}
-              </Text>
-              <TextInput
-                style={[styles.datePickerInput, { 
-                  color: colors.foreground,
-                  borderColor: colors.border,
-                  backgroundColor: colors.background 
-                }]}
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.mutedForeground}
-              />
-              <View style={styles.datePickerButtons}>
-                <TouchableOpacity
-                  style={[styles.datePickerButton, { backgroundColor: colors.muted }]}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={[styles.datePickerButtonText, { color: colors.foreground }]}>
-                    {t('common.cancel')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.datePickerButton, { backgroundColor: colors.primary }]}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={[styles.datePickerButtonText, { color: '#FFFFFF' }]}>
-                    {t('common.done')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={(event, selectedDate) => {
+              if (Platform.OS === 'android') {
+                setShowDatePicker(false);
+              }
+              if (selectedDate) {
+                setDate(selectedDate);
+              }
+              if (Platform.OS === 'ios' && event.type === 'dismissed') {
+                setShowDatePicker(false);
+              }
+            }}
+          />
+        )}
+
+        {/* Native Time Picker */}
+        {showTimePicker && (
+          <DateTimePicker
+            value={date}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={
+              date.toDateString() === new Date().toDateString()
+                ? new Date()
+                : undefined
+            }
+            onChange={(event, selectedDate) => {
+              if (Platform.OS === 'android') {
+                setShowTimePicker(false);
+              }
+              if (selectedDate) {
+                const now = new Date();
+                const isToday = selectedDate.toDateString() === now.toDateString();
+
+                // Prevent future times on today's date
+                if (isToday && selectedDate > now) {
+                  // Don't update if trying to select future time
+                  setDate(now);
+                } else {
+                  setDate(selectedDate);
+                }
+              }
+              if (Platform.OS === 'ios' && event.type === 'dismissed') {
+                setShowTimePicker(false);
+              }
+            }}
+          />
         )}
 
         {/* Image Upload Section */}
@@ -861,64 +905,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  calendarIcon: {
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   buttonRow: {
     marginTop: 24, // Increased top margin for better separation
     marginBottom: 20, // Add bottom margin for better spacing
-  },
-  datePickerModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  datePickerContainer: {
-    borderRadius: 12,
-    padding: 20,
-    margin: 20,
-    minWidth: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  datePickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  datePickerInput: {
-    borderWidth: 1.5,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  datePickerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  datePickerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  datePickerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   labelWithHint: {
     flexDirection: 'row',

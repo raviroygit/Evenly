@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -61,6 +62,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const { symbol, currencyCode } = usePreferredCurrency();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [transactionDate, setTransactionDate] = useState(new Date()); // Date with current time
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [oldImageUrl, setOldImageUrl] = useState<string | null>(null); // Track original image from edit
   const [imageRemoved, setImageRemoved] = useState(false); // Track if user removed the image
@@ -86,6 +90,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setOldImageUrl(imageUrl); // Track original image for deletion
       setImageRemoved(false);
 
+      // Parse transaction date (from date and time strings)
+      try {
+        // Combine date and time strings to create a Date object
+        const dateTimeStr = `${editTransaction.date} ${editTransaction.time}`;
+        const parsedDate = new Date(dateTimeStr);
+        setTransactionDate(parsedDate);
+      } catch {
+        setTransactionDate(new Date());
+      }
+
       // Determine the type from which field has value
       if (editTransaction.amountGiven) {
         setSelectedType('give');
@@ -95,6 +109,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     } else {
       setAmount('');
       setDescription('');
+      setTransactionDate(new Date()); // Reset to current date and time
       setImageUri(null);
       setOldImageUrl(null);
       setImageRemoved(false);
@@ -404,6 +419,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         formData.append('type', selectedType);
         formData.append('amount', parseFloat(amount).toFixed(2));
         formData.append('currency', currencyCode);
+        formData.append('transactionDate', transactionDate.toISOString());
 
         if (description.trim()) {
           formData.append('description', description.trim());
@@ -450,6 +466,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         formData.append('type', transactionType);
         formData.append('amount', parseFloat(amount).toFixed(2));
         formData.append('currency', currencyCode);
+        formData.append('transactionDate', transactionDate.toISOString());
 
         if (description.trim()) {
           formData.append('description', description.trim());
@@ -503,6 +520,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       // Reset form
       setAmount('');
       setDescription('');
+      setTransactionDate(new Date()); // Reset to current date and time
       setImageUri(null);
       setOldImageUrl(null);
       setImageRemoved(false);
@@ -554,6 +572,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!loading && !uploadingImage) {
       setAmount('');
       setDescription('');
+      setTransactionDate(new Date()); // Reset to current date and time
+      setShowDatePicker(false);
+      setShowTimePicker(false);
       setImageUri(null);
       setOldImageUrl(null);
       setImageRemoved(false);
@@ -738,6 +759,125 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     editable={!loading && !uploadingImage}
                   />
                 </View>
+
+                {/* Date and Time Selection */}
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.label, { color: colors.foreground }]}>
+                    {t('expenses.date')}
+                  </Text>
+
+                  {/* Date Display and Picker Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      },
+                    ]}
+                    onPress={() => setShowDatePicker(true)}
+                    disabled={loading || uploadingImage}
+                  >
+                    <Text style={[{ color: colors.foreground, fontSize: 16 }]}>
+                      {transactionDate.toLocaleDateString(undefined, {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </Text>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color={colors.foreground}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Time Display and Picker Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: 8,
+                      },
+                    ]}
+                    onPress={() => setShowTimePicker(true)}
+                    disabled={loading || uploadingImage}
+                  >
+                    <Text style={[{ color: colors.foreground, fontSize: 16 }]}>
+                      {transactionDate.toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </Text>
+                    <Ionicons
+                      name="time-outline"
+                      size={20}
+                      color={colors.foreground}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Native Date Picker */}
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={transactionDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      if (Platform.OS === 'android') {
+                        setShowDatePicker(false);
+                      }
+                      if (selectedDate) {
+                        setTransactionDate(selectedDate);
+                      }
+                      if (Platform.OS === 'ios' && event.type === 'dismissed') {
+                        setShowDatePicker(false);
+                      }
+                    }}
+                  />
+                )}
+
+                {/* Native Time Picker */}
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={transactionDate}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={
+                      transactionDate.toDateString() === new Date().toDateString()
+                        ? new Date()
+                        : undefined
+                    }
+                    onChange={(event, selectedDate) => {
+                      if (Platform.OS === 'android') {
+                        setShowTimePicker(false);
+                      }
+                      if (selectedDate) {
+                        const now = new Date();
+                        const isToday = selectedDate.toDateString() === now.toDateString();
+
+                        // Prevent future times on today's date
+                        if (isToday && selectedDate > now) {
+                          // Don't update if trying to select future time
+                          setTransactionDate(now);
+                        } else {
+                          setTransactionDate(selectedDate);
+                        }
+                      }
+                      if (Platform.OS === 'ios' && event.type === 'dismissed') {
+                        setShowTimePicker(false);
+                      }
+                    }}
+                  />
+                )}
 
                 {/* Image Selection */}
                 <View style={styles.inputContainer}>

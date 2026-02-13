@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, integer, decimal, pgEnum, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, integer, decimal, pgEnum, index, unique } from 'drizzle-orm/pg-core';
 
 // Enums
 export const splitTypeEnum = pgEnum('split_type', ['equal', 'percentage', 'shares', 'exact']);
@@ -149,6 +149,8 @@ export const userBalances = pgTable('user_balances', {
 }, (table) => ({
   groupIdIdx: index('user_balances_group_id_idx').on(table.groupId),
   userIdIdx: index('user_balances_user_id_idx').on(table.userId),
+  // Ensure one balance record per user per group
+  userGroupUnique: unique('user_balances_user_group_unique').on(table.userId, table.groupId),
 }));
 
 // Payments table

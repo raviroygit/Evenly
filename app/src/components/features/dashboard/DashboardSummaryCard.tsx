@@ -49,21 +49,11 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           <Text style={[styles.summaryTitle, { color: colors.foreground }]}>
             👥 {t('dashboard.groupsSummary')}
           </Text>
+          <Text style={[styles.groupCount, { color: '#2196F3' }]}>
+            {loading ? '...' : `${totalGroups} ${t('dashboard.groups')}`}
+          </Text>
         </View>
         <View style={styles.summaryContent}>
-          {/* Total Groups */}
-          <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
-              {t('dashboard.groups')}
-            </Text>
-            <Text style={[styles.summaryValue, { color: '#2196F3' }]}>
-              {loading ? '...' : totalGroups}
-            </Text>
-          </View>
-
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
-
           {/* Net Balance */}
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>
@@ -135,6 +125,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  groupCount: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
   summaryContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,7 +149,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
   },
 });
