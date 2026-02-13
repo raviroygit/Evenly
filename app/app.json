@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EvenlySplit",
-    "slug": "evenly-split",
+    "slug": "evenly",
     "version": "2.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -43,7 +43,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -95,9 +95,7 @@
       "checkAutomatically": "ON_LOAD",
       "enabled": true
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "2.0.0",
     "extra": {
       "router": {},
       "eas": {
