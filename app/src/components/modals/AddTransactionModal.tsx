@@ -842,6 +842,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                           value={transactionDate}
                           mode="date"
                           display="spinner"
+                          themeVariant="dark"
                           maximumDate={new Date()}
                           onChange={(event, selectedDate) => {
                             if (selectedDate) {
@@ -887,6 +888,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                           value={transactionDate}
                           mode="time"
                           display="spinner"
+                          themeVariant="dark"
                           maximumDate={
                             transactionDate.toDateString() === new Date().toDateString()
                               ? new Date()

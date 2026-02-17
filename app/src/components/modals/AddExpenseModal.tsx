@@ -700,6 +700,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   value={date}
                   mode="date"
                   display="spinner"
+                  themeVariant="dark"
                   maximumDate={new Date()}
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -745,6 +746,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   value={date}
                   mode="time"
                   display="spinner"
+                  themeVariant="dark"
                   maximumDate={
                     date.toDateString() === new Date().toDateString()
                       ? new Date()
