@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, Text, TouchableOpacity, ScrollView, TextInput, Dimensions, Image, Platform, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
@@ -683,58 +683,113 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         </View>
 
         {/* Native Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={(event, selectedDate) => {
-              if (Platform.OS === 'android') {
+        {Platform.OS === 'ios' ? (
+          <Modal
+            visible={showDatePicker}
+            transparent
+            animationType="slide"
+          >
+            <View style={styles.iosPickerOverlay}>
+              <View style={[styles.iosPickerContainer, { backgroundColor: colors.card }]}>
+                <View style={styles.iosPickerHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={[styles.iosPickerDone, { color: colors.primary }]}>{t('common.done') || 'Done'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      setDate(selectedDate);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
                 setShowDatePicker(false);
-              }
-              if (selectedDate) {
-                setDate(selectedDate);
-              }
-              if (Platform.OS === 'ios' && event.type === 'dismissed') {
-                setShowDatePicker(false);
-              }
-            }}
-          />
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
+            />
+          )
         )}
 
         {/* Native Time Picker */}
-        {showTimePicker && (
-          <DateTimePicker
-            value={date}
-            mode="time"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={
-              date.toDateString() === new Date().toDateString()
-                ? new Date()
-                : undefined
-            }
-            onChange={(event, selectedDate) => {
-              if (Platform.OS === 'android') {
-                setShowTimePicker(false);
+        {Platform.OS === 'ios' ? (
+          <Modal
+            visible={showTimePicker}
+            transparent
+            animationType="slide"
+          >
+            <View style={styles.iosPickerOverlay}>
+              <View style={[styles.iosPickerContainer, { backgroundColor: colors.card }]}>
+                <View style={styles.iosPickerHeader}>
+                  <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                    <Text style={[styles.iosPickerDone, { color: colors.primary }]}>{t('common.done') || 'Done'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={date}
+                  mode="time"
+                  display="spinner"
+                  maximumDate={
+                    date.toDateString() === new Date().toDateString()
+                      ? new Date()
+                      : undefined
+                  }
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      const now = new Date();
+                      const isToday = selectedDate.toDateString() === now.toDateString();
+                      if (isToday && selectedDate > now) {
+                        setDate(now);
+                      } else {
+                        setDate(selectedDate);
+                      }
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          showTimePicker && (
+            <DateTimePicker
+              value={date}
+              mode="time"
+              display="default"
+              maximumDate={
+                date.toDateString() === new Date().toDateString()
+                  ? new Date()
+                  : undefined
               }
-              if (selectedDate) {
-                const now = new Date();
-                const isToday = selectedDate.toDateString() === now.toDateString();
-
-                // Prevent future times on today's date
-                if (isToday && selectedDate > now) {
-                  // Don't update if trying to select future time
-                  setDate(now);
-                } else {
-                  setDate(selectedDate);
+              onChange={(event, selectedDate) => {
+                setShowTimePicker(false);
+                if (selectedDate) {
+                  const now = new Date();
+                  const isToday = selectedDate.toDateString() === now.toDateString();
+                  if (isToday && selectedDate > now) {
+                    setDate(now);
+                  } else {
+                    setDate(selectedDate);
+                  }
                 }
-              }
-              if (Platform.OS === 'ios' && event.type === 'dismissed') {
-                setShowTimePicker(false);
-              }
-            }}
-          />
+              }}
+            />
+          )
         )}
 
         {/* Image Upload Section */}
@@ -977,5 +1032,27 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 3,
+  },
+  iosPickerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  iosPickerContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 30,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  iosPickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
   },
 });

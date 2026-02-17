@@ -825,58 +825,113 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </View>
 
                 {/* Native Date Picker */}
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={transactionDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    maximumDate={new Date()}
-                    onChange={(event, selectedDate) => {
-                      if (Platform.OS === 'android') {
+                {Platform.OS === 'ios' ? (
+                  <Modal
+                    visible={showDatePicker}
+                    transparent
+                    animationType="slide"
+                  >
+                    <View style={styles.iosPickerOverlay}>
+                      <View style={[styles.iosPickerContainer, { backgroundColor: colors.card }]}>
+                        <View style={styles.iosPickerHeader}>
+                          <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                            <Text style={[styles.iosPickerDone, { color: colors.primary }]}>{t('common.done') || 'Done'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <DateTimePicker
+                          value={transactionDate}
+                          mode="date"
+                          display="spinner"
+                          maximumDate={new Date()}
+                          onChange={(event, selectedDate) => {
+                            if (selectedDate) {
+                              setTransactionDate(selectedDate);
+                            }
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </Modal>
+                ) : (
+                  showDatePicker && (
+                    <DateTimePicker
+                      value={transactionDate}
+                      mode="date"
+                      display="default"
+                      maximumDate={new Date()}
+                      onChange={(event, selectedDate) => {
                         setShowDatePicker(false);
-                      }
-                      if (selectedDate) {
-                        setTransactionDate(selectedDate);
-                      }
-                      if (Platform.OS === 'ios' && event.type === 'dismissed') {
-                        setShowDatePicker(false);
-                      }
-                    }}
-                  />
+                        if (selectedDate) {
+                          setTransactionDate(selectedDate);
+                        }
+                      }}
+                    />
+                  )
                 )}
 
                 {/* Native Time Picker */}
-                {showTimePicker && (
-                  <DateTimePicker
-                    value={transactionDate}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    maximumDate={
-                      transactionDate.toDateString() === new Date().toDateString()
-                        ? new Date()
-                        : undefined
-                    }
-                    onChange={(event, selectedDate) => {
-                      if (Platform.OS === 'android') {
-                        setShowTimePicker(false);
+                {Platform.OS === 'ios' ? (
+                  <Modal
+                    visible={showTimePicker}
+                    transparent
+                    animationType="slide"
+                  >
+                    <View style={styles.iosPickerOverlay}>
+                      <View style={[styles.iosPickerContainer, { backgroundColor: colors.card }]}>
+                        <View style={styles.iosPickerHeader}>
+                          <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                            <Text style={[styles.iosPickerDone, { color: colors.primary }]}>{t('common.done') || 'Done'}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <DateTimePicker
+                          value={transactionDate}
+                          mode="time"
+                          display="spinner"
+                          maximumDate={
+                            transactionDate.toDateString() === new Date().toDateString()
+                              ? new Date()
+                              : undefined
+                          }
+                          onChange={(event, selectedDate) => {
+                            if (selectedDate) {
+                              const now = new Date();
+                              const isToday = selectedDate.toDateString() === now.toDateString();
+                              if (isToday && selectedDate > now) {
+                                setTransactionDate(now);
+                              } else {
+                                setTransactionDate(selectedDate);
+                              }
+                            }
+                          }}
+                        />
+                      </View>
+                    </View>
+                  </Modal>
+                ) : (
+                  showTimePicker && (
+                    <DateTimePicker
+                      value={transactionDate}
+                      mode="time"
+                      display="default"
+                      maximumDate={
+                        transactionDate.toDateString() === new Date().toDateString()
+                          ? new Date()
+                          : undefined
                       }
-                      if (selectedDate) {
-                        const now = new Date();
-                        const isToday = selectedDate.toDateString() === now.toDateString();
-
-                        // Prevent future times on today's date
-                        if (isToday && selectedDate > now) {
-                          // Don't update if trying to select future time
-                          setTransactionDate(now);
-                        } else {
-                          setTransactionDate(selectedDate);
+                      onChange={(event, selectedDate) => {
+                        setShowTimePicker(false);
+                        if (selectedDate) {
+                          const now = new Date();
+                          const isToday = selectedDate.toDateString() === now.toDateString();
+                          if (isToday && selectedDate > now) {
+                            setTransactionDate(now);
+                          } else {
+                            setTransactionDate(selectedDate);
+                          }
                         }
-                      }
-                      if (Platform.OS === 'ios' && event.type === 'dismissed') {
-                        setShowTimePicker(false);
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  )
                 )}
 
                 {/* Image Selection */}
@@ -1150,6 +1205,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  iosPickerOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  iosPickerContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 30,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  iosPickerDone: {
+    fontSize: 17,
+    fontWeight: '600',
   },
 });
 
