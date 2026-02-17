@@ -76,10 +76,15 @@ export class ExpenseService {
         }
 
         // Create equal splits for all group members
-        const splitAmount = parseFloat(expenseData.totalAmount) / activeMembers.length;
-        splits = activeMembers.map(member => ({
+        // Use remainder distribution to avoid floating-point rounding mismatch
+        const total = parseFloat(expenseData.totalAmount);
+        const baseSplit = Math.floor((total / activeMembers.length) * 100) / 100; // floor to 2 decimals
+        const remainder = Math.round((total - baseSplit * activeMembers.length) * 100) / 100;
+
+        splits = activeMembers.map((member, index) => ({
           userId: member.userId,
-          amount: splitAmount.toFixed(2),
+          // Add the remainder (pennies) to the last member so splits sum exactly to totalAmount
+          amount: (index === activeMembers.length - 1 ? baseSplit + remainder : baseSplit).toFixed(2),
         }));
       }
 
@@ -597,11 +602,10 @@ export class ExpenseService {
     // Validate split amounts based on split type
     switch (expenseData.splitType) {
       case 'equal':
-        const equalAmount = totalAmount / splits.length;
-        for (const split of splits) {
-          if (Math.abs(parseFloat(split.amount) - equalAmount) > 0.01) {
-            throw new ValidationError('Equal split amounts do not match');
-          }
+        // Validate that all splits sum to the total (allow remainder distribution to one member)
+        const equalSplitTotal = splits.reduce((s, split) => s + parseFloat(split.amount), 0);
+        if (Math.abs(equalSplitTotal - totalAmount) > 0.01) {
+          throw new ValidationError('Equal split amounts do not match total');
         }
         break;
 
