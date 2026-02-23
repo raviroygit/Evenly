@@ -44,7 +44,9 @@ export const config = {
     supportEmail: process.env.SUPPORT_EMAIL || 'ravi140398@gmail.com',
   },
   app: {
-    baseUrl: process.env.APP_BASE_URL || 'https://b98351f842e5.ngrok-free.app',
+    baseUrl: process.env.APP_BASE_URL || 'https://evenly-backend-374738393915.us-central1.run.app/api/v1',
+    /** Root domain without /api/v1 path — used for smart redirect links */
+    baseUrlRoot: process.env.BASE_URL || process.env.DOMAIN || (process.env.APP_BASE_URL ? process.env.APP_BASE_URL.replace(/\/api\/v1$/, '') : 'https://evenly-backend-374738393915.us-central1.run.app'),
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',

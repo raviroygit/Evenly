@@ -24,7 +24,7 @@ const transporter = nodemailer.createTransport({
 } as nodemailer.TransportOptions);
 
 // Verify connection configuration
-transporter.verify(() => {});
+transporter.verify(() => { });
 
 /**
  * Render an EJS template from the templates folder.
@@ -92,7 +92,7 @@ export async function sendGroupInvitationEmail(
       ? t(lang, 'groupInvitation.subject', { groupName })
       : t(lang, 'groupInvitation.subjectNew', { groupName });
 
-    let appDownloadLink = `${config.app.baseUrl}/api/app/download`;
+    let appDownloadLink = `${config.app.baseUrlRoot}/api/app/download`;
     if (invitationToken) {
       appDownloadLink += `?token=${invitationToken}`;
     }
@@ -188,7 +188,7 @@ export async function sendExpenseNotificationEmail(
     copyright: t(lang, 'expenseNotification.copyright')
   };
 
-  const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
+  const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/expense/${group.id}`;
 
   const htmlBody = await renderTemplate('expenseNotification.ejs', {
     expense,
@@ -394,7 +394,7 @@ async function sendSupportConfirmationEmail(
       </body>
       </html>
     `;
-    
+
     const confirmationSubject = `Support Request Confirmation: ${subject}`;
     await sendEmail(userEmail, confirmationSubject, htmlBody);
   } catch {
@@ -535,7 +535,7 @@ export async function sendExpenseUpdatedEmail(
 ): Promise<void> {
   try {
     // Create smart app open link for expense/group
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/expense/${group.id}`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/expense/${group.id}`;
 
     const htmlBody = await renderTemplate('expenseUpdated.ejs', {
       expense,
@@ -579,7 +579,7 @@ export async function sendExpenseDeletedEmail(
 ): Promise<void> {
   try {
     // Create smart app open link for group
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
     const htmlBody = await renderTemplate('expenseDeleted.ejs', {
       expense,
@@ -621,7 +621,7 @@ export async function sendCustomerAddedEmail(
       downloadAppButton: t(lang, 'customerAdded.downloadAppButton'),
       footer: t(lang, 'customerAdded.footer', { userName })
     };
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
     const htmlBody = await renderTemplate('customerAdded.ejs', {
       customerName,
       userName,
@@ -646,7 +646,7 @@ export async function sendCustomerDeletedEmail(
 ): Promise<void> {
   try {
     // Create smart app open link for Khata
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
     const htmlBody = await renderTemplate('customerDeleted.ejs', {
       customerName,
@@ -691,7 +691,7 @@ export async function sendTransactionUpdatedEmail(
     const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
     // Create smart app open link for Khata
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
     const htmlBody = await renderTemplate('transactionUpdated.ejs', {
       customerName,
@@ -742,7 +742,7 @@ export async function sendTransactionDeletedEmail(
     const balanceAmountFormatted = balanceNum > 0 ? `+₹${balanceNum.toFixed(2)}` : balanceNum < 0 ? `-₹${Math.abs(balanceNum).toFixed(2)}` : '₹0.00';
 
     // Create smart app open link for Khata
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/khata`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
     const htmlBody = await renderTemplate('transactionDeleted.ejs', {
       customerName,
@@ -781,7 +781,7 @@ export async function sendGroupJoinedEmail(
 ): Promise<void> {
   try {
     // Create smart app open link for group
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
     const htmlBody = await renderTemplate('groupJoined.ejs', {
       groupName: group.name,

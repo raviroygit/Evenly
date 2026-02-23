@@ -87,15 +87,15 @@ export class GroupInvitationService {
       if (existingInvitation.length > 0) {
         // If there's a pending invitation, resend the email using the existing invitation
         const invitation = existingInvitation[0];
-        
+
         // Get group and inviter details for email
         const group = await db.select().from(groups).where(eq(groups.id, groupId)).limit(1);
         const inviter = await db.select().from(users).where(eq(users.id, invitedBy)).limit(1);
         const inviterName = inviter.length > 0 ? inviter[0].name : 'Someone';
-        
+
         // Create invitation link
-        const invitationLink = `${config.app.baseUrl}/invite/${invitation.token}`;
-        
+        const invitationLink = `${config.app.baseUrlRoot}/api/app/download?token=${invitation.token}`;
+
         // Resend email (don't fail if email fails, but log prominently)
         let emailSent = false;
         try {
@@ -145,7 +145,7 @@ export class GroupInvitationService {
       const inviterName = inviter.length > 0 ? inviter[0].name : 'Someone';
 
       // Create invitation link
-      const invitationLink = `${config.app.baseUrl}/invite/${token}`;
+      const invitationLink = `${config.app.baseUrlRoot}/api/app/download?token=${token}`;
 
       // Send email (don't fail invitation creation if email fails, but log prominently)
       let emailSent = false;
