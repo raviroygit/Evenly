@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -27,31 +29,44 @@
             justify-content: center;
             color: white;
         }
+
         .container {
             text-align: center;
             padding: 40px 20px;
             max-width: 500px;
         }
+
         .logo {
             font-size: 48px;
             margin-bottom: 20px;
             animation: pulse 2s infinite;
         }
+
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
         }
+
         h1 {
             font-size: 28px;
             margin-bottom: 16px;
             font-weight: 600;
         }
+
         p {
             font-size: 16px;
             opacity: 0.9;
             line-height: 1.6;
             margin-bottom: 24px;
         }
+
         .spinner {
             margin: 30px auto;
             width: 50px;
@@ -61,19 +76,24 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
+
         .status {
             font-size: 14px;
             opacity: 0.8;
             margin-top: 20px;
             font-style: italic;
         }
+
         .button {
-            display: inline-block;
+            display: none;
             padding: 14px 32px;
-            margin-top: 20px;
+            margin: 8px auto;
             background: white;
             color: #667eea;
             text-decoration: none;
@@ -81,16 +101,35 @@
             font-weight: 600;
             font-size: 16px;
             transition: transform 0.2s;
-            display: none;
+            cursor: pointer;
+            width: 80%;
+            max-width: 320px;
+            text-align: center;
         }
+
         .button:hover {
             transform: translateY(-2px);
         }
+
         .button.show {
-            display: inline-block;
+            display: block;
+        }
+
+        #openAppBtn.show {
+            display: block;
+            background: #10b981;
+            color: white;
+        }
+
+        #fallbackBtn.show {
+            display: block;
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.6);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="logo">📱</div>
@@ -98,7 +137,8 @@
         <p id="message">Please wait while we redirect you to the Evenly app.</p>
         <div class="spinner" id="spinner"></div>
         <p class="status" id="status">Checking if app is installed...</p>
-        <a href="#" class="button" id="fallbackBtn">Open in Store</a>
+        <a href="#" class="button" id="openAppBtn">Open EvenlySplit</a>
+        <a href="#" class="button" id="fallbackBtn">Download App</a>
     </div>
 
     <script>
@@ -109,177 +149,177 @@
         const urlParams = new URLSearchParams(window.location.search);
         const invitationToken = urlParams.get('token') || '';
 
+        // App identifiers
+        const PACKAGE_NAME = 'com.nxtgenaidev.evenly';
+        const APP_STORE_ID = '6756101586';
+
         // App store URLs
-        const PLAY_STORE = 'https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly&hl=en_IN&pli=1';
-        const APP_STORE = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
+        const PLAY_STORE = 'https://play.google.com/store/apps/details?id=' + PACKAGE_NAME;
+        const APP_STORE = 'https://apps.apple.com/us/app/evenlysplit/id' + APP_STORE_ID;
 
         // Build deep link based on context type
-        let deepLink = '';
-        let universalLink = '';
+        let deepLinkPath = '';
         let contextMessage = 'Opening Evenly App...';
 
         switch (context.type) {
             case 'invitation':
-                const token = context.data.token || invitationToken;
-                deepLink = `evenly://invitation/${token}`;
-                universalLink = `https://evenly.app/invitation/${token}`;
+                var token = context.data.token || invitationToken;
+                deepLinkPath = 'invitation/' + token;
                 contextMessage = 'Opening your group invitation...';
                 break;
-
             case 'group':
-                const groupId = context.data.groupId;
-                deepLink = `evenly://group/${groupId}`;
-                universalLink = `https://evenly.app/group/${groupId}`;
+                deepLinkPath = 'group/' + context.data.groupId;
                 contextMessage = 'Opening your group...';
                 break;
-
             case 'expense':
-                const expenseGroupId = context.data.groupId;
-                deepLink = `evenly://group/${expenseGroupId}`;
-                universalLink = `https://evenly.app/group/${expenseGroupId}`;
+                deepLinkPath = 'group/' + context.data.groupId;
                 contextMessage = 'Opening your expense details...';
                 break;
-
             case 'khata':
-                deepLink = 'evenly://khata';
-                universalLink = 'https://evenly.app/khata';
+                deepLinkPath = 'khata';
                 contextMessage = 'Opening Khata...';
                 break;
-
             default:
-                deepLink = 'evenly://';
-                universalLink = 'https://evenly.app';
+                deepLinkPath = '';
                 contextMessage = 'Opening Evenly App...';
         }
 
-        // Use the same deep link for both platforms (custom scheme)
-        const ANDROID_DEEP_LINK = deepLink;
-        const IOS_UNIVERSAL_LINK = universalLink;
-        const IOS_CUSTOM_SCHEME = deepLink;
+        // Build all link formats
+        var customSchemeLink = 'evenly://' + deepLinkPath;
 
-        // Auto-detect device from User-Agent (more reliable than URL params)
-        const userAgent = navigator.userAgent.toLowerCase();
-        let device = 'unknown';
-        if (userAgent.includes('android')) {
-            device = 'android';
-        } else if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
-            device = 'ios';
-        }
+        // Android Intent URI - works reliably in Gmail, Chrome, WebViews
+        var intentUri = 'intent://' + deepLinkPath
+            + '#Intent;scheme=evenly;package=' + PACKAGE_NAME
+            + ';S.browser_fallback_url=' + encodeURIComponent(PLAY_STORE) + ';end';
+
+        // Auto-detect device
+        var ua = navigator.userAgent.toLowerCase();
+        var isAndroid = ua.indexOf('android') > -1;
+        var isIOS = /iphone|ipad|ipod/.test(ua);
 
         // UI elements
-        const title = document.getElementById('title');
-        const message = document.getElementById('message');
-        const status = document.getElementById('status');
-        const spinner = document.getElementById('spinner');
-        const fallbackBtn = document.getElementById('fallbackBtn');
+        var titleEl = document.getElementById('title');
+        var messageEl = document.getElementById('message');
+        var statusEl = document.getElementById('status');
+        var spinnerEl = document.getElementById('spinner');
+        var openAppBtn = document.getElementById('openAppBtn');
+        var fallbackBtn = document.getElementById('fallbackBtn');
 
-        // Detect if app opened
-        let appOpened = false;
-        let redirectTimeout = null;
+        var appOpened = false;
 
-        // Function to update UI
-        function updateUI(titleText, messageText, statusText, showButton = false) {
-            title.textContent = titleText;
-            message.textContent = messageText;
-            status.textContent = statusText;
-            if (showButton) {
-                spinner.style.display = 'none';
-                fallbackBtn.classList.add('show');
+        function showButtons() {
+            spinnerEl.style.display = 'none';
+            openAppBtn.classList.add('show');
+            fallbackBtn.classList.add('show');
+            if (isAndroid) {
+                fallbackBtn.textContent = 'Download from Play Store';
+                fallbackBtn.href = PLAY_STORE;
+            } else if (isIOS) {
+                fallbackBtn.textContent = 'Download from App Store';
+                fallbackBtn.href = APP_STORE;
+            } else {
+                openAppBtn.style.display = 'none';
+                fallbackBtn.textContent = 'Visit Website';
+                fallbackBtn.href = 'https://www.evenly.app';
             }
         }
 
-        // Function to redirect to store (so user is never stuck)
-        function redirectToStore() {
-            if (appOpened) return;
-            appOpened = true; // prevent double redirect
-            if (device === 'android') {
-                updateUI('Open in Play Store', 'Redirecting to download Evenly...', 'Opening Play Store...', true);
-                window.location.href = PLAY_STORE;
-            } else if (device === 'ios') {
-                updateUI('Open in App Store', 'Redirecting to download Evenly...', 'Opening App Store...', true);
-                window.location.href = APP_STORE;
-            }
+        function onAppOpened() {
+            appOpened = true;
+            statusEl.textContent = 'App opened!';
         }
 
-        // Function to try opening the app
+        // Detect if app opens (page goes to background)
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) onAppOpened();
+        });
+        window.addEventListener('pagehide', function () { onAppOpened(); });
+
+        // ---- OPEN APP LOGIC ----
         function tryOpenApp() {
-            // Set up detection: if app opens, page will be hidden – clear store redirect
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    appOpened = true;
-                    clearTimeout(redirectTimeout);
-                }
-            });
-            window.addEventListener('blur', function() {
-                appOpened = true;
-                clearTimeout(redirectTimeout);
-            });
-            window.addEventListener('pagehide', function() {
-                appOpened = true;
-                clearTimeout(redirectTimeout);
-            });
+            statusEl.textContent = contextMessage;
 
-            if (device === 'android') {
-                // Schedule fallback FIRST so it always runs (timers can be throttled after location change)
-                redirectTimeout = setTimeout(redirectToStore, 2500);
-                // Then try to open app
-                window.location.href = ANDROID_DEEP_LINK;
+            if (isAndroid) {
+                // Android Intent URI - works in Gmail, Chrome, all WebViews
+                // The intent:// scheme tells Android to find the app by package name
+                // If app not installed, browser_fallback_url sends to Play Store
+                window.location.href = intentUri;
 
-            } else if (device === 'ios') {
-                // Use custom scheme only so we stay on this page and timeout can fire (universal link would navigate away)
-                redirectTimeout = setTimeout(redirectToStore, 3000);
-                window.location.href = IOS_CUSTOM_SCHEME;
+                // Show manual buttons after 1.5s as safety net
+                setTimeout(function () {
+                    if (!appOpened) {
+                        statusEl.textContent = 'Tap the button below to open the app';
+                        showButtons();
+                    }
+                }, 1500);
+
+            } else if (isIOS) {
+                // iOS: try custom scheme via iframe (doesn't show error if app not installed)
+                var iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = customSchemeLink;
+                document.body.appendChild(iframe);
+
+                // Also try direct location change after a small delay
+                setTimeout(function () {
+                    if (!appOpened) {
+                        window.location.href = customSchemeLink;
+                    }
+                }, 100);
+
+                // Show buttons and fallback after 2s
+                setTimeout(function () {
+                    if (!appOpened) {
+                        statusEl.textContent = 'Tap the button below to open the app';
+                        showButtons();
+                    }
+                }, 2000);
+
+                // Redirect to App Store after 4s if app didn't open
+                setTimeout(function () {
+                    if (!appOpened) {
+                        // Don't auto-redirect, let user choose
+                        statusEl.textContent = "Can't find the app? Download it below.";
+                    }
+                }, 4000);
 
             } else {
-                // Desktop or unknown device
-                updateUI(
-                    'Desktop Detected',
-                    'Please use your mobile device to download the Evenly app.',
-                    'Scan QR code or visit on mobile',
-                    false
-                );
-
-                // Show both store buttons
-                fallbackBtn.textContent = 'Learn More';
+                // Desktop
+                titleEl.textContent = 'EvenlySplit';
+                messageEl.textContent = 'Please open this link on your mobile device to use the app.';
+                statusEl.textContent = '';
+                spinnerEl.style.display = 'none';
+                fallbackBtn.textContent = 'Visit Website';
                 fallbackBtn.href = 'https://www.evenly.app';
                 fallbackBtn.classList.add('show');
-                spinner.style.display = 'none';
             }
         }
 
-        // Set up fallback button
-        fallbackBtn.addEventListener('click', function(e) {
+        // Open App button - manual trigger
+        openAppBtn.addEventListener('click', function (e) {
             e.preventDefault();
-            if (device === 'android') {
+            if (isAndroid) {
+                window.location.href = intentUri;
+            } else if (isIOS) {
+                window.location.href = customSchemeLink;
+            }
+        });
+
+        // Fallback button
+        fallbackBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (isAndroid) {
                 window.location.href = PLAY_STORE;
-            } else if (device === 'ios') {
+            } else if (isIOS) {
                 window.location.href = APP_STORE;
             } else {
                 window.location.href = 'https://www.evenly.app';
             }
         });
 
-        // Start the process
-        // Update UI based on context
-        status.textContent = contextMessage;
-
-        // Wait a bit for page to load, then try to open app
-        setTimeout(tryOpenApp, 500);
-
-        // Show "Open in Store" button after 2s so user is never stuck
-        setTimeout(function() {
-            if (!appOpened) {
-                fallbackBtn.classList.add('show');
-                spinner.style.display = 'none';
-                if (device === 'android') {
-                    fallbackBtn.textContent = 'Open Play Store';
-                } else if (device === 'ios') {
-                    fallbackBtn.textContent = 'Open App Store';
-                } else {
-                    fallbackBtn.textContent = 'Visit Website';
-                }
-            }
-        }, 2000);
+        // Start after page loads
+        setTimeout(tryOpenApp, 300);
     </script>
 </body>
+
 </html>
