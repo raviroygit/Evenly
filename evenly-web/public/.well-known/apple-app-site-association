@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "3ZGW2224V2.com.nxtgenaidev.evenly",
+        "paths": [
+          "/invitation/*",
+          "/invite/*",
+          "/group/*",
+          "/khata",
+          "/books",
+          "/tabs/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "3ZGW2224V2.com.nxtgenaidev.evenly"
+    ]
+  }
+}
