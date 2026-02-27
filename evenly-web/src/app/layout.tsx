@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   authors: [{ name: "EvenlySplit Team" }],
   icons: {
     icon: [
-      { url: '/icon.png', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png' },
+      { url: '/og-image.png', sizes: 'any' },
+      { url: '/og-image.png', type: 'image/png' },
     ],
     apple: [
-      { url: '/icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/og-image.png', sizes: '180x180', type: 'image/png' },
     ],
     shortcut: '/icon.png',
   },
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: '/icon.png',
+        url: '/og-image.png',
         width: 512,
         height: 512,
         alt: 'EvenlySplit Logo',

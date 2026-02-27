@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `${SITE_URL}/icon.png`,
+        url: `${SITE_URL}/og-image.png`,
         width: 512,
         height: 512,
         alt: 'EvenlySplit App Icon',
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: 'EvenlySplit - Split Bills Effortlessly',
     description:
       'Download EvenlySplit - the easiest way to split bills with friends.',
-    images: [`${SITE_URL}/icon.png`],
+    images: [`${SITE_URL}/og-image.png`],
   },
 };
 
