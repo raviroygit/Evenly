@@ -514,7 +514,7 @@
     "yourCode": "Your Referral Code",
     "share": "Share with Friends",
     "shareTitle": "Join me on EvenlySplit!",
-    "shareMessage": "Hey! Try EvenlySplit - the easiest way to split bills with friends.\n\nDownload now:\nApp Store: {{appStoreLink}}\nPlay Store: {{playStoreLink}}\n\nUse my referral code: {{code}}",
+    "shareMessage": "Hey! Try EvenlySplit - the easiest way to split bills with friends.\n\nDownload now:\n{{downloadLink}}\n\nUse my referral code: {{code}}",
     "friendsJoined": "{{count}} friends joined",
     "enterCode": "Referral Code (optional)",
     "enterCodePlaceholder": "Enter referral code",

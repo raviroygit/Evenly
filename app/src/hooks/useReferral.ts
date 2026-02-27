@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { ReferralService } from '../services/ReferralService';
 import { openWhatsApp } from '../utils/shareHelper';
 
-// Real store links
-const APP_STORE_LINK = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
-const PLAY_STORE_LINK = 'https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly';
+// Single smart download link with OG metadata for rich WhatsApp preview
+const DOWNLOAD_LINK = 'https://evenlysplit.nxtgenaidev.com/download';
 
 interface ReferralStats {
   totalReferrals: number;
@@ -61,8 +60,7 @@ export function useReferral() {
     if (!code) return;
 
     const message = t('referral.shareMessage', {
-      appStoreLink: APP_STORE_LINK,
-      playStoreLink: PLAY_STORE_LINK,
+      downloadLink: DOWNLOAD_LINK,
       code,
     });
 

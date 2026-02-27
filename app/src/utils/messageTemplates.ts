@@ -1,10 +1,10 @@
-// Direct store links so recipients can download the app immediately
-const APP_STORE_URL = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly';
+// Single smart download link with OG metadata for rich WhatsApp preview
+const DOWNLOAD_URL = 'https://evenlysplit.nxtgenaidev.com/download';
 
-// Download section appended to every shared message with both store links.
+// Download section appended to every shared message.
+// Uses a single link so WhatsApp shows a rich preview with the app icon.
 const getAppDownloadLinks = (t?: (key: string) => string): string => {
-  return `${t ? t('messages.download') : 'Download'}:\nApp Store: ${APP_STORE_URL}\nPlay Store: ${PLAY_STORE_URL}`;
+  return `${t ? t('messages.download') : 'Download'} EvenlySplit:\n${DOWNLOAD_URL}`;
 };
 
 export interface CustomerBalanceData {
