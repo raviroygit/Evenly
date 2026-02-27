@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
-import { Share, Platform, Alert } from 'react-native';
+import { Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ReferralService } from '../services/ReferralService';
+import { openWhatsApp } from '../utils/shareHelper';
 
 // Real store links
 const APP_STORE_LINK = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
@@ -19,18 +20,20 @@ export function useReferral() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const loadReferralCode = useCallback(async () => {
+  const loadReferralCode = useCallback(async (): Promise<string | null> => {
     setLoading(true);
     try {
       const response = await ReferralService.getMyReferralCode();
       if (response.success) {
         setReferralCode(response.data.referralCode);
+        return response.data.referralCode;
       }
     } catch {
       // Silently fail — code will be retried on next load
     } finally {
       setLoading(false);
     }
+    return null;
   }, []);
 
   const loadReferralStats = useCallback(async () => {
@@ -54,11 +57,7 @@ export function useReferral() {
   }, [referralCode]);
 
   const shareReferral = useCallback(async () => {
-    if (!referralCode) {
-      await loadReferralCode();
-    }
-
-    const code = referralCode;
+    const code = referralCode ?? await loadReferralCode();
     if (!code) return;
 
     const message = t('referral.shareMessage', {
@@ -67,14 +66,7 @@ export function useReferral() {
       code,
     });
 
-    try {
-      await Share.share({
-        message,
-        title: t('referral.shareTitle'),
-      });
-    } catch {
-      // User cancelled or share failed
-    }
+    await openWhatsApp(message);
   }, [referralCode, loadReferralCode, t]);
 
   const applyReferralCode = useCallback(async (code: string) => {
