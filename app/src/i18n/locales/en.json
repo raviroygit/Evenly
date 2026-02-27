@@ -509,6 +509,20 @@
     "personalInformation": "Personal Information",
     "phone": "Phone"
   },
+  "referral": {
+    "title": "Refer a Friend",
+    "yourCode": "Your Referral Code",
+    "share": "Share with Friends",
+    "shareTitle": "Join me on EvenlySplit!",
+    "shareMessage": "Hey! Try EvenlySplit - the easiest way to split bills with friends.\n\nDownload now:\nApp Store: {{appStoreLink}}\nPlay Store: {{playStoreLink}}\n\nUse my referral code: {{code}}",
+    "friendsJoined": "{{count}} friends joined",
+    "enterCode": "Referral Code (optional)",
+    "enterCodePlaceholder": "Enter referral code",
+    "codeApplied": "Referral code applied!",
+    "invalidCode": "Invalid referral code",
+    "codeCopied": "Referral code copied!",
+    "referrals": "Referrals"
+  },
   "messages": {
     "hi": "Hi {{name}}",
     "balanceSettled": "Your balance in \"{{groupName}}\" group is settled!",

@@ -628,4 +628,32 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS khata_transactions_customer_id_idx ON khata_transactions(customer_id)`;
   await sql`CREATE INDEX IF NOT EXISTS khata_transactions_user_id_idx ON khata_transactions(user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS khata_transactions_transaction_date_idx ON khata_transactions(transaction_date)`;
+
+  // Add referral_code column to users table
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE;
+    EXCEPTION
+      WHEN duplicate_column THEN null;
+    END $$;
+  `;
+
+  // Create referrals table
+  await sql`
+    CREATE TABLE IF NOT EXISTS referrals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      referral_code TEXT NOT NULL UNIQUE,
+      referred_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `;
+
+  // Create indexes for referrals table
+  await sql`CREATE INDEX IF NOT EXISTS referrals_referrer_id_idx ON referrals(referrer_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS referrals_referral_code_idx ON referrals(referral_code)`;
+  await sql`CREATE INDEX IF NOT EXISTS referrals_referred_user_id_idx ON referrals(referred_user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS referrals_status_idx ON referrals(status)`;
 }

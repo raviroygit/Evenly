@@ -88,6 +88,23 @@ export default function RootLayout() {
           }
         }
 
+        // Handle referral deep links
+        // Format: evenly://referral/CODE or https://evenly.app/referral/CODE
+        else if (hostname === 'referral' || path?.startsWith('/referral')) {
+          let code = '';
+
+          if (hostname === 'referral' && path) {
+            code = path.replace(/^\//, '');
+          } else if (path?.startsWith('/referral/')) {
+            code = path.substring('/referral/'.length);
+          }
+
+          if (code) {
+            // Navigate to signup with referral code pre-filled
+            router.replace(`/auth/signup?referralCode=${code}`);
+          }
+        }
+
         // Legacy Khata deep links (backward compatibility)
         // Format: evenly://khata or https://evenly.app/khata or https://evenly.app/books
         else if (hostname === 'khata' || path === '/khata' || path === '/books' || path === '/tabs/books') {

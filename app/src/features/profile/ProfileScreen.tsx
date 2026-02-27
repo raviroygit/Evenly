@@ -29,6 +29,7 @@ import { getCurrencyName, DEFAULT_CURRENCY } from '../../utils/currency';
 import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStorage } from '../../utils/storage';
+import { useReferral } from '../../hooks/useReferral';
 
 export const ProfileScreen: React.FC = () => {
   const { user, setUser, logout, currentOrganization, authState, refreshUser } = useAuth();
@@ -38,6 +39,7 @@ export const ProfileScreen: React.FC = () => {
   const router = useRouter();
   const { netBalance, loading: balancesLoading, refreshUserBalances } = useUserBalances();
   const { groups, loading: groupsLoading, refreshGroups } = useGroups();
+  const { referralCode, stats, loading: referralLoading, loadReferralCode, loadReferralStats, shareReferral } = useReferral();
   const [refreshing, setRefreshing] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -89,6 +91,11 @@ export const ProfileScreen: React.FC = () => {
   const customerCount = customers.length;
 
   useEffect(() => {
+    loadReferralCode();
+    loadReferralStats();
+  }, [loadReferralCode, loadReferralStats]);
+
+  useEffect(() => {
     fetchKhataSummary();
     // Load current currency: prefer user.preferredCurrency (from backend), then AsyncStorage
     const loadCurrency = async () => {
@@ -114,6 +121,8 @@ export const ProfileScreen: React.FC = () => {
         refreshGroups ? refreshGroups() : Promise.resolve(),
         refreshUserBalances ? refreshUserBalances() : Promise.resolve(),
         fetchKhataSummary(),
+        loadReferralCode(),
+        loadReferralStats(),
       ]);
       setProfileUpdateTrigger(prev => prev + 1);
     } catch (error) {
@@ -451,6 +460,29 @@ export const ProfileScreen: React.FC = () => {
       />
 
 
+
+      {/* Refer a Friend Section */}
+      <GlassMenuCard
+        title={t('referral.title')}
+        items={[
+          {
+            title: t('referral.yourCode'),
+            subtitle: referralLoading ? t('common.loading') : (referralCode || '...'),
+            onPress: shareReferral,
+          },
+          {
+            title: t('referral.share'),
+            subtitle: t('referral.shareTitle'),
+            onPress: shareReferral,
+          },
+          {
+            title: t('referral.referrals'),
+            subtitle: stats
+              ? t('referral.friendsJoined', { count: stats.completedReferrals })
+              : t('common.loading'),
+          },
+        ]}
+      />
 
       {/* Account Section */}
       <GlassMenuCard

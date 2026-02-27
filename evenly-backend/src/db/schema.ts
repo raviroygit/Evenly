@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   phoneNumber: text('phone_number'), // Phone number from auth service
   preferredLanguage: text('preferred_language').default('en'), // User's preferred language for emails and notifications
   preferredCurrency: text('preferred_currency').default('INR'), // User's preferred currency (INR, USD, EUR, etc.)
+  referralCode: text('referral_code').unique(), // Permanent referral code for this user
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -212,6 +213,22 @@ export const khataTransactions = pgTable('khata_transactions', {
 }));
 
 
+// Referrals table
+export const referrals = pgTable('referrals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  referrerId: uuid('referrer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  referralCode: text('referral_code').notNull().unique(),
+  referredUserId: uuid('referred_user_id').references(() => users.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'), // 'pending' | 'completed'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  referrerIdIdx: index('referrals_referrer_id_idx').on(table.referrerId),
+  referralCodeIdx: index('referrals_referral_code_idx').on(table.referralCode),
+  referredUserIdIdx: index('referrals_referred_user_id_idx').on(table.referredUserId),
+  statusIdx: index('referrals_status_idx').on(table.status),
+}));
+
 // Types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -248,6 +265,9 @@ export type NewOrganization = typeof organizations.$inferInsert;
 
 export type OrganizationMember = typeof organizationMembers.$inferSelect;
 export type NewOrganizationMember = typeof organizationMembers.$inferInsert;
+
+export type Referral = typeof referrals.$inferSelect;
+export type NewReferral = typeof referrals.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

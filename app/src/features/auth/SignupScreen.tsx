@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image, Modal, TouchableOpacity, FlatList, TextInput } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,6 +10,7 @@ import { PlatformActionButton } from '../../components/ui/PlatformActionButton';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
+import { ReferralService } from '../../services/ReferralService';
 
 // E.164: + followed by country code + 10 digits (India: +91 + 10 digits)
 const PHONE_E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -24,16 +25,25 @@ export const SignupScreen: React.FC = () => {
   const { colors } = useTheme();
   const { signupWithOtp, signupVerifyOtp } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ referralCode?: string }>();
   const { width } = Dimensions.get('window');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'form' | 'otp'>('form');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; phoneNumber?: string; otp?: string }>({});
+
+  // Pre-fill referral code from deep link params
+  useEffect(() => {
+    if (params.referralCode) {
+      setReferralCode(params.referralCode);
+    }
+  }, [params.referralCode]);
 
   const fullPhoneE164 = (): string => {
     const digits = phoneNumber.replace(/\D/g, '');
@@ -111,6 +121,14 @@ export const SignupScreen: React.FC = () => {
     try {
       const result = await signupVerifyOtp(email.trim().toLowerCase(), trimmedOtp);
       if (result.success) {
+        // Apply referral code if provided (best-effort, don't block signup)
+        if (referralCode.trim()) {
+          try {
+            await ReferralService.applyReferralCode(referralCode.trim());
+          } catch {
+            // Non-blocking — referral application failed but signup succeeded
+          }
+        }
         Alert.alert(
           t('auth.accountCreated'),
           t('auth.pleaseSignInToContinue'),
@@ -282,6 +300,14 @@ export const SignupScreen: React.FC = () => {
                     </View>
                   </TouchableOpacity>
                 </Modal>
+                <SimpleInput
+                  label={t('referral.enterCode')}
+                  placeholder={t('referral.enterCodePlaceholder')}
+                  value={referralCode}
+                  onChangeText={setReferralCode}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
                 <PlatformActionButton
                   title={t('auth.sendVerificationCode')}
                   onPress={handleSendOtp}

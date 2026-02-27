@@ -1,20 +1,10 @@
-import { ENV } from '../config/env';
+// Direct store links so recipients can download the app immediately
+const APP_STORE_URL = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly';
 
-// EVENLY_BACKEND_URL already includes /api (e.g. https://xxx.run.app/api) – append /app/... only
-const getAppDownloadUrl = (): string => {
-  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
-  return base ? `${base}/app/download` : 'https://apps.apple.com/app/id6756101586';
-};
-
-// Backend "open" URLs: tappable in WhatsApp/SMS – open app or redirect to store
-const getAppOpenKhataUrl = (): string => {
-  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
-  return base ? `${base}/app/open/khata` : getAppDownloadUrl();
-};
-
-const getAppOpenGroupUrl = (groupId: string): string => {
-  const base = ENV.EVENLY_BACKEND_URL?.replace(/\/$/, '');
-  return base ? `${base}/app/open/group/${groupId}` : getAppDownloadUrl();
+// Download section appended to every shared message with both store links.
+const getAppDownloadLinks = (t?: (key: string) => string): string => {
+  return `${t ? t('messages.download') : 'Download'}:\nApp Store: ${APP_STORE_URL}\nPlay Store: ${PLAY_STORE_URL}`;
 };
 
 export interface CustomerBalanceData {
@@ -38,9 +28,7 @@ export const generateKhataBalanceMessage = (
 ): string => {
   const { name, amount, type, businessName = 'Evenly' } = data;
 
-  const downloadUrl = getAppDownloadUrl();
-  const openKhataUrl = getAppOpenKhataUrl();
-  const appLink = `\n\n━━━━━━━━━━━━━━━━━━━━\n${t ? t('messages.viewInApp') : 'View in EvenlySplit'}:\n${openKhataUrl}\n\n${t ? t('messages.download') : 'Download'}:\n${downloadUrl}`;
+  const appLink = `\n\n${getAppDownloadLinks(t)}`;
 
   if (type === 'settled') {
     return t
@@ -73,11 +61,7 @@ export const generateGroupBalanceMessage = (
   t?: (key: string, params?: any) => string,
   currencySymbol: string = '₹'
 ): string => {
-  // Use backend open URL so link is tappable in WhatsApp/SMS – opens app or store
-  const downloadUrl = getAppDownloadUrl();
-  const appLink = groupId
-    ? `\n\n━━━━━━━━━━━━━━━━━━━━\n${t ? t('messages.viewInApp') : 'View in EvenlySplit'}:\n${getAppOpenGroupUrl(groupId)}\n\n${t ? t('messages.download') : 'Download'}:\n${downloadUrl}`
-    : `\n\n━━━━━━━━━━━━━━━━━━━━\n${t ? t('messages.viewInApp') : 'View in EvenlySplit'}:\n${downloadUrl}\n\n${t ? t('messages.download') : 'Download'}:\n${downloadUrl}`;
+  const appLink = `\n\n${getAppDownloadLinks(t)}`;
 
   // If no debts or credits, user is settled
   if (debts.length === 0 && credits.length === 0) {
