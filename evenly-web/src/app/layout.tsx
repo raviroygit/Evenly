@@ -13,34 +13,67 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = 'https://evenlysplit.nxtgenaidev.com';
+
 export const metadata: Metadata = {
-  title: "EvenlySplit - Split Bills Effortlessly",
-  description: "The smartest way to split expenses with friends, roommates, and groups. Track who owes what, settle up instantly, and never lose track of shared costs.",
-  keywords: ["expense splitting", "bill splitting", "group expenses", "roommate expenses", "shared costs"],
-  authors: [{ name: "EvenlySplit Team" }],
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'EvenlySplit - Split Bills Effortlessly',
+    template: '%s | EvenlySplit',
+  },
+  description: 'The smartest way to split expenses with friends, roommates, and groups. Track who owes what, settle up instantly, and never lose track of shared costs.',
+  keywords: ['expense splitting', 'bill splitting', 'group expenses', 'split bills', 'roommate expenses', 'shared costs', 'money tracker', 'expense tracker', 'split payment', 'evenlysplit'],
+  authors: [{ name: 'EvenlySplit Team', url: SITE_URL }],
+  creator: 'NxtGenAiDev',
+  publisher: 'NxtGenAiDev',
+  applicationName: 'EvenlySplit',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
-      { url: '/og-image.png', sizes: 'any' },
-      { url: '/og-image.png', type: 'image/png' },
+      { url: '/icon.png', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png' },
     ],
     apple: [
-      { url: '/og-image.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon.png', sizes: '180x180', type: 'image/png' },
     ],
     shortcut: '/icon.png',
   },
   openGraph: {
-    title: "EvenlySplit - Split Bills Effortlessly",
-    description: "The smartest way to split expenses with friends, roommates, and groups.",
-    type: "website",
+    title: 'EvenlySplit - Split Bills Effortlessly',
+    description: 'The smartest way to split expenses with friends, roommates, and groups. Track who owes what, settle up instantly.',
+    url: SITE_URL,
+    siteName: 'EvenlySplit',
+    type: 'website',
+    locale: 'en_US',
     images: [
       {
         url: '/og-image.png',
         width: 512,
         height: 512,
-        alt: 'EvenlySplit Logo',
+        alt: 'EvenlySplit - Split Bills Effortlessly',
       },
     ],
   },
+  twitter: {
+    card: 'summary',
+    title: 'EvenlySplit - Split Bills Effortlessly',
+    description: 'The smartest way to split expenses with friends, roommates, and groups.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  category: 'finance',
 };
 
 export default function RootLayout({
@@ -51,10 +84,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        {/* Favicon */}
-        <link rel="icon" href="/icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-        <link rel="shortcut icon" href="/icon.png" />
         {/* AI Widget Support */}
         <link rel="stylesheet" href="https://chat.voagents.ai/widget.umd.css" />
         <script
