@@ -3,6 +3,7 @@ import { db, users, type User, type NewUser } from '../db';
 import { AuthService } from '../utils/auth';
 import { NotFoundError, DatabaseError } from '../utils/errors';
 import { UUIDUtils } from '../utils/uuid';
+import { sendWelcomeEmail } from './emailService';
 
 export class UserService {
   /**
@@ -74,6 +75,10 @@ export class UserService {
           phoneNumber: userData.phoneNumber,
         })
         .returning();
+
+      // Send welcome email to first-time user (non-blocking)
+      sendWelcomeEmail(createdUser.email, createdUser.name).catch(() => {});
+
       return createdUser;
     } catch (error: unknown) {
       const err = error as { code?: string; detail?: string; message?: string };

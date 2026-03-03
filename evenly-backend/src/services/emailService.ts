@@ -454,6 +454,8 @@ export async function sendKhataTransactionEmail(
   const footerText = t(lang, 'khataTransaction.footer');
   const greeting = t(lang, 'khataTransaction.greeting', { customerName });
 
+  const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
+
   const htmlBody = `
       <!DOCTYPE html>
       <html>
@@ -493,7 +495,11 @@ export async function sendKhataTransactionEmail(
           
           <h3>${currentBalanceLabel}</h3>
           <div class="balance">${balanceType}: ${balanceAmountFormatted}</div>
-          
+
+          <div style="text-align: center; padding: 20px 0;">
+            <a href="${appOpenLink}" style="display: inline-block; padding: 16px 40px; background-color: #6366f1; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">📱 Open in App</a>
+          </div>
+
           <div class="footer">
             <p>${footerText}</p>
             <p>© ${new Date().getFullYear()} EvenlySplit. All rights reserved.</p>
@@ -817,7 +823,7 @@ export async function sendNewMemberJoinedEmail(
 ): Promise<void> {
   try {
     // Create smart app open link for group
-    const appOpenLink = `${config.app.baseUrl}/api/app/open/group/${group.id}`;
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
     const htmlBody = await renderTemplate('newMemberJoined.ejs', {
       newMemberName: newMember.name,
@@ -834,5 +840,29 @@ export async function sendNewMemberJoinedEmail(
     await sendEmail(existingMemberEmail, subject, htmlBody);
   } catch {
     // Don't throw - email failure shouldn't break the join operation
+  }
+}
+
+/**
+ * Send welcome email to a first-time user after signup.
+ * @param email - User's email address
+ * @param userName - User's name
+ */
+export async function sendWelcomeEmail(
+  email: string,
+  userName: string
+): Promise<void> {
+  try {
+    const appOpenLink = `${config.app.baseUrlRoot}/api/app/download`;
+
+    const htmlBody = await renderTemplate('welcome.ejs', {
+      userName,
+      appOpenLink,
+      year: new Date().getFullYear()
+    });
+
+    await sendEmail(email, `Welcome to EvenlySplit, ${userName}!`, htmlBody);
+  } catch {
+    // Don't throw - welcome email failure shouldn't break signup
   }
 }

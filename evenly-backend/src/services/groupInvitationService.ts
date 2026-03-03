@@ -1,6 +1,6 @@
 import { eq, and, or } from 'drizzle-orm';
 import { db, groupInvitations, groups, users, groupMembers, type NewGroupInvitation, type GroupInvitation } from '../db';
-import { sendGroupInvitationEmail } from './emailService';
+import { sendGroupInvitationEmail, sendGroupJoinedEmail, sendNewMemberJoinedEmail } from './emailService';
 import { NotFoundError, ValidationError, ForbiddenError, DatabaseError } from '../utils/errors';
 import { nanoid } from 'nanoid';
 import { config } from '../config/config';
@@ -310,6 +310,45 @@ export class GroupInvitationService {
           invitedUserId: userId, // Update in case it was null
         })
         .where(eq(groupInvitations.id, inv.id));
+
+      // Send welcome & notification emails (non-blocking)
+      try {
+        const [group] = await db.select().from(groups).where(eq(groups.id, inv.groupId)).limit(1);
+        const [newUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+        if (group && newUser) {
+          // Count active members
+          const activeMembers = await db
+            .select()
+            .from(groupMembers)
+            .where(and(eq(groupMembers.groupId, inv.groupId), eq(groupMembers.isActive, true)));
+          const memberCount = activeMembers.length;
+
+          // Send welcome email to the new member
+          sendGroupJoinedEmail(
+            newUser.email,
+            newUser.name,
+            { id: group.id, name: group.name, description: group.description ?? undefined },
+            memberCount
+          ).catch(() => {});
+
+          // Notify existing members about the new member
+          for (const member of activeMembers) {
+            if (member.userId === userId) continue; // Skip the new member
+            const [existingUser] = await db.select().from(users).where(eq(users.id, member.userId)).limit(1);
+            if (existingUser) {
+              sendNewMemberJoinedEmail(
+                existingUser.email,
+                { name: newUser.name, email: newUser.email },
+                { id: group.id, name: group.name },
+                memberCount
+              ).catch(() => {});
+            }
+          }
+        }
+      } catch {
+        // Don't fail invitation acceptance if emails fail
+      }
 
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ValidationError || error instanceof ForbiddenError) {
