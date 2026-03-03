@@ -121,9 +121,6 @@ public/uploads/
 *.key
 *.crt
 
-# Push notification credentials
-certs/
-*.p8
 
 # Docker
 .dockerignore

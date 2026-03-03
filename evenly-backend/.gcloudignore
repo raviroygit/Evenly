@@ -139,6 +139,10 @@ env.cloudrun.example
 !cloudbuild.yaml
 !scripts/deploy.js
 
+# Include APNs push credentials (overrides .gitignore exclusion)
+!certs/
+!*.p8
+
 # Health check files
 health-check.pid
 
