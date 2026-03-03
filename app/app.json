@@ -55,6 +55,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.nxtgenaidev.evenly",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",

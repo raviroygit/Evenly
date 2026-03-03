@@ -247,3 +247,5 @@ tasks.register("checkReleaseSigning") {
     }
 }
 
+
+apply plugin: 'com.google.gms.google-services'

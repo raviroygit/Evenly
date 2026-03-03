@@ -34,13 +34,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Register for push notifications when user is authenticated
   useEffect(() => {
-    if (!user || registeredRef.current) return;
+    if (!user) {
+      console.log('[NotificationContext] No user, skipping push registration');
+      return;
+    }
+    if (registeredRef.current) {
+      console.log('[NotificationContext] Already registered this session, skipping');
+      return;
+    }
 
     const register = async () => {
+      console.log('[NotificationContext] Starting push notification registration for user:', user.id);
       const token = await registerForPushNotifications();
       if (token) {
+        console.log('[NotificationContext] Got token, sending to backend...');
         await registerTokenWithBackend(token);
         registeredRef.current = true;
+        console.log('[NotificationContext] Push registration complete!');
+      } else {
+        console.log('[NotificationContext] No token received — registration skipped');
       }
     };
 
