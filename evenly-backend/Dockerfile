@@ -61,6 +61,9 @@ COPY --from=builder /app/src/templates ./dist/templates
 # Copy i18n email translation JSON (emailTranslator loads from __dirname/email/*.json at runtime)
 COPY --from=builder /app/src/i18n/email ./dist/i18n/email
 
+# Copy APNs push notification key
+COPY --from=builder /app/certs ./certs
+
 # Verify dist folder, templates, and i18n email files
 RUN echo "✅ Final verification..." && \
     ls -la dist/ && \

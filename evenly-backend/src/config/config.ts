@@ -53,4 +53,16 @@ export const config = {
     apiKey: process.env.CLOUDINARY_API_KEY || '',
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
   },
+  push: {
+    apns: {
+      keyPath: process.env.APNS_KEY_PATH || './certs/apns-key.p8',
+      keyId: process.env.APNS_KEY_ID || '9TB3SV933G',
+      teamId: process.env.APNS_TEAM_ID || '3ZGW2224V2',
+      bundleId: process.env.APNS_BUNDLE_ID || 'com.nxtgenaidev.evenly',
+      production: process.env.NODE_ENV === 'production',
+    },
+    fcm: {
+      projectId: process.env.FCM_PROJECT_ID || 'nextgenai-f6743',
+    },
+  },
 };

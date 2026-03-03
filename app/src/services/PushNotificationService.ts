@@ -1,4 +1,5 @@
-import { Platform, NativeModules } from 'react-native';
+import { Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import evenlyApiClient from './EvenlyApiClient';
 
@@ -8,16 +9,25 @@ const PUSH_TOKEN_STORAGE_KEY = '@evenly_push_token';
  * Check if expo-notifications native module is available.
  * Returns false in Expo Go (native module not linked).
  *
- * `require('expo-notifications')` always resolves (JS package is installed),
- * but the underlying native modules (ExpoPushTokenManager, ExpoDevice) are
- * only present in a dev-client / standalone build, NOT in Expo Go.
- * We check NativeModules directly to avoid the crash.
+ * expo-notifications v0.32+ uses the new Expo Modules architecture
+ * (`requireNativeModule` from expo-modules-core), NOT React Native's
+ * `NativeModules`. We use `requireOptionalNativeModule` which returns
+ * null instead of crashing if the module isn't linked.
  */
 function isNotificationsAvailable(): boolean {
-  return (
-    !!NativeModules.ExpoPushTokenManager ||
-    !!NativeModules.ExpoNotificationsEmitter
-  );
+  try {
+    const pushTokenManager = requireOptionalNativeModule('ExpoPushTokenManager');
+    const emitter = requireOptionalNativeModule('ExpoNotificationsEmitter');
+    const available = !!pushTokenManager || !!emitter;
+    console.log('[PushNotification] isNotificationsAvailable:', available, {
+      ExpoPushTokenManager: !!pushTokenManager,
+      ExpoNotificationsEmitter: !!emitter,
+    });
+    return available;
+  } catch {
+    console.log('[PushNotification] isNotificationsAvailable: false (module check threw)');
+    return false;
+  }
 }
 
 /**
@@ -42,9 +52,10 @@ export function setupNotificationHandler(): void {
 }
 
 /**
- * Register for push notifications: request permissions, get Expo push token,
- * create Android notification channel, and send token to backend.
- * Returns the Expo push token string, or null if registration fails.
+ * Register for push notifications: request permissions, get native device
+ * push token (APNs on iOS, FCM on Android), create Android notification
+ * channel, and send token to backend.
+ * Returns the native device token string, or null if registration fails.
  */
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!isNotificationsAvailable()) {
@@ -55,7 +66,8 @@ export async function registerForPushNotifications(): Promise<string | null> {
   try {
     const Notifications = require('expo-notifications');
     const Device = require('expo-device');
-    const Constants = require('expo-constants').default;
+
+    console.log('[PushNotification] Starting registration... isDevice:', Device.isDevice, 'platform:', Platform.OS);
 
     // Push notifications only work on physical devices
     if (!Device.isDevice) {
@@ -66,14 +78,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
     // Check/request permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
+    console.log('[PushNotification] Existing permission status:', existingStatus);
 
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
+      console.log('[PushNotification] Requested permission, new status:', status);
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[PushNotification] Permission not granted');
+      console.log('[PushNotification] Permission not granted, final status:', finalStatus);
       return null;
     }
 
@@ -87,12 +101,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
       });
     }
 
-    // Get the Expo push token
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
+    // Get the native device push token (APNs on iOS, FCM on Android)
+    console.log('[PushNotification] Getting native device push token...');
+    const tokenData = await Notifications.getDevicePushTokenAsync();
     const token = tokenData.data;
+    console.log('[PushNotification] Got device push token:', token);
 
     // Store token locally
     await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
@@ -109,12 +122,20 @@ export async function registerForPushNotifications(): Promise<string | null> {
  */
 export async function registerTokenWithBackend(token: string): Promise<void> {
   try {
-    await evenlyApiClient.post('/notifications/register-token', {
+    console.log('[PushNotification] Registering token with backend...', { token: token.substring(0, 30) + '...', platform: Platform.OS });
+    const result = await evenlyApiClient.post('/notifications/register-token', {
       token,
       platform: Platform.OS as 'ios' | 'android',
     });
-  } catch (error) {
-    console.error('[PushNotification] registerTokenWithBackend error:', error);
+    console.log('[PushNotification] Token registered successfully:', result);
+  } catch (error: any) {
+    console.error('[PushNotification] registerTokenWithBackend FAILED:', {
+      message: error?.message,
+      status: error?.response?.status,
+      data: error?.response?.data,
+      url: error?.config?.url,
+      baseURL: error?.config?.baseURL,
+    });
   }
 }
 

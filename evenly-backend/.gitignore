@@ -121,6 +121,10 @@ public/uploads/
 *.key
 *.crt
 
+# Push notification credentials
+certs/
+*.p8
+
 # Docker
 .dockerignore
 # Dockerfile - commented out for Cloud Run deployment
