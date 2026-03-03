@@ -129,11 +129,7 @@ export const SignupScreen: React.FC = () => {
             // Non-blocking — referral application failed but signup succeeded
           }
         }
-        Alert.alert(
-          t('auth.accountCreated'),
-          t('auth.pleaseSignInToContinue'),
-          [{ text: t('common.ok'), onPress: () => router.replace('/auth/login') }]
-        );
+        // User is now auto-logged in — PublicRoute will redirect to /tabs
         return;
       }
       setErrors({ otp: result.message || t('errors.tryAgain') });

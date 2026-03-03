@@ -382,8 +382,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await authService.signupVerifyOtp(email, otp);
 
       if (result.success && result.user) {
-        // Do not log the user in after signup. Redirect to sign-in so they log in with a fresh session.
-        return { success: true, message: 'Account created successfully. Please sign in.' };
+        // Auto-login after signup — same flow as login()
+        if (result.user.organizations) {
+          setOrganizations(result.user.organizations);
+          if (result.user.currentOrganization) {
+            setCurrentOrganization(result.user.currentOrganization);
+            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
+          } else if (result.user.organizations.length > 0) {
+            setCurrentOrganization(result.user.organizations[0]);
+            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
+          }
+        }
+
+        // Save auth data BEFORE setting user state (prevents race conditions)
+        await AuthStorage.saveAuthData(
+          result.user,
+          result.accessToken,
+          result.user.organizations
+        );
+
+        setAuthState('authenticated');
+        setUser(result.user);
+
+        return { success: true, message: 'Account created successfully!' };
       }
 
       return { success: false, message: result.message || 'Invalid or expired OTP' };
