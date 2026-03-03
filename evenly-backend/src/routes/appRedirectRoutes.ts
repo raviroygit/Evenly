@@ -4,6 +4,7 @@ import {
   openGroupRedirect,
   openExpenseRedirect,
   openKhataRedirect,
+  getAppVersion,
   getDeviceInfo,
   serveLogo,
 } from '../controllers/appRedirectController';
@@ -23,6 +24,9 @@ export default async function appRedirectRoutes(fastify: FastifyInstance) {
 
   // Smart app redirect to open Khata section
   fastify.get('/app/open/khata', openKhataRedirect);
+
+  // App version check — mobile app checks this to prompt store updates
+  fastify.get('/app/version', getAppVersion);
 
   // Device info endpoint (for testing/debugging)
   fastify.get('/app/device-info', getDeviceInfo);

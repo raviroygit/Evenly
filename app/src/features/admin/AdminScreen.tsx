@@ -116,6 +116,26 @@ export const AdminScreen: React.FC = () => {
           <Ionicons name="chevron-forward" size={22} color={colors.mutedForeground} />
         </View>
       </TouchableOpacity>
+
+      {/* Card 3: App Version */}
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}
+        onPress={() => router.push('/tabs/admin/app-version')}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.cardIcon, { backgroundColor: '#10B98115' }]}>
+          <Ionicons name="cloud-upload" size={26} color="#10B981" />
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>
+            App Version
+          </Text>
+          <Text style={[styles.cardSubtitle, { color: colors.mutedForeground }]}>
+            Manage in-app update prompts
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color={colors.mutedForeground} />
+      </TouchableOpacity>
     </ScrollView>
   );
 };

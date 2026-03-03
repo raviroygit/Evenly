@@ -243,7 +243,19 @@ export const referrals = pgTable('referrals', {
   statusIdx: index('referrals_status_idx').on(table.status),
 }));
 
+// App config table (single row — stores latest version info for in-app update prompts)
+export const appConfig = pgTable('app_config', {
+  id: integer('id').primaryKey().default(1),
+  latestVersion: text('latest_version').notNull().default('2.0.1'),
+  minVersion: text('min_version').notNull().default('2.0.0'),
+  forceUpdate: boolean('force_update').notNull().default(false),
+  releaseNotes: text('release_notes').default(''),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Types
+export type AppConfig = typeof appConfig.$inferSelect;
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 

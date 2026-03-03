@@ -2,6 +2,8 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import * as fs from 'fs';
 import * as path from 'path';
 import { config } from '../config/config';
+import { db, appConfig } from '../db';
+import { eq } from 'drizzle-orm';
 
 /**
  * App Store URLs
@@ -178,6 +180,46 @@ export async function serveLogo(
     return reply.status(404).send({ error: 'Logo not found. Add templates/logo.png (copy from app/assets/icon.png).' });
   }
   return reply.type('image/png').send(fs.readFileSync(logoPath));
+}
+
+/**
+ * App version check — mobile app calls this to know if a store update is available
+ * GET /app/version (public, no auth)
+ */
+export async function getAppVersion(
+  _request: FastifyRequest,
+  reply: FastifyReply
+): Promise<any> {
+  try {
+    const rows = await db.select().from(appConfig).where(eq(appConfig.id, 1)).limit(1);
+    const cfg = rows[0] || { latestVersion: '2.0.1', minVersion: '2.0.0', forceUpdate: false, releaseNotes: '' };
+
+    return reply.send({
+      success: true,
+      data: {
+        latestVersion: cfg.latestVersion,
+        minVersion: cfg.minVersion,
+        forceUpdate: cfg.forceUpdate,
+        releaseNotes: cfg.releaseNotes || '',
+        stores: {
+          android: PLAY_STORE_URL,
+          ios: APP_STORE_URL,
+        },
+      },
+    });
+  } catch {
+    // Fallback if DB fails
+    return reply.send({
+      success: true,
+      data: {
+        latestVersion: '2.0.1',
+        minVersion: '2.0.0',
+        forceUpdate: false,
+        releaseNotes: '',
+        stores: { android: PLAY_STORE_URL, ios: APP_STORE_URL },
+      },
+    });
+  }
 }
 
 /**

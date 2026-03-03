@@ -18,6 +18,7 @@ export default function AdminLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="broadcast" />
       <Stack.Screen name="users" />
+      <Stack.Screen name="app-version" />
     </Stack>
   );
 }

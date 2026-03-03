@@ -11,7 +11,9 @@
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
     "web": "expo start --web",
     "android:apk": "cd android && rm -rf app/.cxx app/build build .gradle && ./gradlew assembleRelease && cd ..",
-    "android:bundle": "cd android && rm -rf app/.cxx app/build build .gradle && ./gradlew bundleRelease && cd .."
+    "android:bundle": "cd android && rm -rf app/.cxx app/build build .gradle && ./gradlew bundleRelease && cd ..",
+    "update": "eas update --channel production",
+    "update:preview": "eas update --channel preview"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

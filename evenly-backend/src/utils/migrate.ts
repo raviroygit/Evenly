@@ -672,4 +672,23 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   `;
 
   await sql`CREATE INDEX IF NOT EXISTS device_tokens_user_id_idx ON device_tokens(user_id)`;
+
+  // Create app_config table (single row for version management)
+  await sql`
+    CREATE TABLE IF NOT EXISTS app_config (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      latest_version TEXT NOT NULL DEFAULT '2.0.1',
+      min_version TEXT NOT NULL DEFAULT '2.0.0',
+      force_update BOOLEAN NOT NULL DEFAULT false,
+      release_notes TEXT DEFAULT '',
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `;
+
+  // Seed the single row if it doesn't exist
+  await sql`
+    INSERT INTO app_config (id, latest_version, min_version, force_update, release_notes)
+    VALUES (1, '2.0.1', '2.0.0', false, '')
+    ON CONFLICT (id) DO NOTHING
+  `;
 }
