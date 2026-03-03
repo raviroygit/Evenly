@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Text, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
 import { useAuth } from '../../contexts/AuthContext';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
 import { useUserBalances } from '../../hooks/useBalances';
@@ -30,6 +31,7 @@ import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStorage } from '../../utils/storage';
 import { useReferral } from '../../hooks/useReferral';
+import ENV from '../../config/env';
 
 export const ProfileScreen: React.FC = () => {
   const { user, setUser, logout, currentOrganization, authState, refreshUser } = useAuth();
@@ -541,7 +543,19 @@ export const ProfileScreen: React.FC = () => {
           variant="destructive"
           size="large"
         />
+      </View>
 
+      {/* App Footer */}
+      <View style={styles.appFooter}>
+        <Text style={[styles.footerVersion, { color: colors.mutedForeground }]}>
+          v{Constants.expoConfig?.version || Constants.manifest2?.extra?.expoClient?.version || ENV.APP_VERSION}
+        </Text>
+        <Text style={[styles.footerPoweredBy, { color: colors.mutedForeground }]}>
+          Powered By NxtGen AI Dev Private Limited
+        </Text>
+        <Text style={[styles.footerCopyright, { color: colors.mutedForeground }]}>
+          {'\u00A9'} {new Date().getFullYear()} EvenlySplit. All rights reserved.
+        </Text>
       </View>
         </PullToRefreshScrollView>
       </View>
@@ -642,8 +656,26 @@ const styles = StyleSheet.create({
   },
   logoutContainer: {
     marginTop: 20,
-    marginBottom: 120, // Increased bottom margin to ensure button is fully visible above tab bar
     alignItems: 'center',
+  },
+  appFooter: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 120,
+    gap: 4,
+  },
+  footerVersion: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  footerPoweredBy: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  footerCopyright: {
+    fontSize: 11,
+    fontWeight: '400',
   },
   balanceRow: {
     flexDirection: 'row',
