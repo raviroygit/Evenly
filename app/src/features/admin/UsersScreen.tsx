@@ -10,6 +10,7 @@ import {
   Modal,
   Platform,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -231,6 +232,10 @@ export const UsersScreen: React.FC = () => {
           user={selectedUser}
           visible={!!selectedUser}
           onClose={() => setSelectedUser(null)}
+          onDelete={(userId) => {
+            setSelectedUser(null);
+            setUsers((prev) => prev.filter((u) => u.id !== userId));
+          }}
         />
       )}
     </View>
@@ -243,10 +248,39 @@ interface UserInfoModalProps {
   user: AdminUser;
   visible: boolean;
   onClose: () => void;
+  onDelete: (userId: string) => void;
 }
 
-const UserInfoModal: React.FC<UserInfoModalProps> = ({ user, visible, onClose }) => {
+const UserInfoModal: React.FC<UserInfoModalProps> = ({ user, visible, onClose, onDelete }) => {
   const { colors, theme } = useTheme();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete User',
+      `Are you sure you want to delete ${user.name}? This will remove all their expenses, payments, and group data. This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await EvenlyBackendService.adminDeleteUser(user.id);
+              Alert.alert('Success', `${user.name} has been deleted.`);
+              onDelete(user.id);
+            } catch (error: any) {
+              const message = error?.response?.data?.message || error?.message || 'Failed to delete user';
+              Alert.alert('Error', message);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -388,6 +422,25 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ user, visible, onClose })
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Delete Button — hidden for owners */}
+          {user.role !== 'owner' && (
+            <TouchableOpacity
+              style={[modalStyles.deleteButton, deleting && { opacity: 0.5 }]}
+              onPress={handleDelete}
+              disabled={deleting}
+              activeOpacity={0.7}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                  <Text style={modalStyles.deleteButtonText}>Delete User</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
@@ -635,5 +688,21 @@ const modalStyles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

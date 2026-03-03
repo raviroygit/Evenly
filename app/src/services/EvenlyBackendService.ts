@@ -1151,6 +1151,14 @@ export class EvenlyBackendService {
     return response.data;
   }
 
+  static async adminDeleteUser(userId: string): Promise<{ success: boolean; message: string }> {
+    const response = await this.makeRequest<{ success: boolean; message: string }>(`/admin/users/${userId}`, {
+      method: 'DELETE',
+      invalidatePrefixes: ['/admin'],
+    });
+    return response.data;
+  }
+
   /**
    * Update user's preferred language
    */
