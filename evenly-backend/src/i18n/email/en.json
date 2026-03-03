@@ -34,7 +34,7 @@
     "step2": "Download the EvenlySplit mobile app",
     "step3": "Start tracking and splitting expenses with your group",
     "needHelp": "Need help?",
-    "contactSupport": "Contact our support team at support@evenly.app",
+    "contactSupport": "Contact our support team at connect@nxtgenaidev.com",
     "footer": "This invitation was sent by {inviterName}. If you don't want to join this group, you can safely ignore this email."
   },
   "expenseNotification": {
@@ -205,6 +205,6 @@
     "downloadApp": "Download App",
     "evenly": "EvenlySplit",
     "copyrightFooter": "© {year} EvenlySplit. All rights reserved.",
-    "contactSupport": "Need help? Contact us at support@evenly.app"
+    "contactSupport": "Need help? Contact us at connect@nxtgenaidev.com"
   }
 }

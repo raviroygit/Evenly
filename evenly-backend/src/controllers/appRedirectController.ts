@@ -10,7 +10,7 @@ import { eq } from 'drizzle-orm';
  */
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.nxtgenaidev.evenly&hl=en_IN&pli=1';
 const APP_STORE_URL = 'https://apps.apple.com/us/app/evenlysplit/id6756101586';
-const WEB_FALLBACK_URL = 'https://www.evenly.app'; // Fallback for desktop browsers
+const WEB_FALLBACK_URL = 'https://evenlysplit.nxtgenaidev.com'; // Fallback for desktop browsers
 
 /**
  * Detect device type from User-Agent

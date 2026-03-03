@@ -36,7 +36,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ visible, onClose }) 
   };
 
   const handleOpenHelpCenter = () => {
-    const helpUrl = 'https://evenly.app/help';
+    const helpUrl = 'https://evenlysplit.nxtgenaidev.com/help';
     Linking.openURL(helpUrl).catch(err => {
       Alert.alert(
         t('common.error'),

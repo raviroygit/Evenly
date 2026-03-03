@@ -34,7 +34,7 @@
     "step2": "EvenlySplit मोबाइल ऐप डाउनलोड करें",
     "step3": "अपने ग्रुप के साथ खर्चों को ट्रैक और विभाजित करना शुरू करें",
     "needHelp": "मदद चाहिए?",
-    "contactSupport": "हमारी सहायता टीम से संपर्क करें support@evenly.app पर",
+    "contactSupport": "हमारी सहायता टीम से संपर्क करें connect@nxtgenaidev.com पर",
     "footer": "यह निमंत्रण {inviterName} द्वारा भेजा गया था। यदि आप इस ग्रुप में शामिल नहीं होना चाहते हैं, तो आप इस ईमेल को अनदेखा कर सकते हैं।"
   },
   "expenseNotification": {
@@ -205,6 +205,6 @@
     "downloadApp": "ऐप डाउनलोड करें",
     "evenly": "EvenlySplit",
     "copyrightFooter": "© {year} EvenlySplit। सर्वाधिकार सुरक्षित।",
-    "contactSupport": "मदद चाहिए? हमसे संपर्क करें support@evenly.app पर"
+    "contactSupport": "मदद चाहिए? हमसे संपर्क करें connect@nxtgenaidev.com पर"
   }
 }

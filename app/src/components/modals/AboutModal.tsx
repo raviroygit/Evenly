@@ -84,43 +84,26 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
           </View>
         </View>
 
-        {/* Version Information */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.versionInformation')}</Text>
-          <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.version')}</Text>
-            <Text style={[styles.versionValue, { color: colors.foreground }]}>1.0.0</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.build')}</Text>
-            <Text style={[styles.versionValue, { color: colors.foreground }]}>{new Date().getFullYear()}.1</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.versionInfo} activeOpacity={0.7}>
-            <Text style={[styles.versionLabel, { color: colors.mutedForeground }]}>{t('modals.platform')}</Text>
-            <Text style={[styles.versionValue, { color: colors.foreground }]}>React Native + Expo</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Contact Information */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('modals.getInTouch')}</Text>
           <View style={styles.contactList}>
             <TouchableOpacity 
               style={styles.contactItem}
-              onPress={() => handleOpenLink('mailto:support@evenly.app')}
+              onPress={() => handleOpenLink('mailto:connect@nxtgenaidev.com')}
             >
               <Ionicons name="mail" size={20} color={colors.primary} />
               <Text style={[styles.contactText, { color: colors.primary }]}>
-                support@evenly.app
+                connect@nxtgenaidev.com
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.contactItem}
-              onPress={() => handleOpenLink('https://evenly.app')}
+              onPress={() => handleOpenLink('https://evenlysplit.nxtgenaidev.com')}
             >
               <Ionicons name="globe" size={20} color={colors.primary} />
               <Text style={[styles.contactText, { color: colors.primary }]}>
-                evenly.app
+                evenlysplit.nxtgenaidev.com
               </Text>
             </TouchableOpacity>
           </View>
@@ -226,20 +209,6 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 14,
     flex: 1,
-  },
-  versionInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  versionLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  versionValue: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   contactList: {
     gap: 12,

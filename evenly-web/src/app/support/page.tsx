@@ -70,7 +70,7 @@ export default function SupportPage() {
             <p className="text-muted-foreground mb-4">
               Send us a detailed message and we'll get back to you as soon as possible.
             </p>
-            <div className="text-sm text-primary font-medium">support@evenly.app</div>
+            <div className="text-sm text-primary font-medium">connect@nxtgenaidev.com</div>
           </motion.div>
 
           <motion.div

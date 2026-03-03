@@ -290,7 +290,7 @@ export async function sendSupportEmail(
   `;
 
   const emailSubject = `[${priority.toUpperCase()}] Support Request: ${subject}`;
-  await sendEmail(config.email.supportEmail || 'support@evenly.com', emailSubject, htmlBody);
+  await sendEmail(config.email.supportEmail || 'connect@nxtgenaidev.com', emailSubject, htmlBody);
 
   // Send confirmation email to user
   await sendSupportConfirmationEmail(userEmail, userName, subject, message, priority, category);
@@ -385,7 +385,7 @@ async function sendSupportConfirmationEmail(
           <div class="footer">
             <p><strong>What happens next?</strong></p>
             <p>Our support team will review your request and respond within 24-48 hours.</p>
-            <p>For urgent issues, please contact us directly at support@evenly.com</p>
+            <p>For urgent issues, please contact us directly at connect@nxtgenaidev.com</p>
             <br>
             <p>Thank you for using EvenlySplit! 🎉</p>
             <p>© ${new Date().getFullYear()} EvenlySplit. All rights reserved.</p>

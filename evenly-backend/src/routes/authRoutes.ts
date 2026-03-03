@@ -90,9 +90,10 @@ export async function authRoutes(fastify: FastifyInstance) {
             message: { type: 'string' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
-                user: { type: 'object' },
-                organization: { type: 'object' },
+                user: { type: 'object', additionalProperties: true },
+                organization: { type: 'object', additionalProperties: true },
                 accessToken: { type: 'string' },
                 refreshToken: { type: 'string' },
               },
@@ -180,28 +181,10 @@ export async function authRoutes(fastify: FastifyInstance) {
             message: { type: 'string' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
-                user: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    email: { type: 'string' },
-                    name: { type: 'string' },
-                    avatar: { type: 'string' },
-                    phoneNumber: { type: 'string' },
-                    role: { type: 'string' },
-                  },
-                },
-                organization: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    name: { type: 'string' },
-                    displayName: { type: 'string' },
-                    domainIdentifier: { type: 'string' },
-                    role: { type: 'string' },
-                  },
-                },
+                user: { type: 'object', additionalProperties: true },
+                organization: { type: 'object', additionalProperties: true },
                 accessToken: { type: 'string' },
                 refreshToken: { type: 'string' },
               },
@@ -288,28 +271,10 @@ export async function authRoutes(fastify: FastifyInstance) {
             message: { type: 'string' },
             data: {
               type: 'object',
+              additionalProperties: true,
               properties: {
-                user: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    email: { type: 'string' },
-                    name: { type: 'string' },
-                    avatar: { type: 'string' },
-                    phoneNumber: { type: 'string' },
-                  },
-                },
-                organization: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    name: { type: 'string' },
-                    displayName: { type: 'string' },
-                    domainIdentifier: { type: 'string' },
-                    slug: { type: 'string' },
-                    role: { type: 'string' },
-                  },
-                },
+                user: { type: 'object', additionalProperties: true },
+                organization: { type: 'object', additionalProperties: true },
               },
             },
           },

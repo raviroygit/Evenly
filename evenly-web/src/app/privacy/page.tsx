@@ -182,21 +182,21 @@ export default function PrivacyPolicyPage() {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="mailto:privacy@evenly.app"
+                href="mailto:connect@nxtgenaidev.com"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90 transition-colors"
               >
                 <Mail className="w-4 h-4" />
-                privacy@evenly.app
+                connect@nxtgenaidev.com
               </motion.a>
-              
+
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href="mailto:support@evenly.app"
+                href="mailto:connect@nxtgenaidev.com"
                 className="inline-flex items-center gap-2 px-6 py-3 border border-border text-foreground rounded-lg font-semibold hover:bg-secondary/50 transition-colors"
               >
                 <Users className="w-4 h-4" />
-                support@evenly.app
+                connect@nxtgenaidev.com
               </motion.a>
             </div>
           </div>

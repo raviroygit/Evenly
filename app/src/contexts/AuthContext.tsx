@@ -29,7 +29,7 @@ interface AuthContextType {
   login: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   signup: (email: string) => Promise<{ success: boolean; message: string }>;
   signupWithOtp: (name: string, email: string, phoneNumber: string) => Promise<{ success: boolean; message: string }>;
-  signupVerifyOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
+  signupVerifyOtp: (email: string, otp: string, signupData?: { name: string; phoneNumber: string }) => Promise<{ success: boolean; message: string }>;
   requestOTP: (email: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -377,32 +377,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService]);
 
-  const signupVerifyOtp = useCallback(async (email: string, otp: string) => {
+  const signupVerifyOtp = useCallback(async (email: string, otp: string, signupData?: { name: string; phoneNumber: string }) => {
     try {
       const result = await authService.signupVerifyOtp(email, otp);
 
       if (result.success && result.user) {
+        // Merge signup form data into user if backend didn't return them
+        // The shared auth service may not return name/phoneNumber in verify-otp response
+        const enrichedUser = {
+          ...result.user,
+          name: result.user.name || signupData?.name || '',
+          email: result.user.email || email,
+          phoneNumber: result.user.phoneNumber || signupData?.phoneNumber || '',
+        };
+
         // Auto-login after signup — same flow as login()
-        if (result.user.organizations) {
-          setOrganizations(result.user.organizations);
-          if (result.user.currentOrganization) {
-            setCurrentOrganization(result.user.currentOrganization);
-            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
-          } else if (result.user.organizations.length > 0) {
-            setCurrentOrganization(result.user.organizations[0]);
-            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
+        if (enrichedUser.organizations) {
+          setOrganizations(enrichedUser.organizations);
+          if (enrichedUser.currentOrganization) {
+            setCurrentOrganization(enrichedUser.currentOrganization);
+            await AuthStorage.setCurrentOrganizationId(enrichedUser.currentOrganization.id);
+          } else if (enrichedUser.organizations.length > 0) {
+            setCurrentOrganization(enrichedUser.organizations[0]);
+            await AuthStorage.setCurrentOrganizationId(enrichedUser.organizations[0].id);
           }
         }
 
         // Save auth data BEFORE setting user state (prevents race conditions)
         await AuthStorage.saveAuthData(
-          result.user,
+          enrichedUser,
           result.accessToken,
-          result.user.organizations
+          enrichedUser.organizations
         );
 
         setAuthState('authenticated');
-        setUser(result.user);
+        setUser(enrichedUser);
+
+        // Refresh user from backend in background to get full profile data
+        authService.getCurrentUser().then(async (freshUser) => {
+          if (freshUser) {
+            // Preserve enriched data if backend still doesn't have it
+            const mergedUser = {
+              ...freshUser,
+              name: freshUser.name || enrichedUser.name,
+              phoneNumber: freshUser.phoneNumber || enrichedUser.phoneNumber,
+            };
+            setUser(mergedUser);
+            const authData = await AuthStorage.getAuthData();
+            if (authData?.accessToken) {
+              await AuthStorage.saveAuthData(mergedUser, authData.accessToken, mergedUser.organizations);
+            }
+          }
+        }).catch(() => {});
 
         return { success: true, message: 'Account created successfully!' };
       }

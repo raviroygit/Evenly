@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -50,7 +50,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 15,
+      "versionCode": 16,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

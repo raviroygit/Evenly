@@ -119,7 +119,10 @@ export const SignupScreen: React.FC = () => {
     setErrors({});
 
     try {
-      const result = await signupVerifyOtp(email.trim().toLowerCase(), trimmedOtp);
+      const result = await signupVerifyOtp(email.trim().toLowerCase(), trimmedOtp, {
+        name: name.trim(),
+        phoneNumber: fullPhoneE164(),
+      });
       if (result.success) {
         // Apply referral code if provided (best-effort, don't block signup)
         if (referralCode.trim()) {

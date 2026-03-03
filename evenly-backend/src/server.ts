@@ -114,7 +114,7 @@ async function registerPlugins() {
         version: '1.0.0',
         contact: {
           name: 'API Support',
-          email: 'support@evenly.app',
+          email: 'connect@nxtgenaidev.com',
         },
         license: {
           name: 'MIT',

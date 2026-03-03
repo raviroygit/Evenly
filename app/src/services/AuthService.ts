@@ -346,12 +346,17 @@ export class AuthService {
       const storedPhoneNumber = storedAuthData?.user?.phoneNumber;
 
       const { data: response } = await this.makeRequest('/auth/me', {});
-      if (response.success && response.user) {
-        const organizations = response.organizations || [];
-console.log(response,'response.user current user', response.user);
+      // Backend sends user nested in data: { success, data: { user, organization } }
+      // Also handle top-level user for backwards compatibility
+      const user = response.user || response.data?.user;
+      if (response.success && user) {
+        // Backend may send organization (singular) or organizations (plural array)
+        const org = response.organization || response.data?.organization;
+        const orgs = response.organizations || response.data?.organizations;
+        const organizations = orgs || (org ? [org] : []);
+
         // Store organizations
         if (organizations.length > 0) {
-
           // Set current organization to the first one if not already set
           const currentOrgId = await AuthStorage.getCurrentOrganizationId();
           if (!currentOrgId && organizations[0]) {
@@ -360,23 +365,23 @@ console.log(response,'response.user current user', response.user);
         }
 
         // Sync user with evenly-backend
-        await this.syncUserWithEvenlyBackend(response.user);
+        await this.syncUserWithEvenlyBackend(user);
 
         // Use phoneNumber from response if available, otherwise use stored phoneNumber
         // This handles the case where evenly-backend doesn't return phoneNumber
-        const phoneNumber = response.user.phoneNumber || storedPhoneNumber;
+        const phoneNumber = user.phoneNumber || storedPhoneNumber;
 
         return {
-          id: response.user.id,
-          email: response.user.email,
-          name: response.user.name,
+          id: user.id,
+          email: user.email,
+          name: user.name,
           phoneNumber: phoneNumber,
-          preferredLanguage: response.user.preferredLanguage,
-          preferredCurrency: response.user.preferredCurrency,
+          preferredLanguage: user.preferredLanguage,
+          preferredCurrency: user.preferredCurrency,
           stats: { groups: 0, totalSpent: 0, owed: 0 },
           organizations: organizations,
-          defaultOrganizationId: response.user.defaultOrganizationId,
-          lastOrganizationId: response.user.lastOrganizationId,
+          defaultOrganizationId: user.defaultOrganizationId,
+          lastOrganizationId: user.lastOrganizationId,
         };
       }
       return null;
