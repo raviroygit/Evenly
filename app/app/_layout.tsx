@@ -5,6 +5,7 @@ import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { ActivitiesProvider } from '../src/contexts/ActivitiesContext';
 import { SwipeActionProvider } from '../src/contexts/SwipeActionContext';
+import { NotificationProvider } from '../src/contexts/NotificationContext';
 import { AuthInitializer } from '../src/components/auth/AuthInitializer';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
@@ -146,13 +147,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <ActivitiesProvider>
-            <SwipeActionProvider>
-              <AuthInitializer>
-                <Slot />
-              </AuthInitializer>
-            </SwipeActionProvider>
-          </ActivitiesProvider>
+          <NotificationProvider>
+            <ActivitiesProvider>
+              <SwipeActionProvider>
+                <AuthInitializer>
+                  <Slot />
+                </AuthInitializer>
+              </SwipeActionProvider>
+            </ActivitiesProvider>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

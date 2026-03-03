@@ -20,6 +20,8 @@ import supportRoutes from './routes/supportRoutes';
 import { khataRoutes } from './routes/khataRoutes';
 import appRedirectRoutes from './routes/appRedirectRoutes';
 import { referralRoutes } from './routes/referralRoutes';
+import { pushNotificationRoutes } from './routes/pushNotificationRoutes';
+import { adminRoutes } from './routes/adminRoutes';
 // Health check routes removed - using simple background service instead
 import { handleError } from './utils/errors';
 // Simple health check service that runs in the main process
@@ -187,6 +189,8 @@ async function registerRoutes() {
     await fastify.register(supportRoutes, { prefix: '/api/support' });
     await fastify.register(khataRoutes, { prefix: '/api/khata' });
     await fastify.register(referralRoutes, { prefix: '/api/referrals' });
+    await fastify.register(pushNotificationRoutes, { prefix: '/api/notifications' });
+    await fastify.register(adminRoutes, { prefix: '/api/admin' });
     await fastify.register(appRedirectRoutes, { prefix: '/api' }); // No prefix needed, routes are /app/download
   } catch (error) {
     fastify.log.error(error, 'Failed to register API routes');

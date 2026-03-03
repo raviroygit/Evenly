@@ -1,4 +1,4 @@
-import { Group, Expense, EnhancedExpense } from '../types';
+import { Group, Expense, EnhancedExpense, AdminUser } from '../types';
 import { ENV } from '../config/env';
 import { evenlyApiClient } from './EvenlyApiClient';
 import { AppCache, defaultCacheKeyFromRequest } from '../utils/cache';
@@ -1141,6 +1141,14 @@ export class EvenlyBackendService {
     // Return limited results
     const limit = options?.limit ?? 10;
     return allTransactions.slice(0, limit);
+  }
+
+  // Admin API
+  static async getAllUsers(): Promise<AdminUser[]> {
+    const response = await this.makeRequest<AdminUser[]>('/admin/users', {
+      cacheTTLMs: 30000,
+    });
+    return response.data;
   }
 
   /**

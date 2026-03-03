@@ -9,6 +9,7 @@ import { HomeCache } from '../utils/homeCache';
 import { OfflineDataCache } from '../utils/offlineDataCache';
 import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
+import { getStoredPushToken, unregisterTokenFromBackend, clearStoredPushToken } from '../services/PushNotificationService';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -402,6 +403,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
+      // Unregister push token from backend before clearing auth data
+      try {
+        const pushToken = await getStoredPushToken();
+        if (pushToken) {
+          await unregisterTokenFromBackend(pushToken);
+          await clearStoredPushToken();
+        }
+      } catch (pushError) {
+        // Non-blocking: don't fail logout if push cleanup fails
+      }
 
       // Clear all cache and session data first to prevent race conditions and data leaks
       await CacheManager.invalidateAllData();
@@ -425,6 +436,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
 
       // Even if logout fails, clear everything locally
+      await clearStoredPushToken();
       await CacheManager.invalidateAllData();
       await HomeCache.clear();
       await OfflineDataCache.clearAll();

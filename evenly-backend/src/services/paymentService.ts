@@ -3,6 +3,7 @@ import { db, payments, userBalances, users, groups, type Payment, type NewPaymen
 import { alias } from 'drizzle-orm/pg-core';
 import { GroupService } from './groupService';
 import { NotFoundError, ForbiddenError, ValidationError, DatabaseError } from '../utils/errors';
+import { sendPaymentCompletedPush } from './pushNotificationService';
 
 export class PaymentService {
   /**
@@ -395,9 +396,32 @@ export class PaymentService {
         throw new NotFoundError('Payment');
       }
 
-      // If payment is completed, update user balances
+      // If payment is completed, update user balances and send push notification
       if (status === 'completed') {
         await this.updateBalancesAfterPayment(paymentId, organizationId);
+
+        // Send push notification (non-blocking)
+        try {
+          const [fromUserData] = await db.select().from(users).where(eq(users.id, updatedPayment.fromUserId)).limit(1);
+          const [toUserData] = await db.select().from(users).where(eq(users.id, updatedPayment.toUserId)).limit(1);
+          const [group] = await db.select().from(groups).where(eq(groups.id, updatedPayment.groupId)).limit(1);
+          if (fromUserData && toUserData && group) {
+            // Notify the other person involved (not the one who marked it complete)
+            const recipientUserIds = [updatedPayment.fromUserId, updatedPayment.toUserId].filter(id => id !== userId);
+            if (recipientUserIds.length > 0) {
+              await sendPaymentCompletedPush(
+                recipientUserIds,
+                { name: fromUserData.name },
+                { name: toUserData.name },
+                updatedPayment.amount,
+                updatedPayment.currency,
+                { id: group.id, name: group.name }
+              );
+            }
+          }
+        } catch (pushError) {
+          console.error('[PaymentService] sendPaymentCompletedPush failed:', pushError instanceof Error ? pushError.message : String(pushError));
+        }
       }
 
       return updatedPayment;

@@ -4,6 +4,7 @@ import { GroupService } from './groupService';
 import { UserService } from './userService';
 import { NotFoundError, ForbiddenError, ValidationError, DatabaseError } from '../utils/errors';
 import { sendExpenseNotificationEmail } from './emailService';
+import { sendExpenseCreatedPush, sendExpenseUpdatedPush, sendExpenseDeletedPush } from './pushNotificationService';
 import { EnhancedExpense, ExpenseShare, CurrentUserShare, NetBalance } from '../types';
 
 export class ExpenseService {
@@ -525,6 +526,30 @@ export class ExpenseService {
         throw new NotFoundError('Expense');
       }
 
+      // Send push notification for expense update (non-blocking)
+      try {
+        const [group] = await db.select().from(groups).where(eq(groups.id, updatedExpense.groupId)).limit(1);
+        const [updatedByUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (group && updatedByUser) {
+          // Get all group members except the updater
+          const members = await db
+            .select({ userId: groupMembers.userId })
+            .from(groupMembers)
+            .where(and(eq(groupMembers.groupId, updatedExpense.groupId), eq(groupMembers.isActive, true)));
+          const recipientUserIds = members.map(m => m.userId).filter(id => id !== userId);
+          if (recipientUserIds.length > 0) {
+            await sendExpenseUpdatedPush(
+              recipientUserIds,
+              { title: updatedExpense.title, totalAmount: updatedExpense.totalAmount, currency: updatedExpense.currency },
+              { name: updatedByUser.name },
+              { id: group.id, name: group.name }
+            );
+          }
+        }
+      } catch (pushError) {
+        console.error('[ExpenseService] sendExpenseUpdatedPush failed:', pushError instanceof Error ? pushError.message : String(pushError));
+      }
+
       return updatedExpense;
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
@@ -564,8 +589,34 @@ export class ExpenseService {
         throw new ForbiddenError('You are not a member of this group');
       }
 
+      // Capture expense data for push notification before deleting
+      const expenseForPush = { title: expense.title, totalAmount: expense.totalAmount, currency: expense.currency, groupId: expense.groupId };
+
       // Delete expense (cascade will handle splits and balance updates)
       await db.delete(expenses).where(eq(expenses.id, expenseId));
+
+      // Send push notification for expense deletion (non-blocking)
+      try {
+        const [group] = await db.select().from(groups).where(eq(groups.id, expenseForPush.groupId)).limit(1);
+        const [deletedByUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (group && deletedByUser) {
+          const members = await db
+            .select({ userId: groupMembers.userId })
+            .from(groupMembers)
+            .where(and(eq(groupMembers.groupId, expenseForPush.groupId), eq(groupMembers.isActive, true)));
+          const recipientUserIds = members.map(m => m.userId).filter(id => id !== userId);
+          if (recipientUserIds.length > 0) {
+            await sendExpenseDeletedPush(
+              recipientUserIds,
+              { title: expenseForPush.title, totalAmount: expenseForPush.totalAmount, currency: expenseForPush.currency },
+              { name: deletedByUser.name },
+              { id: group.id, name: group.name }
+            );
+          }
+        }
+      } catch (pushError) {
+        console.error('[ExpenseService] sendExpenseDeletedPush failed:', pushError instanceof Error ? pushError.message : String(pushError));
+      }
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ForbiddenError) {
         throw error;
@@ -815,6 +866,19 @@ export class ExpenseService {
       });
 
       await Promise.all(emailPromises);
+
+      // Send push notifications to all split users except the one who added the expense
+      try {
+        const recipientUserIds = splitsToNotify.map(s => s.userId);
+        await sendExpenseCreatedPush(
+          recipientUserIds,
+          { title: expense.title, totalAmount: expense.totalAmount.toString(), currency: expense.currency },
+          { name: addedByUser.name },
+          { id: group.id, name: group.name }
+        );
+      } catch (pushError) {
+        console.error('[ExpenseService] sendExpenseCreatedPush failed:', pushError instanceof Error ? pushError.message : String(pushError));
+      }
     } catch (error) {
       // Never throw: log and swallow so expense creation never fails due to email/i18n
       console.error('[ExpenseService] sendExpenseNotifications error:', error instanceof Error ? error.message : String(error));

@@ -213,6 +213,20 @@ export const khataTransactions = pgTable('khata_transactions', {
 }));
 
 
+// Device tokens table (for push notifications)
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull(), // Expo push token
+  platform: text('platform').notNull(), // 'ios' or 'android'
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('device_tokens_user_id_idx').on(table.userId),
+  userTokenUnique: unique('device_tokens_user_token_unique').on(table.userId, table.token),
+}));
+
 // Referrals table
 export const referrals = pgTable('referrals', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -268,6 +282,9 @@ export type NewOrganizationMember = typeof organizationMembers.$inferInsert;
 
 export type Referral = typeof referrals.$inferSelect;
 export type NewReferral = typeof referrals.$inferInsert;
+
+export type DeviceToken = typeof deviceTokens.$inferSelect;
+export type NewDeviceToken = typeof deviceTokens.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

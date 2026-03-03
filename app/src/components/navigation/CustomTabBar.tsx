@@ -1,6 +1,7 @@
 import { View, StyleSheet, Platform } from 'react-native';
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import TabBarButton from './TabBarButton';
 
 interface CustomTabBarProps {
@@ -11,6 +12,11 @@ interface CustomTabBarProps {
 
 const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { theme, colors } = useTheme();
+  const { currentOrganization } = useAuth();
+
+  const isAdmin =
+    currentOrganization?.role === 'owner' ||
+    currentOrganization?.role === 'admin';
 
   const primaryColor = colors.primary;
   const greyColor = theme === 'dark' ? colors.mutedForeground : '#6B7280';
@@ -41,6 +47,9 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigat
             : route.name;
 
         if (['_sitemap', '+not-found'].includes(route.name)) return null;
+
+        // Hide admin tab for non-admin users
+        if (route.name === 'admin' && !isAdmin) return null;
 
         const isFocused = state.index === index;
 

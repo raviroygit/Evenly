@@ -656,4 +656,20 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS referrals_referral_code_idx ON referrals(referral_code)`;
   await sql`CREATE INDEX IF NOT EXISTS referrals_referred_user_id_idx ON referrals(referred_user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS referrals_status_idx ON referrals(status)`;
+
+  // Create device_tokens table (push notifications)
+  await sql`
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      UNIQUE(user_id, token)
+    )
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS device_tokens_user_id_idx ON device_tokens(user_id)`;
 }

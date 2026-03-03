@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
 import { ProtectedRoute } from '../../src/components/auth/ProtectedRoute';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import CustomTabBar from '../../src/components/navigation/CustomTabBar';
 import { LanguageSelectionModal } from '../../src/components/modals/LanguageSelectionModal';
@@ -16,8 +17,13 @@ const LANGUAGE_SELECTED_KEY = '@evenly_language_selected';
 function TabLayoutContent() {
   const { t, i18n } = useTranslation();
   const { theme, colors } = useTheme();
+  const { currentOrganization } = useAuth();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [checking, setChecking] = useState(true);
+
+  const isAdmin =
+    currentOrganization?.role === 'owner' ||
+    currentOrganization?.role === 'admin';
 
   // Check if user has selected language before
   useEffect(() => {
@@ -78,6 +84,13 @@ function TabLayoutContent() {
               }}
             />
             <Tabs.Screen
+              name="admin"
+              options={{
+                title: 'Admin',
+                href: isAdmin ? '/tabs/admin' : null,
+              }}
+            />
+            <Tabs.Screen
               name="profile"
               options={{
                 title: t('profile.title')
@@ -100,6 +113,13 @@ function TabLayoutContent() {
               <Label>{t('khata.title')}</Label>
               <Icon sf="book.fill" />
             </NativeTabs.Trigger>
+
+            {isAdmin && (
+              <NativeTabs.Trigger name="admin">
+                <Label>Admin</Label>
+                <Icon sf="checkmark.shield.fill" />
+              </NativeTabs.Trigger>
+            )}
 
             <NativeTabs.Trigger name="profile">
               <Label>{t('profile.title')}</Label>

@@ -217,6 +217,17 @@ export interface GlassCardProps {
   marginBottom?: number;
 }
 
+// Admin Types
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  phoneNumber?: string;
+  avatar?: string;
+  role: string;
+  createdAt: string;
+}
+
 export interface GlassListItemProps {
   title: string;
   subtitle?: string;
