@@ -25,6 +25,7 @@ import { CustomersListModal } from '../../components/modals/CustomersListModal';
 import { CustomerInfoModal } from '../../components/modals/CustomerInfoModal';
 import { LanguageSelectionModal } from '../../components/modals/LanguageSelectionModal';
 import { CurrencySelectionModal } from '../../components/modals/CurrencySelectionModal';
+import { FriendsJoinedModal } from '../../components/modals/FriendsJoinedModal';
 import { OrganizationSwitcher } from '../../components/navigation/OrganizationSwitcher';
 import { getCurrencyName, DEFAULT_CURRENCY } from '../../utils/currency';
 import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
@@ -52,6 +53,7 @@ export const ProfileScreen: React.FC = () => {
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showFriendsJoinedModal, setShowFriendsJoinedModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [currentCurrency, setCurrentCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
@@ -482,6 +484,7 @@ export const ProfileScreen: React.FC = () => {
             subtitle: stats
               ? t('referral.friendsJoined', { count: stats.completedReferrals })
               : t('common.loading'),
+            onPress: () => setShowFriendsJoinedModal(true),
           },
         ]}
       />
@@ -639,6 +642,14 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setShowCurrencyModal(false)}
         currentCurrency={currentCurrency}
         onCurrencyChange={handleCurrencyChange}
+      />
+
+      {/* Friends Joined Modal */}
+      <FriendsJoinedModal
+        visible={showFriendsJoinedModal}
+        onClose={() => setShowFriendsJoinedModal(false)}
+        referredUsers={stats?.referredUsers ?? []}
+        loading={referralLoading}
       />
     </>
   );

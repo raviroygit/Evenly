@@ -3,6 +3,9 @@ import { AuthService } from '../services/authService';
 import { OrganizationService } from '../services/organizationService';
 import { UserService } from '../services/userService';
 import { z } from 'zod';
+import { db, users, expenses, payments, groupInvitations, groups, groupMembers, organizations, organizationMembers } from '../db';
+import { eq, or, and, ne } from 'drizzle-orm';
+import { AuthenticatedRequest } from '../types';
 
 // Validation schemas
 const signupSchema = z.object({
@@ -107,15 +110,100 @@ export class AuthController {
   }
 
   /**
-   * Delete current user (proxy to auth service)
+   * Delete current user: delete from auth service, then clean up evenly-backend PostgreSQL data
    */
   static async deleteCurrentUser(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const result = await AuthService.deleteUser(request);
-      if (result.success) {
-        return reply.status(200).send({ success: true, message: result.message || 'Account deleted', data: null });
+      const userId = (request as AuthenticatedRequest).user?.id;
+      if (!userId) {
+        return reply.status(401).send({ success: false, message: 'Unauthorized' });
       }
-      return reply.status(400).send({ success: false, message: result.message || 'Failed to delete account' });
+
+      // 1. Delete from auth service (nxgenaidev_auth MongoDB) first
+      const authResult = await AuthService.deleteUser(request);
+      console.log('[deleteCurrentUser] Auth service result:', JSON.stringify(authResult));
+      if (!authResult.success) {
+        console.error('[deleteCurrentUser] Auth service delete failed:', authResult.message);
+        return reply.status(400).send({ success: false, message: `Auth service: ${authResult.message}` });
+      }
+
+      // 2. Delete expenses where paidBy = userId (cascades to expense_splits)
+      await db.delete(expenses).where(eq(expenses.paidBy, userId));
+
+      // 3. Delete payments where fromUserId or toUserId = userId
+      await db.delete(payments).where(
+        or(eq(payments.fromUserId, userId), eq(payments.toUserId, userId))
+      );
+
+      // 4. Delete group_invitations where invitedBy = userId
+      await db.delete(groupInvitations).where(eq(groupInvitations.invitedBy, userId));
+
+      // 5. Set invitedUserId = null where invitedUserId = userId
+      await db.update(groupInvitations)
+        .set({ invitedUserId: null })
+        .where(eq(groupInvitations.invitedUserId, userId));
+
+      // 6. Reassign groups.createdBy where user is the creator
+      const createdGroups = await db
+        .select({ id: groups.id })
+        .from(groups)
+        .where(eq(groups.createdBy, userId));
+
+      for (const group of createdGroups) {
+        const otherMember = await db
+          .select({ userId: groupMembers.userId })
+          .from(groupMembers)
+          .where(
+            and(
+              eq(groupMembers.groupId, group.id),
+              ne(groupMembers.userId, userId),
+              eq(groupMembers.isActive, true)
+            )
+          )
+          .limit(1);
+
+        if (otherMember.length) {
+          await db.update(groups)
+            .set({ createdBy: otherMember[0].userId })
+            .where(eq(groups.id, group.id));
+        } else {
+          await db.delete(groups).where(eq(groups.id, group.id));
+        }
+      }
+
+      // 7. Reassign organizations.createdBy where user is the creator
+      const createdOrgs = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.createdBy, userId));
+
+      for (const org of createdOrgs) {
+        const otherAdmin = await db
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, org.id),
+              ne(organizationMembers.userId, userId)
+            )
+          )
+          .limit(1);
+
+        if (otherAdmin.length) {
+          await db.update(organizations)
+            .set({ createdBy: otherAdmin[0].userId })
+            .where(eq(organizations.id, org.id));
+        } else {
+          await db.delete(organizations).where(eq(organizations.id, org.id));
+        }
+      }
+
+      // 8. Delete the user from PostgreSQL (CASCADE handles: organization_members, group_members,
+      //    expense_splits, user_balances, khata_customers, khata_transactions,
+      //    device_tokens, referrals)
+      await db.delete(users).where(eq(users.id, userId));
+
+      return reply.status(200).send({ success: true, message: 'Account deleted successfully', data: null });
     } catch (error: any) {
       return reply.status(500).send({ success: false, message: error.message || 'Failed to delete account' });
     }

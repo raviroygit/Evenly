@@ -508,16 +508,24 @@ export class AuthService {
    */
   static async deleteUser(request: FastifyRequest): Promise<AuthResponse> {
     try {
-      const ssoToken = request.cookies?.sso_token;
-      
+      // Extract token from Authorization header (mobile) or cookie (web)
+      const authHeader = request.headers.authorization;
+      const ssoToken =
+        (authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null) ??
+        request.cookies?.sso_token ??
+        null;
+
       if (!ssoToken) {
         return { success: false, message: 'No authentication token provided' };
       }
 
+      // Send BOTH Bearer and Cookie — same pattern as admin delete route (adminRoutes.ts)
+      // Auth system's validateAuth tries cookie first, then Bearer — one will match
       const response = await axios.delete(`${this.AUTH_SERVICE_URL}/me`, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': `Bearer ${ssoToken}`,
           'Cookie': `sso_token=${ssoToken}`,
         },
         timeout: 30000,
@@ -529,6 +537,7 @@ export class AuthService {
       }
       return { success: false, message: respData?.message || 'Failed to delete account' };
     } catch (error: any) {
+      console.error('[AuthService.deleteUser] Failed:', error.response?.status, error.response?.data || error.message);
       return { success: false, message: error.response?.data?.message || 'Failed to delete account' };
     }
   }
