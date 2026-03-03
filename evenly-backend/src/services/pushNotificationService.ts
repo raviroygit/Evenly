@@ -38,36 +38,25 @@ function getApnsJwt(): string {
   return apnsJwt;
 }
 
-function getApnsHost(): string {
-  return config.push.apns.production
-    ? 'https://api.push.apple.com'
-    : 'https://api.sandbox.push.apple.com';
-}
+const APNS_PRODUCTION = 'https://api.push.apple.com';
+const APNS_SANDBOX = 'https://api.sandbox.push.apple.com';
 
 /**
- * Send a push notification via APNs HTTP/2.
- * Returns true if delivered, false if the token should be removed.
+ * Send a single APNs request to a specific host.
+ * Returns { ok, badToken } where badToken means the token is invalid for this host.
  */
-async function sendApns(
+function sendApnsToHost(
+  host: string,
   deviceToken: string,
-  payload: { title: string; body: string; data?: Record<string, string> }
-): Promise<boolean> {
+  apnsPayload: string
+): Promise<{ ok: boolean; badToken: boolean }> {
   return new Promise((resolve) => {
-    const host = getApnsHost();
     const client = http2.connect(host);
 
     client.on('error', (err) => {
       console.error('[PushNotification] APNs connection error:', err.message);
       client.close();
-      resolve(true); // Don't remove token on connection error
-    });
-
-    const apnsPayload = JSON.stringify({
-      aps: {
-        alert: { title: payload.title, body: payload.body },
-        sound: 'default',
-      },
-      ...(payload.data || {}),
+      resolve({ ok: false, badToken: false });
     });
 
     const req = client.request({
@@ -94,26 +83,60 @@ async function sendApns(
     req.on('end', () => {
       client.close();
       if (statusCode === 200) {
-        resolve(true);
+        resolve({ ok: true, badToken: false });
       } else {
-        const isInvalid = isApnsTokenInvalid(statusCode, responseData);
-        if (isInvalid) {
-          console.warn('[PushNotification] APNs invalid token, will deactivate:', deviceToken.substring(0, 12) + '...');
-        } else {
+        const bad = isApnsTokenInvalid(statusCode, responseData);
+        if (!bad) {
           console.error('[PushNotification] APNs error:', statusCode, responseData);
         }
-        resolve(!isInvalid);
+        resolve({ ok: false, badToken: bad });
       }
     });
 
     req.on('error', (err) => {
       console.error('[PushNotification] APNs request error:', err.message);
       client.close();
-      resolve(true); // Don't remove token on transient errors
+      resolve({ ok: false, badToken: false });
     });
 
     req.end(apnsPayload);
   });
+}
+
+/**
+ * Send a push notification via APNs HTTP/2.
+ * Tries production first, falls back to sandbox if the token is rejected
+ * (handles dev builds pointing at sandbox while backend runs in production).
+ * Returns true if delivered, false if the token should be removed.
+ */
+async function sendApns(
+  deviceToken: string,
+  payload: { title: string; body: string; data?: Record<string, string> }
+): Promise<boolean> {
+  const apnsPayload = JSON.stringify({
+    aps: {
+      alert: { title: payload.title, body: payload.body },
+      sound: 'default',
+    },
+    ...(payload.data || {}),
+  });
+
+  const primary = config.push.apns.production ? APNS_PRODUCTION : APNS_SANDBOX;
+  const fallback = config.push.apns.production ? APNS_SANDBOX : APNS_PRODUCTION;
+
+  const result = await sendApnsToHost(primary, deviceToken, apnsPayload);
+  if (result.ok) return true;
+
+  // If token was rejected as invalid, try the other environment before giving up
+  if (result.badToken) {
+    const fallbackResult = await sendApnsToHost(fallback, deviceToken, apnsPayload);
+    if (fallbackResult.ok) return true;
+    // Both failed — token is truly invalid
+    console.warn('[PushNotification] APNs token invalid on both prod and sandbox, will deactivate:', deviceToken.substring(0, 12) + '...');
+    return false;
+  }
+
+  return true; // Transient error, don't deactivate
 }
 
 function isApnsTokenInvalid(statusCode: number, responseBody: string): boolean {
