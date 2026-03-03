@@ -6,7 +6,9 @@
         "target": {
             "namespace": "android_app",
             "package_name": "com.nxtgenaidev.evenly",
-            "sha256_cert_fingerprints": []
+            "sha256_cert_fingerprints": [
+                "BE:25:07:E1:15:74:FD:48:77:F6:BF:73:C8:85:99:AC:2D:F3:F7:DC:BE:1D:49:7A:17:BF:3B:44:10:66:4D:E3"
+            ]
         }
     }
 ]

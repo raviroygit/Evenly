@@ -30,6 +30,7 @@ import { SwipeActionRow } from '../../components/ui/SwipeActionRow';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { generateKhataBalanceMessage } from '../../utils/messageTemplates';
 import { shareBalance } from '../../utils/shareHelper';
+import { useAuth } from '../../contexts/AuthContext';
 import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 
 interface Transaction {
@@ -48,6 +49,7 @@ export const CustomerDetailScreen: React.FC = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerInitials?: string }>();
   const { colors, theme } = useTheme();
+  const { user: currentUser } = useAuth();
   const { setActiveSwipeId } = useSwipeAction();
   const { formatAmount, symbol } = usePreferredCurrency();
   const [customer, setCustomer] = useState<{
@@ -394,6 +396,9 @@ export const CustomerDetailScreen: React.FC = () => {
         name: customer.name,
         amount: Math.abs(parseFloat(customer.balance)).toFixed(2),
         type: customer.type,
+        senderName: currentUser?.name,
+        senderEmail: currentUser?.email,
+        senderPhone: currentUser?.phoneNumber,
       },
       t,
       symbol
@@ -683,6 +688,9 @@ export const CustomerDetailScreen: React.FC = () => {
                 name: customer.name,
                 amount: Math.abs(parseFloat(customer.balance)).toFixed(2),
                 type: customer.type,
+                senderName: currentUser?.name,
+                senderEmail: currentUser?.email,
+                senderPhone: currentUser?.phoneNumber,
               },
               t,
               symbol

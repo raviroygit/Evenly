@@ -3,8 +3,10 @@ import * as fs from 'fs';
 import * as jwt from 'jsonwebtoken';
 import * as admin from 'firebase-admin';
 import { eq, and, inArray } from 'drizzle-orm';
-import { db, deviceTokens } from '../db';
+import { db, deviceTokens, users } from '../db';
 import { config } from '../config/config';
+import { t as translate, getUserLanguage, getUserCurrencySymbol } from '../i18n/emailTranslator';
+import { formatAmount } from '../utils/currency';
 
 // ── APNs setup ──
 
@@ -325,6 +327,83 @@ async function sendPushNotifications(
   }
 }
 
+// ── Helpers for personalized push ──
+
+/**
+ * Fetch preferences (language + currency) for recipient users.
+ */
+async function getRecipientPreferences(
+  userIds: string[]
+): Promise<Map<string, { preferredLanguage: string | null; preferredCurrency: string | null }>> {
+  const prefs = new Map<string, { preferredLanguage: string | null; preferredCurrency: string | null }>();
+  if (userIds.length === 0) return prefs;
+  try {
+    const rows = await db
+      .select({ id: users.id, preferredLanguage: users.preferredLanguage, preferredCurrency: users.preferredCurrency })
+      .from(users)
+      .where(inArray(users.id, userIds));
+    for (const row of rows) {
+      prefs.set(row.id, { preferredLanguage: row.preferredLanguage, preferredCurrency: row.preferredCurrency });
+    }
+  } catch (error) {
+    console.error('[PushNotification] getRecipientPreferences error:', error instanceof Error ? error.message : error);
+  }
+  return prefs;
+}
+
+/**
+ * Format an amount using the recipient's preferred currency.
+ * Returns e.g. "₹500" or "$500" instead of "USD 500".
+ */
+function formatAmountForUser(
+  rawAmount: string,
+  userPref?: { preferredCurrency?: string | null } | null
+): string {
+  const symbol = getUserCurrencySymbol(userPref ?? undefined);
+  const num = parseFloat(rawAmount);
+  // Use Intl formatting if possible, otherwise symbol + number
+  if (userPref?.preferredCurrency) {
+    return formatAmount(num, userPref.preferredCurrency);
+  }
+  return `${symbol}${num % 1 === 0 ? num.toString() : num.toFixed(2)}`;
+}
+
+/**
+ * Send personalized push notifications per recipient (respecting language + currency).
+ * Falls back to English + INR if preferences are unavailable.
+ */
+async function sendPersonalizedPush(
+  recipientUserIds: string[],
+  buildPayload: (lang: string, userPref: { preferredCurrency?: string | null }) => { title: string; body: string },
+  data: Record<string, string>
+): Promise<void> {
+  try {
+    const prefs = await getRecipientPreferences(recipientUserIds);
+    const tokens = await getActiveTokensForUsers(recipientUserIds);
+    if (tokens.length === 0) return;
+
+    const results = await Promise.allSettled(
+      tokens.map(async (tok) => {
+        const userPref = prefs.get(tok.userId) ?? { preferredLanguage: null, preferredCurrency: null };
+        const lang = getUserLanguage(userPref);
+        const { title, body } = buildPayload(lang, userPref);
+        const ok = await sendToDevice(tok.token, tok.platform, { title, body, data });
+        if (!ok) {
+          await unregisterPushToken(tok.userId, tok.token);
+        }
+      })
+    );
+
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error('[PushNotification] send error:', r.reason);
+      }
+    }
+  } catch (error) {
+    console.error('[PushNotification] sendPersonalizedPush error:', error instanceof Error ? error.message : error);
+  }
+}
+
 // ── Event-specific push notification functions ──
 
 export async function sendExpenseCreatedPush(
@@ -334,15 +413,18 @@ export async function sendExpenseCreatedPush(
   group: { id: string; name: string }
 ): Promise<void> {
   try {
-    await sendPushNotifications(recipientUserIds, {
-      title: `New expense in ${group.name}`,
-      body: `${addedBy.name} added "${expense.title}" (${expense.currency} ${expense.totalAmount})`,
-      data: {
-        type: 'expense_created',
-        groupId: group.id,
-        screen: 'group_detail',
-      },
-    });
+    await sendPersonalizedPush(
+      recipientUserIds,
+      (lang, userPref) => ({
+        title: translate(lang, 'pushNotification.expenseCreatedTitle', { groupName: group.name }),
+        body: translate(lang, 'pushNotification.expenseCreatedBody', {
+          addedBy: addedBy.name,
+          title: expense.title,
+          amount: formatAmountForUser(expense.totalAmount, userPref),
+        }),
+      }),
+      { type: 'expense_created', groupId: group.id, screen: 'group_detail' }
+    );
   } catch (error) {
     console.error('[PushNotification] sendExpenseCreatedPush error:', error instanceof Error ? error.message : error);
   }
@@ -355,15 +437,18 @@ export async function sendExpenseUpdatedPush(
   group: { id: string; name: string }
 ): Promise<void> {
   try {
-    await sendPushNotifications(recipientUserIds, {
-      title: `Expense updated in ${group.name}`,
-      body: `${updatedBy.name} updated "${expense.title}" (${expense.currency} ${expense.totalAmount})`,
-      data: {
-        type: 'expense_updated',
-        groupId: group.id,
-        screen: 'group_detail',
-      },
-    });
+    await sendPersonalizedPush(
+      recipientUserIds,
+      (lang, userPref) => ({
+        title: translate(lang, 'pushNotification.expenseUpdatedTitle', { groupName: group.name }),
+        body: translate(lang, 'pushNotification.expenseUpdatedBody', {
+          updatedBy: updatedBy.name,
+          title: expense.title,
+          amount: formatAmountForUser(expense.totalAmount, userPref),
+        }),
+      }),
+      { type: 'expense_updated', groupId: group.id, screen: 'group_detail' }
+    );
   } catch (error) {
     console.error('[PushNotification] sendExpenseUpdatedPush error:', error instanceof Error ? error.message : error);
   }
@@ -376,15 +461,18 @@ export async function sendExpenseDeletedPush(
   group: { id: string; name: string }
 ): Promise<void> {
   try {
-    await sendPushNotifications(recipientUserIds, {
-      title: `Expense deleted in ${group.name}`,
-      body: `${deletedBy.name} removed "${expense.title}" (${expense.currency} ${expense.totalAmount})`,
-      data: {
-        type: 'expense_deleted',
-        groupId: group.id,
-        screen: 'group_detail',
-      },
-    });
+    await sendPersonalizedPush(
+      recipientUserIds,
+      (lang, userPref) => ({
+        title: translate(lang, 'pushNotification.expenseDeletedTitle', { groupName: group.name }),
+        body: translate(lang, 'pushNotification.expenseDeletedBody', {
+          deletedBy: deletedBy.name,
+          title: expense.title,
+          amount: formatAmountForUser(expense.totalAmount, userPref),
+        }),
+      }),
+      { type: 'expense_deleted', groupId: group.id, screen: 'group_detail' }
+    );
   } catch (error) {
     console.error('[PushNotification] sendExpenseDeletedPush error:', error instanceof Error ? error.message : error);
   }
@@ -399,17 +487,142 @@ export async function sendPaymentCompletedPush(
   group: { id: string; name: string }
 ): Promise<void> {
   try {
-    await sendPushNotifications(recipientUserIds, {
-      title: `Payment in ${group.name}`,
-      body: `${fromUser.name} paid ${toUser.name} ${currency} ${amount}`,
-      data: {
-        type: 'payment_completed',
-        groupId: group.id,
-        screen: 'group_detail',
-      },
-    });
+    await sendPersonalizedPush(
+      recipientUserIds,
+      (lang, userPref) => ({
+        title: translate(lang, 'pushNotification.paymentTitle', { groupName: group.name }),
+        body: translate(lang, 'pushNotification.paymentBody', {
+          fromUser: fromUser.name,
+          toUser: toUser.name,
+          amount: formatAmountForUser(amount, userPref),
+        }),
+      }),
+      { type: 'payment_completed', groupId: group.id, screen: 'group_detail' }
+    );
   } catch (error) {
     console.error('[PushNotification] sendPaymentCompletedPush error:', error instanceof Error ? error.message : error);
+  }
+}
+
+export async function sendKhataTransactionPush(
+  customerEmail: string,
+  customerName: string,
+  userName: string,
+  transaction: { type: 'give' | 'get'; amount: string; currency: string }
+): Promise<void> {
+  try {
+    // Look up the customer in the users table by email to get their userId
+    const [customerUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, customerEmail))
+      .limit(1);
+
+    if (!customerUser) return; // Customer is not a registered user — can't send push
+
+    await sendPersonalizedPush(
+      [customerUser.id],
+      (lang, userPref) => {
+        const formattedAmount = formatAmountForUser(transaction.amount, userPref);
+        // From customer's perspective: 'give' means user gave → customer received (got)
+        // 'get' means user got → customer gave
+        const typeKey = transaction.type === 'give' ? 'khataGotBody' : 'khataGaveBody';
+        return {
+          title: translate(lang, 'pushNotification.khataTitle', { userName }),
+          body: translate(lang, `pushNotification.${typeKey}`, { userName, amount: formattedAmount }),
+        };
+      },
+      { type: 'khata_transaction', screen: 'khata' }
+    );
+  } catch (error) {
+    console.error('[PushNotification] sendKhataTransactionPush error:', error instanceof Error ? error.message : error);
+  }
+}
+
+export async function sendKhataTransactionUpdatedPush(
+  customerEmail: string,
+  userName: string,
+  transaction: { type: 'give' | 'get'; amount: string }
+): Promise<void> {
+  try {
+    const [customerUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, customerEmail))
+      .limit(1);
+
+    if (!customerUser) return;
+
+    await sendPersonalizedPush(
+      [customerUser.id],
+      (lang, userPref) => {
+        const formattedAmount = formatAmountForUser(transaction.amount, userPref);
+        const typeKey = transaction.type === 'give' ? 'khataGotBody' : 'khataGaveBody';
+        return {
+          title: translate(lang, 'pushNotification.khataUpdatedTitle', { userName }),
+          body: translate(lang, `pushNotification.${typeKey}`, { userName, amount: formattedAmount }),
+        };
+      },
+      { type: 'khata_transaction_updated', screen: 'khata' }
+    );
+  } catch (error) {
+    console.error('[PushNotification] sendKhataTransactionUpdatedPush error:', error instanceof Error ? error.message : error);
+  }
+}
+
+export async function sendKhataTransactionDeletedPush(
+  customerEmail: string,
+  userName: string,
+  transaction: { type: 'give' | 'get'; amount: string }
+): Promise<void> {
+  try {
+    const [customerUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, customerEmail))
+      .limit(1);
+
+    if (!customerUser) return;
+
+    await sendPersonalizedPush(
+      [customerUser.id],
+      (lang, userPref) => {
+        const formattedAmount = formatAmountForUser(transaction.amount, userPref);
+        return {
+          title: translate(lang, 'pushNotification.khataDeletedTitle', { userName }),
+          body: translate(lang, 'pushNotification.khataDeletedBody', { userName, amount: formattedAmount }),
+        };
+      },
+      { type: 'khata_transaction_deleted', screen: 'khata' }
+    );
+  } catch (error) {
+    console.error('[PushNotification] sendKhataTransactionDeletedPush error:', error instanceof Error ? error.message : error);
+  }
+}
+
+export async function sendKhataCustomerAddedPush(
+  customerEmail: string,
+  userName: string
+): Promise<void> {
+  try {
+    const [customerUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, customerEmail))
+      .limit(1);
+
+    if (!customerUser) return;
+
+    await sendPersonalizedPush(
+      [customerUser.id],
+      (lang) => ({
+        title: translate(lang, 'pushNotification.khataCustomerAddedTitle'),
+        body: translate(lang, 'pushNotification.khataCustomerAddedBody', { userName }),
+      }),
+      { type: 'khata_customer_added', screen: 'khata' }
+    );
+  } catch (error) {
+    console.error('[PushNotification] sendKhataCustomerAddedPush error:', error instanceof Error ? error.message : error);
   }
 }
 

@@ -540,9 +540,13 @@
     "download": "डाउनलोड करें",
     "accountSettled": "{{businessName}} के साथ आपका खाता सेटल हो गया है।",
     "thankYou": "आपके व्यापार के लिए धन्यवाद!",
-    "reminderOutstanding": "अनुस्मारक: आपका ₹{{amount}} का बकाया बैलेंस है।",
+    "reminderOutstanding": "यह एक अनुस्मारक है कि आपका {{amount}} का बकाया बैलेंस है।",
     "account": "खाता",
-    "pleaseSettle": "कृपया जल्द से जल्द भुगतान करें।",
-    "balanceInFavor": "आपके खाते में ₹{{amount}} का बैलेंस आपके पक्ष में है।"
+    "pleaseSettle": "कृपया जल्द से जल्द राशि का भुगतान करें।",
+    "balanceInFavor": "आपके खाते में {{amount}} का बैलेंस आपके पक्ष में है।",
+    "requestedBy": "अनुरोधकर्ता:",
+    "phone": "फ़ोन:",
+    "email": "ईमेल:",
+    "thankYouTeam": "धन्यवाद,\nटीम EvenlySplit"
   }
 }

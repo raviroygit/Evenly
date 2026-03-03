@@ -245,6 +245,52 @@ const start = async () => {
       };
     });
 
+    // iOS Universal Links — Apple App Site Association
+    fastify.get('/.well-known/apple-app-site-association', async (_request, reply) => {
+      return reply
+        .type('application/json')
+        .header('Cache-Control', 'public, max-age=86400')
+        .send({
+          applinks: {
+            apps: [],
+            details: [
+              {
+                appID: '3ZGW2224V2.com.nxtgenaidev.evenly',
+                paths: [
+                  '/api/app/download',
+                  '/api/app/open/*',
+                  '/invitation/*',
+                  '/group/*',
+                  '/khata',
+                ],
+              },
+            ],
+          },
+          webcredentials: {
+            apps: ['3ZGW2224V2.com.nxtgenaidev.evenly'],
+          },
+        });
+    });
+
+    // Android App Links — Digital Asset Links
+    fastify.get('/.well-known/assetlinks.json', async (_request, reply) => {
+      return reply
+        .type('application/json')
+        .header('Cache-Control', 'public, max-age=86400')
+        .send([
+          {
+            relation: ['delegate_permission/common.handle_all_urls'],
+            target: {
+              namespace: 'android_app',
+              package_name: 'com.nxtgenaidev.evenly',
+              sha256_cert_fingerprints: [
+                'BE:25:07:E1:15:74:FD:48:77:F6:BF:73:C8:85:99:AC:2D:F3:F7:DC:BE:1D:49:7A:17:BF:3B:44:10:66:4D:E3',
+              ],
+            },
+          },
+        ]);
+    });
+
     // CRITICAL: Register plugins and routes BEFORE starting the server
     // Fastify doesn't allow plugin/route registration after listen() is called
     // We register them synchronously to ensure they're ready before the server starts

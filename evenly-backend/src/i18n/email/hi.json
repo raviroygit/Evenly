@@ -182,6 +182,24 @@
     "downloadApp": "ऐप डाउनलोड करें",
     "footer": "आपको यह ईमेल इसलिए मिल रहा है क्योंकि आप EvenlySplit पर {groupName} के सदस्य हैं।"
   },
+  "pushNotification": {
+    "expenseCreatedTitle": "{groupName} में नया खर्च",
+    "expenseCreatedBody": "{addedBy} ने \"{title}\" जोड़ा ({amount})",
+    "expenseUpdatedTitle": "{groupName} में खर्च अपडेट",
+    "expenseUpdatedBody": "{updatedBy} ने \"{title}\" अपडेट किया ({amount})",
+    "expenseDeletedTitle": "{groupName} से खर्च हटाया",
+    "expenseDeletedBody": "{deletedBy} ने \"{title}\" हटाया ({amount})",
+    "paymentTitle": "{groupName} में भुगतान",
+    "paymentBody": "{fromUser} ने {toUser} को {amount} भुगतान किया",
+    "khataTitle": "{userName} से खाता अपडेट",
+    "khataUpdatedTitle": "{userName} ने खाता लेनदेन अपडेट किया",
+    "khataDeletedTitle": "{userName} ने खाता लेनदेन हटाया",
+    "khataGotBody": "{userName} ने आपको {amount} का भुगतान दर्ज किया",
+    "khataGaveBody": "आपने {userName} को {amount} का भुगतान किया",
+    "khataDeletedBody": "{userName} ने {amount} का लेनदेन हटाया",
+    "khataCustomerAddedTitle": "आपको एक खाते में जोड़ा गया है",
+    "khataCustomerAddedBody": "{userName} ने आपको अपने खाता बही में जोड़ा"
+  },
   "common": {
     "viewInApp": "EvenlySplit में देखें",
     "downloadApp": "ऐप डाउनलोड करें",

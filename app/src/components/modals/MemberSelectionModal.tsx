@@ -158,6 +158,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
         debts.push({
           owesTo: debt.toUser?.name || 'Unknown',
           amount: debt.amount?.toString() || '0',
+          email: debt.toUser?.email,
+          phone: debt.toUser?.phoneNumber,
         });
       }
       // If this member is owed money (toUserId matches)
@@ -165,6 +167,8 @@ export const MemberSelectionModal: React.FC<MemberSelectionModalProps> = ({
         credits.push({
           owesTo: debt.fromUser?.name || 'Unknown',
           amount: debt.amount?.toString() || '0',
+          email: debt.fromUser?.email,
+          phone: debt.fromUser?.phoneNumber,
         });
       }
     });

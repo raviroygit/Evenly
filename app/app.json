@@ -37,7 +37,8 @@
       "associatedDomains": [
         "applinks:evenly.app",
         "applinks:www.evenly.app",
-        "applinks:evenlysplit.nxtgenaidev.com"
+        "applinks:evenlysplit.nxtgenaidev.com",
+        "applinks:evenly-backend-374738393915.us-central1.run.app"
       ],
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
@@ -87,6 +88,21 @@
               "scheme": "https",
               "host": "www.evenly.app",
               "pathPrefix": "/invitation"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "evenly-backend-374738393915.us-central1.run.app",
+              "pathPrefix": "/api/app"
             }
           ],
           "category": [

@@ -242,7 +242,7 @@
             statusEl.textContent = contextMessage;
 
             if (isAndroid) {
-                // Android Intent URI - works in Gmail, Chrome, all WebViews
+                // Android Intent URI - works in Gmail, Chrome, Chrome Custom Tabs
                 // The intent:// scheme tells Android to find the app by package name
                 // If app not installed, browser_fallback_url sends to Play Store
                 window.location.href = intentUri;
@@ -256,34 +256,26 @@
                 }, 1500);
 
             } else if (isIOS) {
-                // iOS: try custom scheme via iframe (doesn't show error if app not installed)
-                var iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = customSchemeLink;
-                document.body.appendChild(iframe);
+                // iOS: Try direct custom scheme redirect
+                // Note: Hidden iframe approach is deprecated since iOS 9+
+                // Universal Links (AASA) handle most cases automatically before this page loads
+                // This is the fallback for when the page does load (e.g., Safari, in-app browsers)
+                window.location.href = customSchemeLink;
 
-                // Also try direct location change after a small delay
-                setTimeout(function () {
-                    if (!appOpened) {
-                        window.location.href = customSchemeLink;
-                    }
-                }, 100);
-
-                // Show buttons and fallback after 2s
+                // Show buttons after 1.5s if app didn't open
                 setTimeout(function () {
                     if (!appOpened) {
                         statusEl.textContent = 'Tap the button below to open the app';
                         showButtons();
                     }
-                }, 2000);
+                }, 1500);
 
-                // Redirect to App Store after 4s if app didn't open
+                // Update message after 3s if still on page
                 setTimeout(function () {
                     if (!appOpened) {
-                        // Don't auto-redirect, let user choose
                         statusEl.textContent = "Can't find the app? Download it below.";
                     }
-                }, 4000);
+                }, 3000);
 
             } else {
                 // Desktop

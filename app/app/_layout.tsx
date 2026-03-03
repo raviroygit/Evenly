@@ -30,7 +30,35 @@ export default function RootLayout() {
     const handleDeepLink = (url: string) => {
       try {
         // Parse the URL
-        const { hostname, path } = Linking.parse(url);
+        const { hostname, path, queryParams } = Linking.parse(url);
+
+        // Handle backend universal links (from email "View in App" / "Accept Invitation" buttons)
+        // Format: https://backend.../api/app/download?token=xyz
+        if (path?.includes('/api/app/download') || url.includes('/api/app/download')) {
+          const token = (queryParams as any)?.token || new URL(url).searchParams.get('token') || '';
+          if (token) {
+            router.replace(`/invitations/accept?token=${token}`);
+            return;
+          }
+        }
+
+        // Handle backend universal links for group/expense
+        // Format: https://backend.../api/app/open/group/:groupId or /api/app/open/expense/:groupId
+        if (path?.includes('/api/app/open/group/') || path?.includes('/api/app/open/expense/') ||
+            url.includes('/api/app/open/group/') || url.includes('/api/app/open/expense/')) {
+          const groupMatch = (path || url).match(/\/api\/app\/open\/(?:group|expense)\/([a-f0-9-]+)/);
+          if (groupMatch?.[1]) {
+            router.replace(`/tabs/groups/${groupMatch[1]}`);
+            return;
+          }
+        }
+
+        // Handle backend universal links for khata
+        // Format: https://backend.../api/app/open/khata
+        if (path?.includes('/api/app/open/khata') || url.includes('/api/app/open/khata')) {
+          router.replace('/tabs/books');
+          return;
+        }
 
         // Handle invitation deep links
         // Format: evenly://invitation/token123 or https://evenly.app/invitation/token123

@@ -182,6 +182,24 @@
     "downloadApp": "Download App",
     "footer": "You're receiving this email because you're a member of {groupName} on EvenlySplit."
   },
+  "pushNotification": {
+    "expenseCreatedTitle": "New expense in {groupName}",
+    "expenseCreatedBody": "{addedBy} added \"{title}\" ({amount})",
+    "expenseUpdatedTitle": "Expense updated in {groupName}",
+    "expenseUpdatedBody": "{updatedBy} updated \"{title}\" ({amount})",
+    "expenseDeletedTitle": "Expense deleted in {groupName}",
+    "expenseDeletedBody": "{deletedBy} removed \"{title}\" ({amount})",
+    "paymentTitle": "Payment in {groupName}",
+    "paymentBody": "{fromUser} paid {toUser} {amount}",
+    "khataTitle": "Khata update from {userName}",
+    "khataUpdatedTitle": "Khata transaction updated by {userName}",
+    "khataDeletedTitle": "Khata transaction deleted by {userName}",
+    "khataGotBody": "{userName} recorded a payment of {amount} to you",
+    "khataGaveBody": "You paid {amount} to {userName}",
+    "khataDeletedBody": "{userName} deleted a transaction of {amount}",
+    "khataCustomerAddedTitle": "You've been added to a Khata",
+    "khataCustomerAddedBody": "{userName} added you to their Khata ledger"
+  },
   "common": {
     "viewInApp": "View in EvenlySplit",
     "downloadApp": "Download App",

@@ -536,9 +536,13 @@
     "download": "Download",
     "accountSettled": "Your account with {{businessName}} is settled.",
     "thankYou": "Thank you for your business!",
-    "reminderOutstanding": "Reminder: You have an outstanding balance of ₹{{amount}} to pay.",
+    "reminderOutstanding": "This is a friendly reminder that you have an outstanding balance of {{amount}}.",
     "account": "Account",
-    "pleaseSettle": "Please settle at your earliest convenience.",
-    "balanceInFavor": "Your account shows a balance of ₹{{amount}} in your favor."
+    "pleaseSettle": "Kindly settle the amount at your earliest convenience.",
+    "balanceInFavor": "Your account shows a balance of {{amount}} in your favor.",
+    "requestedBy": "Requested by:",
+    "phone": "Phone:",
+    "email": "Email:",
+    "thankYouTeam": "Thank you,\nTeam EvenlySplit"
   }
 }

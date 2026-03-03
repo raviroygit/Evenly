@@ -44,6 +44,7 @@ export class BalanceService {
             email: users.email,
             name: users.name,
             avatar: users.avatar,
+            phoneNumber: users.phoneNumber,
           },
         })
         .from(userBalances)

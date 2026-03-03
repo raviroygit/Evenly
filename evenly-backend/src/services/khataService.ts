@@ -11,6 +11,7 @@ import {
 } from '../db';
 import { NotFoundError, ValidationError, DatabaseError } from '../utils/errors';
 import { sendKhataTransactionEmail, sendCustomerAddedEmail } from './emailService';
+import { sendKhataTransactionPush, sendKhataTransactionUpdatedPush, sendKhataTransactionDeletedPush, sendKhataCustomerAddedPush } from './pushNotificationService';
 
 export class KhataService {
   /**
@@ -264,6 +265,18 @@ export class KhataService {
             // Email failure doesn't affect customer creation
           }
         })().catch(() => {});
+
+        // Send push notification to customer if they are a registered user (non-blocking)
+        (async () => {
+          try {
+            const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+            if (user) {
+              await sendKhataCustomerAddedPush(customerEmail, user.name);
+            }
+          } catch {
+            // Ignore — push is non-blocking
+          }
+        })().catch(() => {});
       }
 
       return customer;
@@ -465,6 +478,25 @@ export class KhataService {
         })().catch(() => {});
       }
 
+      // Send push notification to customer if they are a registered user (non-blocking)
+      if (customer.email) {
+        (async () => {
+          try {
+            const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+            if (user) {
+              await sendKhataTransactionPush(
+                customer.email!,
+                customer.name,
+                user.name,
+                { type: transactionData.type, amount: transactionData.amount, currency: transactionData.currency || 'INR' }
+              );
+            }
+          } catch {
+            // Ignore — push is non-blocking
+          }
+        })().catch(() => {});
+      }
+
       return transaction;
     } catch (error: any) {
       if (error instanceof NotFoundError) {
@@ -530,6 +562,23 @@ export class KhataService {
         .where(eq(khataTransactions.id, transactionId))
         .limit(1);
 
+      // Send push notification to customer (non-blocking)
+      const finalType = transactionData.type || existingTransaction.type;
+      const finalAmount = transactionData.amount || existingTransaction.amount;
+      (async () => {
+        try {
+          const [customer] = await db.select({ email: khataCustomers.email }).from(khataCustomers).where(eq(khataCustomers.id, existingTransaction.customerId)).limit(1);
+          if (customer?.email) {
+            const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+            if (user) {
+              await sendKhataTransactionUpdatedPush(customer.email, user.name, { type: finalType as 'give' | 'get', amount: finalAmount });
+            }
+          }
+        } catch {
+          // Ignore — push is non-blocking
+        }
+      })().catch(() => {});
+
       return finalTransaction;
     } catch (error: any) {
       if (error instanceof NotFoundError) {
@@ -563,6 +612,21 @@ export class KhataService {
 
       // Recalculate balances for all transactions of this customer
       await this.recalculateCustomerBalances(transaction.customerId);
+
+      // Send push notification to customer (non-blocking)
+      (async () => {
+        try {
+          const [customer] = await db.select({ email: khataCustomers.email }).from(khataCustomers).where(eq(khataCustomers.id, transaction.customerId)).limit(1);
+          if (customer?.email) {
+            const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+            if (user) {
+              await sendKhataTransactionDeletedPush(customer.email, user.name, { type: transaction.type as 'give' | 'get', amount: transaction.amount });
+            }
+          }
+        } catch {
+          // Ignore — push is non-blocking
+        }
+      })().catch(() => {});
     } catch (error: any) {
       if (error instanceof NotFoundError) {
         throw error;
