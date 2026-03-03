@@ -65,7 +65,11 @@ function serveSmartRedirect(
       `
     );
 
-    return reply.type('text/html').send(html);
+    // Override helmet's CSP to allow the inline script in this HTML page
+    return reply
+      .type('text/html')
+      .header('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:;")
+      .send(html);
   } catch {
     // Fallback to store redirect
     let redirectUrl: string;

@@ -199,6 +199,9 @@
         var isAndroid = ua.indexOf('android') > -1;
         var isIOS = /iphone|ipad|ipod/.test(ua);
 
+        // Detect in-app browsers (Gmail, Facebook, Instagram, etc.)
+        var isInAppBrowser = /gsa\/|gmail|fbav|fban|instagram|twitter|linkedin|snapchat|line\/|wv\)/.test(ua);
+
         // UI elements
         var titleEl = document.getElementById('title');
         var messageEl = document.getElementById('message');
@@ -214,9 +217,11 @@
             openAppBtn.classList.add('show');
             fallbackBtn.classList.add('show');
             if (isAndroid) {
+                openAppBtn.textContent = 'Open EvenlySplit';
                 fallbackBtn.textContent = 'Download from Play Store';
                 fallbackBtn.href = PLAY_STORE;
             } else if (isIOS) {
+                openAppBtn.textContent = 'Open EvenlySplit';
                 fallbackBtn.textContent = 'Download from App Store';
                 fallbackBtn.href = APP_STORE;
             } else {
@@ -243,8 +248,6 @@
 
             if (isAndroid) {
                 // Android Intent URI - works in Gmail, Chrome, Chrome Custom Tabs
-                // The intent:// scheme tells Android to find the app by package name
-                // If app not installed, browser_fallback_url sends to Play Store
                 window.location.href = intentUri;
 
                 // Show manual buttons after 1.5s as safety net
@@ -256,26 +259,25 @@
                 }, 1500);
 
             } else if (isIOS) {
-                // iOS: Try direct custom scheme redirect
-                // Note: Hidden iframe approach is deprecated since iOS 9+
-                // Universal Links (AASA) handle most cases automatically before this page loads
-                // This is the fallback for when the page does load (e.g., Safari, in-app browsers)
-                window.location.href = customSchemeLink;
+                if (isInAppBrowser) {
+                    // In-app browsers (Gmail, etc.) block custom URL schemes
+                    // Show buttons immediately — user taps to open
+                    titleEl.textContent = 'Open in EvenlySplit';
+                    messageEl.textContent = 'Tap the button below to open the app or download it.';
+                    statusEl.textContent = '';
+                    showButtons();
+                } else {
+                    // Safari or SFSafariViewController — try custom scheme
+                    window.location.href = customSchemeLink;
 
-                // Show buttons after 1.5s if app didn't open
-                setTimeout(function () {
-                    if (!appOpened) {
-                        statusEl.textContent = 'Tap the button below to open the app';
-                        showButtons();
-                    }
-                }, 1500);
-
-                // Update message after 3s if still on page
-                setTimeout(function () {
-                    if (!appOpened) {
-                        statusEl.textContent = "Can't find the app? Download it below.";
-                    }
-                }, 3000);
+                    // Show buttons after 1.5s if app didn't open
+                    setTimeout(function () {
+                        if (!appOpened) {
+                            statusEl.textContent = 'Tap the button below to open the app';
+                            showButtons();
+                        }
+                    }, 1500);
+                }
 
             } else {
                 // Desktop
