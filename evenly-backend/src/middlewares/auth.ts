@@ -1,10 +1,58 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import jwt from 'jsonwebtoken';
 import { AuthService } from '../utils/auth';
 import { UserService } from '../services/userService';
 import { OrganizationService } from '../services/organizationService';
 import { UnauthorizedError, AuthServiceError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types';
 import { config } from '../config/config';
+
+/**
+ * Try to verify a JWT locally using the shared JWT_SECRET.
+ * Used as a fallback when the auth service rejects a token (e.g. expired JWT).
+ * Verifies the signature but ignores expiration so that mobile tokens
+ * whose auth-service session expired still work if the user exists locally.
+ */
+async function tryLocalJwtFallback(
+  token: string,
+  request: FastifyRequest
+): Promise<boolean> {
+  try {
+    const secret = config.auth.jwtSecret;
+    if (!secret || secret === 'your-secret-key') return false;
+
+    // Verify signature but ignore expiration
+    const decoded = jwt.verify(token, secret, { ignoreExpiration: true }) as {
+      userId?: string;
+      type?: string;
+    };
+
+    const userId = decoded?.userId;
+    if (!userId) return false;
+
+    const user = await UserService.getUserById(userId);
+    if (!user) return false;
+
+    request.log?.info?.(
+      { userId },
+      'Auth: local JWT fallback succeeded (auth service rejected but JWT signature valid)'
+    );
+
+    (request as AuthenticatedRequest).user = {
+      ...user,
+      avatar: user.avatar ?? undefined,
+      phoneNumber: user.phoneNumber ?? undefined,
+    } as AuthenticatedRequest['user'];
+
+    await extractOrganizationContext(request, token, user.id);
+    await ensureOrganizationIdSet(request, user.id);
+
+    return true;
+  } catch {
+    // JWT signature invalid or secret mismatch — don't fall back
+    return false;
+  }
+}
 
 export const authenticateToken = async (
   request: FastifyRequest,
@@ -34,6 +82,14 @@ export const authenticateToken = async (
     // Validate token with external auth service first; fall back to local session only when auth is unavailable
     const authResult = await AuthService.validateToken(token);
     if (authResult.authRejected) {
+      // Auth service explicitly rejected the token (401).
+      // For mobile clients with expired JWTs, try local JWT signature verification
+      // so users don't get logged out when the auth-service session expires.
+      const isMobile = request.headers['x-client-type'] === 'mobile';
+      if (isMobile && AuthService.looksLikeJwt(token)) {
+        const fallbackOk = await tryLocalJwtFallback(token, request);
+        if (fallbackOk) return;
+      }
       throw new UnauthorizedError('Unauthorized Access');
     }
     if (authResult.success && authResult.user) {
@@ -60,6 +116,13 @@ export const authenticateToken = async (
       await ensureOrganizationIdSet(request, syncedUser.id);
 
       return;
+    }
+
+    // Auth service was unavailable (timeout, connection refused, etc.)
+    // Try local JWT fallback first (works for any client with a valid JWT signature)
+    if (AuthService.looksLikeJwt(token)) {
+      const fallbackOk = await tryLocalJwtFallback(token, request);
+      if (fallbackOk) return;
     }
 
     // Fall back to local session only when auth service was unavailable (e.g. timeout), not when it rejected (401)

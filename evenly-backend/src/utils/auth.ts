@@ -9,7 +9,7 @@ export class AuthService {
    * Whether the token looks like a JWT (three base64 parts separated by dots).
    * JWTs are validated via Bearer; opaque session IDs via Cookie.
    */
-  private static looksLikeJwt(token: string): boolean {
+  static looksLikeJwt(token: string): boolean {
     return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token.trim());
   }
 
