@@ -165,11 +165,11 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                             styles.memberRow,
                             {
                               backgroundColor: theme === 'dark'
-                                ? '#1A1A1A'
-                                : '#F8F8F8',
+                                ? '#1C1C2E'
+                                : '#FFFFFF',
                               borderColor: theme === 'dark'
-                                ? '#333333'
-                                : '#E0E0E0',
+                                ? '#2E2E45'
+                                : '#E5E7EB',
                             },
                           ]}
                           onPress={() => handleMemberPress(member)}

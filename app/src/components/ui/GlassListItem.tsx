@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, Platform } from 'react-native';
-import { GlassView } from 'expo-glass-effect';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface GlassListItemProps {
@@ -20,116 +19,50 @@ export const GlassListItem: React.FC<GlassListItemProps> = ({
 }) => {
   const { theme, colors } = useTheme();
 
-  // Platform-aware list item styles
+  // Consistent solid card styling for both platforms
   const getListItemStyle = () => {
-    if (Platform.OS === 'android') {
-      // Clean Android Material Design styling
-      return {
-        backgroundColor: theme === 'dark' 
-          ? '#2C2C2C' 
-          : '#FFFFFF',
-        borderColor: theme === 'dark' 
-          ? '#404040' 
-          : '#E0E0E0',
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-      };
-    }
-    
-    // iOS glassmorphism styling
     return {
-      backgroundColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.15)' 
-        : 'rgba(0, 0, 0, 0.08)',
-      borderColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.4)' 
-        : 'rgba(0, 0, 0, 0.15)',
-      borderWidth: 2,
-      // Theme-aware inner glow with heavy effect
-      borderTopColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.6)' 
-        : 'rgba(255, 255, 255, 0.8)',
-      borderLeftColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.6)' 
-        : 'rgba(255, 255, 255, 0.8)',
-      borderRightColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.2)' 
-        : 'rgba(0, 0, 0, 0.1)',
-      borderBottomColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.2)' 
-        : 'rgba(0, 0, 0, 0.1)',
-      // Heavy shadows like main cards
+      backgroundColor: theme === 'dark'
+        ? '#1C1C2E'
+        : '#FFFFFF',
+      borderColor: theme === 'dark'
+        ? '#2E2E45'
+        : '#E5E7EB',
+      borderWidth: 1,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme === 'dark' ? 0.3 : 0.12,
-      shadowRadius: 16,
-      elevation: 8,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme === 'dark' ? 0.3 : 0.1,
+      shadowRadius: 4,
+      elevation: 2,
     };
   };
 
   const content = (
-    <>
-      {Platform.OS === 'android' ? (
-        <View
-          style={[
-            styles.listItem,
-            getListItemStyle(),
-            style,
-          ]}
-        >
-          <View style={styles.listItemContent}>
-            <View style={styles.listItemText}>
-              <Text style={[styles.listItemTitle, { color: colors.foreground }]}>
-                {title}
-              </Text>
-              {subtitle && (
-                <Text style={[styles.listItemSubtitle, { color: colors.mutedForeground }]}>
-                  {subtitle}
-                </Text>
-              )}
-            </View>
-            {rightElement || (
-              <Text style={[styles.listItemArrow, { color: colors.mutedForeground }]}>
-                ›
-              </Text>
-            )}
-          </View>
+    <View
+      style={[
+        styles.listItem,
+        getListItemStyle(),
+        style,
+      ]}
+    >
+      <View style={styles.listItemContent}>
+        <View style={styles.listItemText}>
+          <Text style={[styles.listItemTitle, { color: colors.foreground }]}>
+            {title}
+          </Text>
+          {subtitle && (
+            <Text style={[styles.listItemSubtitle, { color: colors.mutedForeground }]}>
+              {subtitle}
+            </Text>
+          )}
         </View>
-      ) : (
-        <GlassView
-          style={[
-            styles.listItem,
-            getListItemStyle(),
-            style,
-          ]}
-          glassEffectStyle="thick"
-          isInteractive={true}
-          tint={theme === 'dark' ? 'dark' : 'light'}
-        >
-          <View style={styles.listItemContent}>
-            <View style={styles.listItemText}>
-              <Text style={[styles.listItemTitle, { color: colors.foreground }]}>
-                {title}
-              </Text>
-              {subtitle && (
-                <Text style={[styles.listItemSubtitle, { color: colors.mutedForeground }]}>
-                  {subtitle}
-                </Text>
-              )}
-            </View>
-            {rightElement || (
-              <Text style={[styles.listItemArrow, { color: colors.mutedForeground }]}>
-                ›
-              </Text>
-            )}
-          </View>
-        </GlassView>
-      )}
-    </>
+        {rightElement || (
+          <Text style={[styles.listItemArrow, { color: colors.mutedForeground }]}>
+            ›
+          </Text>
+        )}
+      </View>
+    </View>
   );
 
   if (onPress) {

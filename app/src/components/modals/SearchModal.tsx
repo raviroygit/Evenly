@@ -127,8 +127,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       style={[
         styles.searchItem,
         {
-          backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-          borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+          backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+          borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
         },
       ]}
       onPress={() => handleItemPress(item)}
@@ -224,9 +224,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     style={[
                       styles.searchInput,
                       {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                         color: colors.foreground,
-                        borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                        borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
                       },
                     ]}
                     placeholder={placeholder}

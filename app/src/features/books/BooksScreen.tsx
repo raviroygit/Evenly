@@ -359,7 +359,7 @@ export const BooksScreen: React.FC = () => {
 
         {/* Search and Filter */}
         <View style={styles.searchContainer}>
-          <View style={[styles.searchBar, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
+          <View style={[styles.searchBar, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}>
             <Ionicons name="search-outline" size={20} color={colors.mutedForeground} />
             <TextInput
               style={[styles.searchInput, { color: colors.foreground }]}
@@ -370,7 +370,7 @@ export const BooksScreen: React.FC = () => {
             />
           </View>
           <TouchableOpacity
-            style={[styles.filterButton, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}
+            style={[styles.filterButton, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}
             onPress={() => setShowFilterModal(true)}
           >
             <Ionicons name="options-outline" size={20} color={colors.foreground} />

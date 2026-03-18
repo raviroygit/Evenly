@@ -63,57 +63,25 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   const buttonColors = getButtonColors();
   const sizeStyles = getSizeStyles();
 
-  // Platform-aware container styles
+  // Consistent solid styling for both platforms
   const getContainerStyle = () => {
-    if (Platform.OS === 'android') {
-      return {
-        borderRadius: 8,
-        overflow: 'hidden' as const,
-        elevation: variant === 'primary' ? 8 : 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: theme === 'dark' ? 0.3 : 0.15,
-        shadowRadius: 6,
-        backgroundColor: variant === 'primary' 
-          ? buttonColors.backgroundColor
-          : theme === 'dark' 
-            ? '#2C2C2C' 
-            : '#FFFFFF',
-        borderWidth: variant === 'primary' ? 0 : 1,
-        borderColor: theme === 'dark' 
-          ? '#404040' 
-          : '#E0E0E0',
-      };
-    }
-    
-    // iOS glassmorphism styling
     return {
-      borderRadius: 20,
+      borderRadius: 8,
       overflow: 'hidden' as const,
+      elevation: variant === 'primary' ? 8 : 4,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme === 'dark' ? 0.35 : 0.12,
-      shadowRadius: 16,
-      elevation: 12,
-      backgroundColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.12)' 
-        : 'rgba(0, 0, 0, 0.06)',
-      borderWidth: 2,
-      borderColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.4)' 
-        : 'rgba(0, 0, 0, 0.12)',
-      borderTopColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.6)' 
-        : 'rgba(255, 255, 255, 0.8)',
-      borderLeftColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.6)' 
-        : 'rgba(255, 255, 255, 0.8)',
-      borderRightColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.2)' 
-        : 'rgba(0, 0, 0, 0.08)',
-      borderBottomColor: theme === 'dark' 
-        ? 'rgba(255, 255, 255, 0.2)' 
-        : 'rgba(0, 0, 0, 0.08)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: theme === 'dark' ? 0.3 : 0.15,
+      shadowRadius: 6,
+      backgroundColor: variant === 'primary'
+        ? buttonColors.backgroundColor
+        : theme === 'dark'
+          ? '#1C1C2E'
+          : '#FFFFFF',
+      borderWidth: variant === 'primary' ? 0 : 1,
+      borderColor: theme === 'dark'
+        ? '#2E2E45'
+        : '#E5E7EB',
     };
   };
 

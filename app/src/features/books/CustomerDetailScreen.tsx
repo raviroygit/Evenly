@@ -423,9 +423,9 @@ export const CustomerDetailScreen: React.FC = () => {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, {
-          backgroundColor: theme === 'dark' ? '#1A1A1A' : '#FFFFFF',
+          backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
           borderBottomWidth: 1,
-          borderBottomColor: theme === 'dark' ? '#2A2A2A' : '#E5E5E5',
+          borderBottomColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
         }]}>
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -558,7 +558,7 @@ export const CustomerDetailScreen: React.FC = () => {
                   {/* Content area with badges */}
                   <View style={styles.transactionContent}>
                     <View style={styles.badgesRow}>
-                      <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
+                      <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}>
                         <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
                           {transaction.date}
                         </Text>

@@ -79,7 +79,7 @@ export const CurrencySelectionModal: React.FC<CurrencySelectionModalProps> = ({
             style={[
               styles.currencyOption,
               {
-                backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                 borderColor: selectedCurrency === currency.code ? colors.primary : 'transparent',
                 borderWidth: selectedCurrency === currency.code ? 2 : 0,
               },

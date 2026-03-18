@@ -653,7 +653,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                           {
                             backgroundColor: selectedType === 'give'
                               ? colors.primary
-                              : (theme === 'dark' ? '#1A1A1A' : '#F8F8F8'),
+                              : (theme === 'dark' ? '#1C1C2E' : '#FFFFFF'),
                           },
                         ]}
                         onPress={() => setSelectedType('give')}
@@ -678,7 +678,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                           {
                             backgroundColor: selectedType === 'get'
                               ? colors.primary
-                              : (theme === 'dark' ? '#1A1A1A' : '#F8F8F8'),
+                              : (theme === 'dark' ? '#1C1C2E' : '#FFFFFF'),
                           },
                         ]}
                         onPress={() => setSelectedType('get')}
@@ -710,7 +710,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     style={[
                       styles.input,
                       {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                         color: colors.foreground,
                         borderColor: errors.amount ? '#FF3B30' : 'transparent',
                         borderWidth: errors.amount ? 1 : 0,
@@ -745,7 +745,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       styles.input,
                       styles.textArea,
                       {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                         color: colors.foreground,
                       },
                     ]}
@@ -771,7 +771,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     style={[
                       styles.input,
                       {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
@@ -799,7 +799,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     style={[
                       styles.input,
                       {
-                        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
@@ -962,7 +962,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       style={[
                         styles.imagePickerButton,
                         {
-                          backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                          backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                           borderColor: colors.mutedForeground,
                         },
                       ]}
@@ -983,7 +983,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                           {t('expenses.uploadingImage')}... {uploadProgress}%
                         </Text>
                       </View>
-                      <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
+                      <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#E5E7EB' }]}>
                         <View
                           style={[
                             styles.progressBarFill,

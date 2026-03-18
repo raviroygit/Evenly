@@ -257,7 +257,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
               style={[
                 styles.countryCodeTouchable,
                 {
-                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                   borderColor: errors.phoneNumber ? '#FF3B30' : colors.border,
                 },
               ]}
@@ -274,7 +274,7 @@ export const PersonalInfoModal: React.FC<PersonalInfoModalProps> = ({ visible, o
               style={[
                 styles.phoneInputWrapper,
                 {
-                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                   borderColor: errors.phoneNumber ? '#FF3B30' : colors.border,
                 },
               ]}

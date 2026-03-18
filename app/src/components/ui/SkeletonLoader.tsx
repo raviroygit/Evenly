@@ -201,7 +201,7 @@ export const SkeletonTransactionItem: React.FC = () => {
           {/* Badges row */}
           <View style={styles.badgesRow}>
             {/* Date/Time badge skeleton */}
-            <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8' }]}>
+            <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}>
               <SkeletonLoader width={60} height={11} borderRadius={6} />
               <SkeletonLoader width={50} height={11} borderRadius={6} />
             </View>
@@ -347,8 +347,8 @@ export const SkeletonKhataSummary: React.FC = () => {
         style={[
           styles.khataSummaryCard,
           {
-            backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-            borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+            backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+            borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
           },
         ]}
       >
@@ -367,7 +367,7 @@ export const SkeletonKhataSummary: React.FC = () => {
           </View>
 
           {/* Divider */}
-          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
 
           {/* Will Get */}
           <View style={styles.khataSummaryItem}>
@@ -390,8 +390,8 @@ export const SkeletonDashboardSummary: React.FC = () => {
         style={[
           styles.khataSummaryCard,
           {
-            backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-            borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+            backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+            borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
             elevation: 4,
           },
         ]}
@@ -411,7 +411,7 @@ export const SkeletonDashboardSummary: React.FC = () => {
           </View>
 
           {/* Divider */}
-          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
 
           {/* You Owe */}
           <View style={styles.khataSummaryItem}>
@@ -420,7 +420,7 @@ export const SkeletonDashboardSummary: React.FC = () => {
           </View>
 
           {/* Divider */}
-          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
 
           {/* You Get */}
           <View style={styles.khataSummaryItem}>
@@ -443,11 +443,11 @@ export const SkeletonDashboardStats: React.FC = () => {
       style={{
         ...styles.statCard,
         backgroundColor: theme === 'dark' 
-          ? '#2C2C2C' 
+          ? '#1C1C2E' 
           : '#FFFFFF',
         borderColor: theme === 'dark' 
-          ? '#404040' 
-          : '#E0E0E0',
+          ? '#2E2E45' 
+          : '#E5E7EB',
         padding: 16,
         borderRadius: 16,
         borderWidth: 1,
@@ -504,11 +504,11 @@ export const SkeletonActivityItem: React.FC = () => {
     <View style={{
       ...styles.activityItem,
       backgroundColor: theme === 'dark' 
-        ? '#1A1A1A' 
-        : '#F8F8F8',
+        ? '#1C1C2E' 
+        : '#FFFFFF',
       borderColor: theme === 'dark' 
-        ? '#333333' 
-        : '#E0E0E0',
+        ? '#2E2E45' 
+        : '#E5E7EB',
     }}>
       <View style={styles.activityIcon}>
         <SkeletonLoader width={24} height={24} borderRadius={12} />

@@ -115,8 +115,8 @@ export const CustomerFilterModal: React.FC<CustomerFilterModalProps> = ({
                             selectedFilter === option.value
                               ? colors.primary
                               : theme === 'dark'
-                              ? '#1A1A1A'
-                              : '#F8F8F8',
+                              ? '#1C1C2E'
+                              : '#FFFFFF',
                         },
                       ]}
                       onPress={() => setSelectedFilter(option.value)}

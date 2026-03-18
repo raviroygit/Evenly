@@ -74,7 +74,7 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
             style={[
               styles.languageOption,
               {
-                backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                 borderColor: selectedLanguage === language.code ? colors.primary : 'transparent',
                 borderWidth: selectedLanguage === language.code ? 2 : 0,
               },

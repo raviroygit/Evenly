@@ -402,8 +402,8 @@ export const HomeScreen: React.FC = () => {
   const getPlatformAwareStyles = () => {
     return {
       headerCard: {
-        backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-        borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+        borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
         borderWidth: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -412,8 +412,8 @@ export const HomeScreen: React.FC = () => {
         elevation: 4,
       },
       activityCard: {
-        backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-        borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+        borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
         borderWidth: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -428,8 +428,8 @@ export const HomeScreen: React.FC = () => {
         paddingVertical: 14,
         paddingHorizontal: 18,
         borderRadius: 8,
-        backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-        borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+        backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+        borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
         borderWidth: 1,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -520,8 +520,8 @@ export const HomeScreen: React.FC = () => {
               style={[
                 styles.khataSummaryCard,
                 {
-                  backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-                  borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                  borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
                 },
               ]}
               onPress={handleKhataSummaryPress}
@@ -548,7 +548,7 @@ export const HomeScreen: React.FC = () => {
                     })()}
                   </Text>
                 </View>
-                <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+                <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
                 {/* Row 2: Will Get (amount owed to you) – green */}
                 <View style={styles.khataSummaryItem}>
                   <Text style={[styles.khataSummaryLabel, { color: colors.mutedForeground }]}>

@@ -35,11 +35,11 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, loading =
         ...styles.statCard,
         // Use opaque backgrounds to match Android appearance
         backgroundColor: theme === 'dark' 
-        ? '#2C2C2C' 
+        ? '#1C1C2E' 
         : '#FFFFFF',
         borderColor: theme === 'dark' 
-          ? '#404040' 
-          : '#E0E0E0',
+          ? '#2E2E45' 
+          : '#E5E7EB',
         padding: 16,
         borderRadius: 16,
         borderWidth: 1,

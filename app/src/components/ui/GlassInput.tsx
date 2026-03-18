@@ -30,14 +30,14 @@ export const GlassInput: React.FC<GlassInputProps> = ({
       minHeight: 48, // Increased height to accommodate more internal padding
       justifyContent: 'center' as const, // Center content vertically
       backgroundColor: theme === 'dark'
-        ? 'rgba(255, 255, 255, 0.12)'
-        : 'rgba(255, 255, 255, 0.9)',
-      borderWidth: isFocused ? 2 : 1.5,
-      borderColor: isFocused 
-        ? colors.primary 
+        ? '#1C1C2E'
+        : '#FFFFFF',
+      borderWidth: isFocused ? 2 : 1,
+      borderColor: isFocused
+        ? colors.primary
         : theme === 'dark'
-          ? 'rgba(255, 255, 255, 0.4)'
-          : 'rgba(0, 0, 0, 0.2)',
+          ? '#2E2E45'
+          : '#E5E7EB',
     };
 
     // Android-specific additions

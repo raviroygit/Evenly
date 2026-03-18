@@ -104,7 +104,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             styles.modalContainer,
             {
               backgroundColor: theme === 'dark' ? 'rgba(26, 26, 26, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-              borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+              borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
             },
           ]}
         >
@@ -120,7 +120,7 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               style={[
                 styles.closeButton,
                 {
-                  backgroundColor: theme === 'dark' ? '#333333' : '#F0F0F0',
+                  backgroundColor: theme === 'dark' ? '#2E2E45' : '#F0F0F0',
                 },
               ]}
             >
@@ -156,8 +156,8 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
             <View style={[
               styles.balanceSection,
               {
-                backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
               }
             ]}>
               <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>
@@ -176,8 +176,8 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               <View style={[
                 styles.sectionContent,
                 {
-                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                  borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                  borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
                 }
               ]}>
                 <InfoRow label={t('profile.email')} value={customer.email || ''} icon="mail-outline" />
@@ -199,8 +199,8 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
                 <View style={[
                   styles.notesContainer,
                   {
-                    backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                    borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                    backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                    borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
                   }
                 ]}>
                   <Text style={[styles.notesText, { color: colors.foreground }]}>
@@ -218,8 +218,8 @@ export const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               <View style={[
                 styles.sectionContent,
                 {
-                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
-                  borderColor: theme === 'dark' ? '#333333' : '#E0E0E0',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                  borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
                 }
               ]}>
                 <InfoRow

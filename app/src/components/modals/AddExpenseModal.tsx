@@ -828,7 +828,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                       {t('modals.uploadingImage')} {uploadProgress}%
                     </Text>
                   </View>
-                  <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1A1A1A' : '#E0E0E0' }]}>
+                  <View style={[styles.progressBarBackground, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#E5E7EB' }]}>
                     <View
                       style={[
                         styles.progressBarFill,
@@ -847,7 +847,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               style={[
                 styles.imageSinglePickerButton,
                 {
-                  backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                  backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                   borderColor: colors.mutedForeground,
                 },
               ]}

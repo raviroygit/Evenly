@@ -274,7 +274,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         style={[
                           styles.input,
                           {
-                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                            backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                             color: colors.foreground,
                             borderColor: errors.name ? '#FF3B30' : 'transparent',
                             borderWidth: errors.name ? 1 : 0,
@@ -305,7 +305,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         style={[
                           styles.input,
                           {
-                            backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                            backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                             color: colors.foreground,
                             borderColor: errors.email ? '#FF3B30' : 'transparent',
                             borderWidth: errors.email ? 1 : 0,
@@ -339,7 +339,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           style={[
                             styles.countryCodeTouchable,
                             {
-                              backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                              backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                               borderColor: errors.phone ? '#FF3B30' : 'transparent',
                               borderWidth: errors.phone ? 1 : 0,
                             },
@@ -357,7 +357,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           style={[
                             styles.phoneInputWrapper,
                             {
-                              backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                              backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                               borderColor: errors.phone ? '#FF3B30' : 'transparent',
                               borderWidth: errors.phone ? 1 : 0,
                             },

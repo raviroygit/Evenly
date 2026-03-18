@@ -39,8 +39,8 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
         style={[
           styles.summaryCard,
           {
-            backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
-            borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+            backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+            borderColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB',
           },
         ]}
         {...cardProps}
@@ -70,7 +70,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           </View>
 
           {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+          <View style={[styles.divider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
 
           {/* You Owe */}
           <View style={styles.summaryItem}>
@@ -83,7 +83,7 @@ export const DashboardSummaryCard: React.FC<DashboardSummaryCardProps> = ({
           </View>
 
           {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+          <View style={[styles.divider, { backgroundColor: theme === 'dark' ? '#2E2E45' : '#E5E7EB' }]} />
 
           {/* You're Owed */}
           <View style={styles.summaryItem}>

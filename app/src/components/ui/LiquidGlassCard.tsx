@@ -88,12 +88,12 @@ export const LiquidGlassCard: React.FC<LiquidGlassCardProps> = ({
       shadowOpacity: isPressed ? 0.4 : (theme === 'dark' ? 0.4 : 0.2),
       shadowRadius: isPressed ? 16 : (theme === 'dark' ? 12 : 8),
       backgroundColor: theme === 'dark' 
-        ? '#2C2C2C' 
+        ? '#1C1C2E' 
         : '#FFFFFF',
       borderWidth: 1,
       borderColor: theme === 'dark' 
-        ? '#404040' 
-        : '#E0E0E0',
+        ? '#2E2E45' 
+        : '#E5E7EB',
       transform: [{ scale: animatedValue }], // Animation transform
       ...style,
     };

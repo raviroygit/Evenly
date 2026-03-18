@@ -112,7 +112,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                     styles.button,
                     styles.cancelButton,
                     {
-                      backgroundColor: theme === 'dark' ? '#1A1A1A' : '#F8F8F8',
+                      backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
                       borderColor: colors.border,
                     },
                   ]}

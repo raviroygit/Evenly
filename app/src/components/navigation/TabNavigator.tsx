@@ -40,7 +40,7 @@ export const TabNavigator: React.FC = () => {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
           backgroundColor: Platform.OS === 'android' 
-            ? (theme === 'dark' ? '#1A1A1A' : '#FFFFFF')
+            ? (theme === 'dark' ? '#1C1C2E' : '#FFFFFF')
             : (theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)'),
           borderTopColor: colors.border,
           borderTopWidth: 1,
