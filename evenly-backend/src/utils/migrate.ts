@@ -639,16 +639,39 @@ async function createTablesFromSchema(sql: any): Promise<void> {
   `;
 
   // Create referrals table
+  // NOTE: referral_code is NOT unique — multiple users can use the same code.
+  // referred_user_id IS unique — each user can only be referred once.
   await sql`
     CREATE TABLE IF NOT EXISTS referrals (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      referral_code TEXT NOT NULL UNIQUE,
-      referred_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      referral_code TEXT NOT NULL,
+      referred_user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     )
+  `;
+
+  // Fix: Drop incorrect unique constraint on referral_code (allows only 1 use per code)
+  // and add correct unique constraint on referred_user_id (each user referred once)
+  await sql`
+    DO $$ BEGIN
+      -- Drop unique on referral_code if it exists (wrong constraint)
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'referrals_referral_code_key') THEN
+        ALTER TABLE referrals DROP CONSTRAINT referrals_referral_code_key;
+      END IF;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
+  `;
+
+  await sql`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'referrals_referred_user_id_unique' OR conname = 'referrals_referred_user_id_key') THEN
+        ALTER TABLE referrals ADD CONSTRAINT referrals_referred_user_id_unique UNIQUE (referred_user_id);
+      END IF;
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END $$;
   `;
 
   // Create indexes for referrals table

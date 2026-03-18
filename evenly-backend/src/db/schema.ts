@@ -231,8 +231,8 @@ export const deviceTokens = pgTable('device_tokens', {
 export const referrals = pgTable('referrals', {
   id: uuid('id').primaryKey().defaultRandom(),
   referrerId: uuid('referrer_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  referralCode: text('referral_code').notNull().unique(),
-  referredUserId: uuid('referred_user_id').references(() => users.id, { onDelete: 'cascade' }),
+  referralCode: text('referral_code').notNull(),
+  referredUserId: uuid('referred_user_id').unique().references(() => users.id, { onDelete: 'cascade' }),
   status: text('status').notNull().default('pending'), // 'pending' | 'completed'
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
