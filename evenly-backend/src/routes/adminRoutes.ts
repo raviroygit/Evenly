@@ -3,8 +3,9 @@ import axios from 'axios';
 import { authenticateToken } from '../middlewares/auth';
 import { AuthenticatedRequest } from '../types';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
-import { db, users, organizationMembers, organizations, appConfig, expenses, payments, groupInvitations, groups, groupMembers } from '../db';
-import { eq, or, and, ne } from 'drizzle-orm';
+import { db, users, organizationMembers, organizations, appConfig, expenses, payments, groupInvitations, groups, groupMembers, referrals } from '../db';
+import { eq, or, and, ne, inArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { config } from '../config/config';
 import { AuthService } from '../utils/auth';
 
@@ -32,6 +33,8 @@ export async function adminRoutes(fastify: FastifyInstance) {
                   avatar: { type: 'string', nullable: true },
                   role: { type: 'string' },
                   createdAt: { type: 'string' },
+                  invitedByName: { type: 'string', nullable: true },
+                  invitedByEmail: { type: 'string', nullable: true },
                 },
               },
             },
@@ -63,6 +66,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     const evenlyOrgId = evenlyOrg[0].id;
 
     // Get all members of the Evenly organization with their user data
+    const referrer = alias(users, 'referrer');
     const rows = await db
       .select({
         id: users.id,
@@ -72,9 +76,13 @@ export async function adminRoutes(fastify: FastifyInstance) {
         avatar: users.avatar,
         role: organizationMembers.role,
         createdAt: users.createdAt,
+        invitedByName: referrer.name,
+        invitedByEmail: referrer.email,
       })
       .from(organizationMembers)
       .innerJoin(users, eq(organizationMembers.userId, users.id))
+      .leftJoin(referrals, eq(referrals.referredUserId, users.id))
+      .leftJoin(referrer, eq(referrals.referrerId, referrer.id))
       .where(eq(organizationMembers.organizationId, evenlyOrgId));
 
     // Deduplicate by user id (keep first occurrence — highest-privilege role)

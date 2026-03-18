@@ -196,6 +196,14 @@ export const UsersScreen: React.FC = () => {
                   >
                     {user.email}
                   </Text>
+                  {user.invitedByName && (
+                    <Text
+                      style={[styles.invitedByText, { color: '#8B5CF6' }]}
+                      numberOfLines={1}
+                    >
+                      Invited by {user.invitedByName}
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -329,6 +337,14 @@ const UserInfoModal: React.FC<UserInfoModalProps> = ({ user, visible, onClose, o
     label: 'Joined',
     value: formatDate(user.createdAt),
   });
+
+  if (user.invitedByName) {
+    infoRows.push({
+      icon: 'people-outline',
+      label: 'Invited By',
+      value: user.invitedByName + (user.invitedByEmail ? ` (${user.invitedByEmail})` : ''),
+    });
+  }
 
   return (
     <Modal
@@ -585,6 +601,11 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 11,
+  },
+  invitedByText: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
   },
   cellRole: {
     width: 72,

@@ -226,6 +226,8 @@ export interface AdminUser {
   avatar?: string;
   role: string;
   createdAt: string;
+  invitedByName?: string | null;
+  invitedByEmail?: string | null;
 }
 
 export interface GlassListItemProps {
