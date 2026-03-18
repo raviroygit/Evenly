@@ -526,7 +526,8 @@
     "codeApplied": "Referral code applied!",
     "invalidCode": "Invalid referral code",
     "codeCopied": "Referral code copied!",
-    "referrals": "Referrals"
+    "referrals": "Referrals",
+    "noFriendsYet": "No friends have joined yet"
   },
   "messages": {
     "hi": "Hi {{name}}",

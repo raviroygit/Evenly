@@ -530,7 +530,8 @@
     "codeApplied": "रेफरल कोड लागू हो गया!",
     "invalidCode": "गलत रेफरल कोड",
     "codeCopied": "रेफरल कोड कॉपी हो गया!",
-    "referrals": "रेफरल"
+    "referrals": "रेफरल",
+    "noFriendsYet": "अभी तक कोई दोस्त नहीं जुड़ा"
   },
   "messages": {
     "hi": "नमस्ते {{name}}",
