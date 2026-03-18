@@ -116,6 +116,8 @@ export function InfiniteScrollScreen<T>({
           colors={[colors.primary]}
         />
       }
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       removeClippedSubviews={true}
       maxToRenderPerBatch={10}
       updateCellsBatchingPeriod={50}

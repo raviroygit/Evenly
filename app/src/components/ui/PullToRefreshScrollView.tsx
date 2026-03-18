@@ -11,6 +11,8 @@ interface PullToRefreshScrollViewProps {
   contentContainerStyle?: any;
   style?: any;
   showsVerticalScrollIndicator?: boolean;
+  keyboardDismissMode?: 'none' | 'on-drag' | 'interactive';
+  keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
 }
 
 export const PullToRefreshScrollView: React.FC<PullToRefreshScrollViewProps> = ({
@@ -23,6 +25,8 @@ export const PullToRefreshScrollView: React.FC<PullToRefreshScrollViewProps> = (
   contentContainerStyle,
   style,
   showsVerticalScrollIndicator = false,
+  keyboardDismissMode = 'on-drag',
+  keyboardShouldPersistTaps = 'handled',
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -57,6 +61,8 @@ export const PullToRefreshScrollView: React.FC<PullToRefreshScrollViewProps> = (
       onScrollBeginDrag={handleScrollBeginDrag}
       onScrollEndDrag={handleScrollEndDrag}
       scrollEventThrottle={16}
+      keyboardDismissMode={keyboardDismissMode}
+      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       bounces={true}
       alwaysBounceVertical={true}
       decelerationRate="normal"

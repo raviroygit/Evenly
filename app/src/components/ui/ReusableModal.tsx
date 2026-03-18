@@ -9,6 +9,7 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,7 +74,7 @@ export const ReusableModal: React.FC<ReusableModalProps> = ({
       >
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.overlay}>
-            <TouchableWithoutFeedback>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={[styles.container, { backgroundColor: colors.background }]}>
               {/* Header */}
               {titleGradient ? (
@@ -134,7 +135,7 @@ export const ReusableModal: React.FC<ReusableModalProps> = ({
               ) : (
                 <View style={styles.scrollWrapper}>
                   {Platform.OS === 'ios' ? (
-                    <TouchableWithoutFeedback>
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                       <View style={styles.iosTouchArea}>
                         <ScrollView 
                           style={[styles.scrollContent, styles.iosScrollContent]}
@@ -168,7 +169,7 @@ export const ReusableModal: React.FC<ReusableModalProps> = ({
                           fadingEdgeLength={0}
                         >
                           {makeContentInteractive ? (
-                            <TouchableWithoutFeedback>
+                            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                               <View style={styles.interactiveContent}>
                                 {children}
                               </View>
