@@ -18,8 +18,14 @@ const USER_BALANCES_CACHE_DURATION = 60000; // 1 minute
 export const useBalances = (groupId?: string) => {
   const [balances, setBalances] = useState<UserBalance[]>([]);
   const [simplifiedDebts, setSimplifiedDebts] = useState<SimplifiedDebt[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const balancesLengthRef = useRef(0);
+
+  // Keep ref in sync
+  useEffect(() => {
+    balancesLengthRef.current = balances.length;
+  }, [balances]);
 
   useEffect(() => {
     if (groupId) {
@@ -44,7 +50,7 @@ export const useBalances = (groupId?: string) => {
 
   const loadGroupBalances = async (groupId: string) => {
     try {
-      setLoading(true);
+      if (balancesLengthRef.current === 0) setLoading(true);
       setError(null);
 
       // Use token's remaining lifetime as cache TTL
@@ -121,12 +127,12 @@ export const useUserBalances = () => {
   const [loading, setLoading] = useState(!globalUserBalancesCache);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUserBalances = useCallback(async (options: { silent?: boolean } = {}) => {
+  const loadUserBalances = useCallback(async (options: { silent?: boolean; force?: boolean } = {}) => {
     try {
-      const { silent = false } = options;
+      const { silent = false, force = false } = options;
 
       // If there's already a fetch in progress, wait for it
-      if (globalUserBalancesFetchPromise) {
+      if (globalUserBalancesFetchPromise && !force) {
         console.log('🔄 [useUserBalances] Waiting for existing fetch...');
         await globalUserBalancesFetchPromise;
         if (globalUserBalancesCache) {
@@ -139,7 +145,7 @@ export const useUserBalances = () => {
 
       // If we have recent cache data (< 5 seconds old), use it immediately
       const timeSinceLastFetch = Date.now() - globalUserBalancesLastFetchTime;
-      if (globalUserBalancesCache && timeSinceLastFetch < 5000 && !globalUserBalancesIsFirstFetch) {
+      if (!force && globalUserBalancesCache && timeSinceLastFetch < 5000 && !globalUserBalancesIsFirstFetch) {
         console.log('⚡ [useUserBalances] Using recent cache (age: ' + Math.round(timeSinceLastFetch/1000) + 's)');
         setBalances(globalUserBalancesCache.balances);
         setNetBalance(globalUserBalancesCache.netBalance);
@@ -172,12 +178,12 @@ export const useUserBalances = () => {
         try {
           globalUserBalancesIsLoading = true;
 
-          // Always bypass cache on first fetch to ensure fresh data on app reopen
+          // Always bypass cache on first fetch or forced refresh
           // After first fetch, use cache for better performance
           let cacheTTL: number;
-          if (globalUserBalancesIsFirstFetch) {
+          if (force || globalUserBalancesIsFirstFetch) {
             cacheTTL = 0; // Bypass cache - force fresh fetch
-            globalUserBalancesIsFirstFetch = false;
+            if (globalUserBalancesIsFirstFetch) globalUserBalancesIsFirstFetch = false;
             globalUserBalancesLastFetchTime = Date.now();
           } else {
             // Check if cache has expired (1 minute)
@@ -255,8 +261,8 @@ export const useUserBalances = () => {
       return;
     }
 
-    // Load balances immediately - first fetch will bypass cache
-    loadUserBalances();
+    // Load balances silently - show cached/offline data instantly, refresh in background
+    loadUserBalances({ silent: true });
   }, [authState, loadUserBalances]);
 
   // Register with DataRefreshCoordinator
@@ -305,6 +311,6 @@ export const useUserBalances = () => {
     netBalance,
     loading,
     error,
-    refreshUserBalances: () => loadUserBalances({ silent: false }), // Explicit user refresh
+    refreshUserBalances: () => loadUserBalances({ silent: false, force: true }), // Explicit user refresh
   };
 };

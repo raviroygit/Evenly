@@ -30,7 +30,7 @@ export const GroupDetailsScreen: React.FC = () => {
   const { user } = useAuth();
   const { setActiveSwipeId } = useSwipeAction();
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,7 +105,7 @@ export const GroupDetailsScreen: React.FC = () => {
     if (!groupId) return;
     
     try {
-      if (!skipLoadingState) {
+      if (!skipLoadingState && expenses.length === 0) {
         setLoading(true);
       }
       const response = await EvenlyBackendService.getGroupExpenses(groupId);
@@ -122,7 +122,7 @@ export const GroupDetailsScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadExpenses();
+    await loadExpenses(true); // skip loading state, refreshing handles UI
     setRefreshing(false);
   };
 
@@ -339,7 +339,7 @@ export const GroupDetailsScreen: React.FC = () => {
           <View style={[styles.container, { backgroundColor: colors.background }]}>
             <ListHeaderComponent />
             <View style={styles.contentContainer}>
-              <SkeletonExpenseList count={5} />
+              <SkeletonExpenseList count={10} />
             </View>
           </View>
         </View>
@@ -374,8 +374,8 @@ export const GroupDetailsScreen: React.FC = () => {
     );
   }
 
-  // Show skeleton loading state while groups are loading
-  if (groupsLoading) {
+  // Show skeleton loading state only when no cached groups data
+  if (groupsLoading && groups.length === 0) {
     return (
       <View style={[styles.fullScreenContainer, { backgroundColor: colors.background }]}>
         <View style={[styles.container, styles.skeletonContainer, { backgroundColor: colors.background }]}>
@@ -402,7 +402,7 @@ export const GroupDetailsScreen: React.FC = () => {
 
           {/* Skeleton Expense List */}
           <View style={[styles.skeletonContentContainer, { backgroundColor: colors.background }]}>
-            <SkeletonExpenseList count={5} />
+            <SkeletonExpenseList count={10} />
           </View>
         </View>
       </View>

@@ -150,7 +150,9 @@ export const ProfileScreen: React.FC = () => {
       netBalance: net,
     };
   }, [netBalance?.totalOwed, netBalance?.totalOwing, khataSummary]);
-  const balanceLoading = balancesLoading || khataSummaryLoading;
+  // Only show balance loading on pull-to-refresh or when no cached data exists
+  const hasBalanceData = netBalance !== null || khataSummary !== null;
+  const balanceLoading = refreshing || (!hasBalanceData && (balancesLoading || khataSummaryLoading));
 
   const handlePersonalInfoSuccess = () => {
     // Force re-render when personal info is updated
@@ -452,7 +454,7 @@ export const ProfileScreen: React.FC = () => {
           },
           {
             title: t('groups.title'),
-            subtitle: groupsLoading ? t('common.loading') : `${groups.length} ${groups.length !== 1 ? t('groups.title').toLowerCase() : t('groups.title').toLowerCase()}`,
+            subtitle: (refreshing || (!groups.length && groupsLoading)) ? t('common.loading') : `${groups.length} ${groups.length !== 1 ? t('groups.title').toLowerCase() : t('groups.title').toLowerCase()}`,
             onPress: () => setShowGroupsListModal(true),
           },
           {

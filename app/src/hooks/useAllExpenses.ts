@@ -47,9 +47,12 @@ export const useAllExpenses = () => {
     }
 
     if (groupsLoading) {
-      setLoading(true);
+      // Only show loading if no cached expenses exist
+      if (globalExpensesCache.length === 0) {
+        setLoading(true);
+      }
     } else if (groups.length > 0) {
-      loadAllExpenses();
+      loadAllExpenses({ silent: globalExpensesCache.length > 0 });
     } else {
       setExpenses([]);
       setLoading(false);
@@ -113,12 +116,12 @@ export const useAllExpenses = () => {
   }, [loadAllExpenses]);
 
   // Fix closure issue by using current groups, not stale closure
-  const loadAllExpenses = useCallback(async (options: { silent?: boolean } = {}) => {
+  const loadAllExpenses = useCallback(async (options: { silent?: boolean; force?: boolean } = {}) => {
     try {
-      const { silent = false } = options;
+      const { silent = false, force = false } = options;
 
       // If another instance is already loading, wait and use cached data
-      if (globalExpensesIsLoading && !globalExpensesIsFirstFetch) {
+      if (!force && globalExpensesIsLoading && !globalExpensesIsFirstFetch) {
 
         // Wait for the other instance to finish loading (max 5 seconds)
         let attempts = 0;
@@ -158,12 +161,12 @@ export const useAllExpenses = () => {
         return;
       }
 
-      // Always bypass cache on first fetch to ensure fresh data on app reopen
+      // Always bypass cache on first fetch or forced refresh
       // After first fetch, use cache for better performance
       let cacheTTL: number;
-      if (globalExpensesIsFirstFetch) {
+      if (force || globalExpensesIsFirstFetch) {
         cacheTTL = 0; // Bypass cache - force fresh fetch
-        globalExpensesIsFirstFetch = false;
+        if (globalExpensesIsFirstFetch) globalExpensesIsFirstFetch = false;
         globalExpensesLastFetchTime = Date.now();
       } else {
         // Check if cache has expired (1 minute)
@@ -296,6 +299,6 @@ export const useAllExpenses = () => {
     expensesByCategory,
     recentExpenses,
     addExpense,
-    refreshExpenses: () => loadAllExpenses({ silent: false }), // Explicit user refresh
+    refreshExpenses: () => loadAllExpenses({ silent: false, force: true }), // Explicit user refresh
   };
 };

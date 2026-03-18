@@ -24,7 +24,7 @@ export const useActivitiesInfinite = () => {
   const { expenses, loading: expensesLoading } = useAllExpenses();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -32,17 +32,19 @@ export const useActivitiesInfinite = () => {
   const [khataTransactions, setKhataTransactions] = useState<any[]>([]);
   const [khataLoading, setKhataLoading] = useState(true);
   
-  // Keep refs to latest groups/expenses/khata for refresh function
+  // Keep refs to latest groups/expenses/khata/activities for refresh function
   const groupsRef = useRef(groups);
   const expensesRef = useRef(expenses);
   const khataRef = useRef(khataTransactions);
+  const activitiesLengthRef = useRef(activities.length);
 
-  // Update refs when groups/expenses/khata change
+  // Update refs when groups/expenses/khata/activities change
   useEffect(() => {
     groupsRef.current = groups;
     expensesRef.current = expenses;
     khataRef.current = khataTransactions;
-  }, [groups, expenses, khataTransactions]);
+    activitiesLengthRef.current = activities.length;
+  }, [groups, expenses, khataTransactions, activities]);
 
   // Fetch khata transactions
   useEffect(() => {
@@ -62,7 +64,7 @@ export const useActivitiesInfinite = () => {
 
   const generateActivities = useCallback(() => {
     try {
-      setLoading(true);
+      if (activitiesLengthRef.current === 0) setLoading(true);
       const generatedActivities: ActivityItem[] = [];
 
       // Add group activities - use actual group creation/update dates
@@ -149,7 +151,7 @@ export const useActivitiesInfinite = () => {
       });
 
       // Simulate pagination
-      const pageSize = 3;
+      const pageSize = 10;
       const startIndex = 0; // Always start from beginning for initial load
       const endIndex = startIndex + pageSize;
       const paginatedActivities = combinedActivities.slice(startIndex, endIndex);
@@ -326,7 +328,7 @@ export const useActivitiesInfinite = () => {
       });
 
       // Simulate pagination
-      const pageSize = 3;
+      const pageSize = 10;
       const startIndex = (pageNum - 1) * pageSize;
       const endIndex = startIndex + pageSize;
       const paginatedActivities = combinedActivities.slice(startIndex, endIndex);
@@ -474,7 +476,7 @@ export const useActivitiesInfinite = () => {
       });
 
       // Simulate pagination
-      const pageSize = 3;
+      const pageSize = 10;
       const startIndex = 0;
       const endIndex = startIndex + pageSize;
       const paginatedActivities = combinedActivities.slice(startIndex, endIndex);

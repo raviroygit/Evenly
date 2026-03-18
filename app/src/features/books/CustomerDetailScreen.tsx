@@ -492,7 +492,7 @@ export const CustomerDetailScreen: React.FC = () => {
         {/* Transaction History */}
         <View style={styles.transactionsContainer}>
           {loading ? (
-            <SkeletonTransactionList count={5} />
+            <SkeletonTransactionList count={10} />
           ) : transactions.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>

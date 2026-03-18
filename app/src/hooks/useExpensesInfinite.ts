@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { EnhancedExpense } from '../types';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { useGroups } from './useGroups';
@@ -7,15 +7,21 @@ import { emitExpenseCreated, emitExpenseUpdated, emitExpenseDeleted } from '../u
 export const useExpensesInfinite = () => {
   const { groups, loading: groupsLoading } = useGroups();
   const [expenses, setExpenses] = useState<EnhancedExpense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const expensesLengthRef = useRef(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
 
+  // Keep ref in sync
+  useEffect(() => {
+    expensesLengthRef.current = expenses.length;
+  }, [expenses]);
+
   const loadAllExpenses = useCallback(async () => {
     try {
-      setLoading(true);
+      if (expensesLengthRef.current === 0) setLoading(true);
       setError(null);
       
       // Filter out any groups that might be invalid (defensive programming)
@@ -44,7 +50,7 @@ export const useExpensesInfinite = () => {
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
       // Simulate pagination
-      const pageSize = 3;
+      const pageSize = 10;
       const startIndex = 0; // Always start from beginning for initial load
       const endIndex = startIndex + pageSize;
       const paginatedExpenses = allExpenses.slice(startIndex, endIndex);
@@ -113,7 +119,7 @@ export const useExpensesInfinite = () => {
       const allExpenses = allExpensesResults.flatMap(result => result.expenses);
       
       // Simulate pagination
-      const pageSize = 3;
+      const pageSize = 10;
       const startIndex = (pageNum - 1) * pageSize;
       const endIndex = startIndex + pageSize;
       const paginatedExpenses = allExpenses.slice(startIndex, endIndex);
@@ -129,7 +135,7 @@ export const useExpensesInfinite = () => {
   }, [groups]);
 
   const refresh = useCallback(() => {
-    loadAllExpenses();
+    return loadAllExpenses();
   }, [loadAllExpenses]);
 
   const addExpense = useCallback(async (expenseData: any) => {

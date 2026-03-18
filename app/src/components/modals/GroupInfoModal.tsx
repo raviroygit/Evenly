@@ -160,7 +160,7 @@ export const GroupInfoModal: React.FC<GroupInfoModalProps> = ({
                       <View style={[styles.skeletonLine, { backgroundColor: colors.muted }]} />
                       <View style={[styles.skeletonLine, { backgroundColor: colors.muted }]} />
                     </View>
-                    <SkeletonExpenseList count={3} />
+                    <SkeletonExpenseList count={10} />
                   </View>
                 ) : group ? (
                   <>

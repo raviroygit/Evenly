@@ -17,7 +17,7 @@ import { DashboardSummaryCard } from '../../components/features/dashboard/Dashbo
 import { RecentActivity } from '../../components/features/dashboard/RecentActivity';
 import { CustomersListModal } from '../../components/modals/CustomersListModal';
 import { GroupsListModal } from '../../components/modals/GroupsListModal';
-import { SkeletonKhataSummary } from '../../components/ui/SkeletonLoader';
+import { SkeletonKhataSummary, SkeletonDashboardSummary } from '../../components/ui/SkeletonLoader';
 import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
@@ -54,15 +54,17 @@ export const HomeScreen: React.FC = () => {
     }).length,
   }), [groups, netBalance]);
 
-  const dashboardLoading = groupsLoading || balancesLoading;
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Show loading on first load or during pull-to-refresh
+  const hasCachedData = groups.length > 0 || netBalance !== null;
+  const dashboardLoading = refreshing || (!hasCachedData && (groupsLoading || balancesLoading));
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const activitiesRefreshRef = useRef<(() => void) | null>(null);
   const [khataSummary, setKhataSummary] = useState<{ totalGive: string; totalGet: string } | null>(null);
-  const [khataLoading, setKhataLoading] = useState(true);
+  const [khataLoading, setKhataLoading] = useState(false);
   const [customerCount, setCustomerCount] = useState(0);
   const [showCustomersListModal, setShowCustomersListModal] = useState(false);
   const [showGroupsListModal, setShowGroupsListModal] = useState(false);
@@ -77,12 +79,14 @@ export const HomeScreen: React.FC = () => {
     const fetchKhataSummary = async () => {
       try {
         const cached = await HomeCache.get();
+        const hasCachedKhata = cached && cached.khataSummary;
         if (cached && !cancelled) {
           setKhataSummary(cached.khataSummary);
           setCustomerCount(cached.customerCount);
           setCustomers(Array.isArray(cached.customers) ? cached.customers : []);
         }
-        setKhataLoading(true);
+        // Only show skeleton if no cached data
+        if (!hasCachedKhata) setKhataLoading(true);
         const [summary, customersData] = await Promise.all([
           EvenlyBackendService.getKhataFinancialSummary(),
           EvenlyBackendService.getKhataCustomers({ cacheTTLMs: 30000 }),
@@ -495,14 +499,17 @@ export const HomeScreen: React.FC = () => {
         </ResponsiveLiquidGlassCard>
 
         {/* Dashboard Summary Card */}
-        <DashboardSummaryCard
-          totalGroups={stats.totalGroups}
-          netBalance={stats.netBalance}
-          youOwe={stats.totalOwing}
-          youreOwed={stats.totalOwed}
-          loading={dashboardLoading || isCreatingGroup || isAddingExpense}
-          onPress={handleGroupsSummaryPress}
-        />
+        {dashboardLoading || isCreatingGroup || isAddingExpense ? (
+          <SkeletonDashboardSummary />
+        ) : (
+          <DashboardSummaryCard
+            totalGroups={stats.totalGroups}
+            netBalance={stats.netBalance}
+            youOwe={stats.totalOwing}
+            youreOwed={stats.totalOwed}
+            onPress={handleGroupsSummaryPress}
+          />
+        )}
 
         {/* Khata Summary Card */}
         {khataLoading ? (

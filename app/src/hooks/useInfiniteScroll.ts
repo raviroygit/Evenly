@@ -41,15 +41,15 @@ export function useInfiniteScroll<T>(
 
   const isLoadingRef = useRef(false);
 
-  const loadData = useCallback(async (pageNum: number, isLoadMore: boolean = false) => {
+  const loadData = useCallback(async (pageNum: number, isLoadMore: boolean = false, silent: boolean = false) => {
     if (isLoadingRef.current) return;
-    
+
     isLoadingRef.current = true;
-    
+
     try {
       if (isLoadMore) {
         setLoadingMore(true);
-      } else {
+      } else if (!silent) {
         setLoading(true);
       }
       
@@ -87,7 +87,7 @@ export function useInfiniteScroll<T>(
   const refresh = useCallback(() => {
     setPage(initialPage);
     setHasMore(initialHasMore);
-    loadData(initialPage, false);
+    return loadData(initialPage, false);
   }, [loadData, initialPage, initialHasMore]);
 
   const appendData = useCallback((newData: T[]) => {
@@ -105,9 +105,10 @@ export function useInfiniteScroll<T>(
     isLoadingRef.current = false;
   }, [initialPage, initialHasMore]);
 
-  // Auto-load initial data
+  // Auto-load initial data — silent if we already have data (cache)
   useEffect(() => {
-    loadData(initialPage, false);
+    loadData(initialPage, false, data.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData, initialPage]);
 
   return {

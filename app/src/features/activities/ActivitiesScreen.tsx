@@ -247,7 +247,7 @@ export const ActivitiesScreen: React.FC = () => {
     </View>
   );
 
-  if (loading) {
+  if (loading && activities.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}

@@ -67,12 +67,10 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isGroupModalVisible, setIsGroupModalVisible] = useState(false);
 
-  // Show skeleton loader only on initial load (never loaded before) or when adding expense
-  // Once data is loaded once, always show it (even during refreshes)
-  // This prevents skeleton on navigation back when activities are cached in context
-  // Also show skeleton when loading with no activities (handles fresh login case)
+  // Show skeleton loader on initial load, pull-to-refresh, or when adding expense
   const showSkeleton =
     (!hasInitiallyLoaded && loading) ||
+    refreshing ||
     isAddingExpense ||
     (activities.length === 0 && loading);
 

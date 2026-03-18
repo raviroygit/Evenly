@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,9 +17,9 @@ import { CustomerFilterModal, FilterType, SortType } from '../../components/moda
 import { AddCustomerModal } from '../../components/modals/AddCustomerModal';
 import { DeleteConfirmationModal } from '../../components/modals/DeleteConfirmationModal';
 import { FloatingActionButton } from '../../components/ui/FloatingActionButton';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { EvenlyBackendService } from '../../services/EvenlyBackendService';
-import { SkeletonCustomerList } from '../../components/ui/SkeletonLoader';
+import { SkeletonCustomerList, SkeletonLoader } from '../../components/ui/SkeletonLoader';
 import { useSwipeAction } from '../../contexts/SwipeActionContext';
 import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
@@ -90,7 +90,7 @@ export const BooksScreen: React.FC = () => {
     try {
       if (isRefresh) {
         setRefreshing(true);
-      } else {
+      } else if (customers.length === 0) {
         setLoading(true);
       }
 
@@ -131,6 +131,19 @@ export const BooksScreen: React.FC = () => {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  // Silently refresh when navigating back (e.g. after adding transaction on customer detail)
+  const isFirstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+      // Silent refresh — no loading skeleton, just update data
+      loadCustomers();
+    }, [loadCustomers])
+  );
 
   const formatAmount = (amount: number | string) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -297,12 +310,21 @@ export const BooksScreen: React.FC = () => {
               borderRadius={{ small: 16, medium: 18, large: 20 }}
               style={styles.summaryCard}
             >
-              <Text style={[styles.summaryLabel, { color: '#10B981' }]}>
-                {t('khata.youWillGet')}
-              </Text>
-              <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
-                {formatCurrency(parseFloat(summary.totalGet))}
-              </Text>
+              {loading || refreshing ? (
+                <>
+                  <SkeletonLoader width={80} height={13} borderRadius={6} style={{ marginBottom: 6 }} />
+                  <SkeletonLoader width={100} height={20} borderRadius={8} />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.summaryLabel, { color: '#10B981' }]}>
+                    {t('khata.youWillGet')}
+                  </Text>
+                  <Text style={[styles.summaryAmount, { color: '#10B981' }]}>
+                    {formatCurrency(parseFloat(summary.totalGet))}
+                  </Text>
+                </>
+              )}
 
             </ResponsiveLiquidGlassCard>
           </View>
@@ -315,12 +337,21 @@ export const BooksScreen: React.FC = () => {
               borderRadius={{ small: 16, medium: 18, large: 20 }}
               style={styles.summaryCard}
             >
-              <Text style={[styles.summaryLabel, { color: '#FF3B30' }]}>
-                {t('khata.youWillGive')}
-              </Text>
-              <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
-                {formatCurrency(parseFloat(summary.totalGive))}
-              </Text>
+              {loading || refreshing ? (
+                <>
+                  <SkeletonLoader width={80} height={13} borderRadius={6} style={{ marginBottom: 6 }} />
+                  <SkeletonLoader width={100} height={20} borderRadius={8} />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.summaryLabel, { color: '#FF3B30' }]}>
+                    {t('khata.youWillGive')}
+                  </Text>
+                  <Text style={[styles.summaryAmount, { color: '#FF3B30' }]}>
+                    {formatCurrency(parseFloat(summary.totalGive))}
+                  </Text>
+                </>
+              )}
 
             </ResponsiveLiquidGlassCard>
           </View>
@@ -349,8 +380,8 @@ export const BooksScreen: React.FC = () => {
 
         {/* Customer List */}
         <View style={styles.listContainer}>
-          {loading ? (
-            <SkeletonCustomerList count={5} />
+          {loading || refreshing ? (
+            <SkeletonCustomerList count={10} />
           ) : customers.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>

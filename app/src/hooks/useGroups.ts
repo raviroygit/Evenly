@@ -22,12 +22,12 @@ export const useGroups = () => {
   const [loading, setLoading] = useState(!globalGroupsCache.length); // Don't show loader if cache exists
   const [error, setError] = useState<string | null>(null);
 
-  const loadGroups = useCallback(async (options: { silent?: boolean } = {}) => {
+  const loadGroups = useCallback(async (options: { silent?: boolean; force?: boolean } = {}) => {
     try {
-      const { silent = false } = options;
+      const { silent = false, force = false } = options;
 
       // If there's already a fetch in progress, wait for it instead of starting a new one
-      if (globalFetchPromise) {
+      if (globalFetchPromise && !force) {
         console.log('🔄 [useGroups] Waiting for existing fetch to complete...');
         await globalFetchPromise;
         setGroups([...globalGroupsCache]);
@@ -37,7 +37,7 @@ export const useGroups = () => {
 
       // If we have recent cache data (< 5 seconds old), use it immediately
       const timeSinceLastFetch = Date.now() - globalLastFetchTime;
-      if (globalGroupsCache.length >= 0 && timeSinceLastFetch < 5000 && !globalIsFirstFetch) {
+      if (!force && globalGroupsCache.length >= 0 && timeSinceLastFetch < 5000 && !globalIsFirstFetch) {
         console.log('⚡ [useGroups] Using recent cache (age: ' + Math.round(timeSinceLastFetch/1000) + 's)');
         setGroups([...globalGroupsCache]);
         setLoading(false);
@@ -73,12 +73,12 @@ export const useGroups = () => {
         try {
           globalIsLoading = true;
 
-          // Always bypass cache on first fetch to ensure fresh data on app reopen
+          // Always bypass cache on first fetch or forced refresh
           // After first fetch, use cache for better performance
           let cacheTTL: number;
-          if (globalIsFirstFetch) {
+          if (force || globalIsFirstFetch) {
             cacheTTL = 0; // Bypass cache - force fresh fetch
-            globalIsFirstFetch = false;
+            if (globalIsFirstFetch) globalIsFirstFetch = false;
             globalLastFetchTime = Date.now();
           } else {
             // Check if cache has expired (1 minute)
@@ -151,8 +151,8 @@ export const useGroups = () => {
       return;
     }
 
-    // Load groups immediately - first fetch will bypass cache
-    loadGroups();
+    // Load groups silently - show cached/offline data instantly, refresh in background
+    loadGroups({ silent: true });
   }, [authState, loadGroups]);
 
   // Register with DataRefreshCoordinator
@@ -310,6 +310,6 @@ export const useGroups = () => {
     leaveGroup,
     updateGroup,
     deleteGroup,
-    refreshGroups: () => loadGroups({ silent: false }), // Explicit user refresh
+    refreshGroups: () => loadGroups({ silent: false, force: true }), // Explicit user refresh
   };
 };

@@ -244,15 +244,15 @@ export const GroupsScreen: React.FC = () => {
   };
 
 
-  if (loading) {
+  // Show skeleton on initial load (early return) or during pull-to-refresh (inline below)
+  const showSkeleton = (loading && groups.length === 0) || refreshing;
+
+  if (loading && groups.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <GlassListCard
-          title={t('groups.title')}
-          contentGap={8}
-        >
-          <SkeletonGroupList count={3} />
-        </GlassListCard>
+        <View style={[styles.contentContainer, { padding: 20 }]}>
+          <SkeletonGroupList count={10} />
+        </View>
       </View>
     );
   }
@@ -300,22 +300,29 @@ export const GroupsScreen: React.FC = () => {
   return (
     <>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <InfiniteScrollScreen
-          data={groups}
-          renderItem={renderGroupItem}
-          keyExtractor={(group) => group.id}
-          loading={loading}
-          loadingMore={loadingMore}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          emptyMessage={t('groups.createFirstGroup')}
-          loadingMessage={t('common.loading')}
-          ListHeaderComponent={ListHeaderComponent}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
-          showsVerticalScrollIndicator={false}
-        />
+        {showSkeleton ? (
+          <View style={[styles.contentContainer, { padding: 20, paddingBottom: 100 }]}>
+            <ListHeaderComponent />
+            <SkeletonGroupList count={10} />
+          </View>
+        ) : (
+          <InfiniteScrollScreen
+            data={groups}
+            renderItem={renderGroupItem}
+            keyExtractor={(group) => group.id}
+            loading={loading}
+            loadingMore={loadingMore}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            emptyMessage={t('groups.createFirstGroup')}
+            loadingMessage={t('common.loading')}
+            ListHeaderComponent={ListHeaderComponent}
+            contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
           {/* Create/Edit Group Modal */}
           <CreateGroupModal

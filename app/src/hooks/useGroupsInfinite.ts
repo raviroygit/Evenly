@@ -42,7 +42,7 @@ export const useGroupsInfinite = () => {
     reset,
   } = useInfiniteScroll<Group>(fetchGroups, {
     initialPage: 1,
-    pageSize: 3, // Page size for testing infinite scroll
+    pageSize: 10,
   });
 
   const createGroup = useCallback(async (groupData: {

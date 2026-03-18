@@ -171,7 +171,7 @@ export const SkeletonExpenseItem: React.FC = () => {
 };
 
 // Skeleton for expense list
-export const SkeletonExpenseList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+export const SkeletonExpenseList: React.FC<{ count?: number }> = ({ count = 10 }) => {
   const { colors } = useTheme();
   return (
     <View style={[styles.expenseList, { backgroundColor: colors.background }]}>
@@ -227,7 +227,7 @@ export const SkeletonTransactionItem: React.FC = () => {
 };
 
 // Skeleton for transaction list
-export const SkeletonTransactionList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+export const SkeletonTransactionList: React.FC<{ count?: number }> = ({ count = 10 }) => {
   const { colors } = useTheme();
   return (
     <View style={[styles.transactionList, { backgroundColor: colors.background }]}>
@@ -268,7 +268,7 @@ export const SkeletonCustomerItem: React.FC = () => {
 };
 
 // Skeleton for customer list
-export const SkeletonCustomerList: React.FC<{ count?: number }> = ({ count = 5 }) => {
+export const SkeletonCustomerList: React.FC<{ count?: number }> = ({ count = 10 }) => {
   const { colors } = useTheme();
   return (
     <View style={[styles.customerList, { backgroundColor: colors.background }]}>
@@ -301,7 +301,7 @@ export const SkeletonGroupItem: React.FC = () => {
       style={styles.groupCardOverrides}
     >
       <View style={styles.header}>
-        {/* Icon - Blue circle with white letter G */}
+        {/* Icon - Blue circle matching GroupItem 48x48 */}
         <View style={[styles.icon, { backgroundColor: '#007AFF' }]}>
           <Text style={styles.iconText}>G</Text>
         </View>
@@ -313,8 +313,11 @@ export const SkeletonGroupItem: React.FC = () => {
           <SkeletonLoader width="50%" height={12} borderRadius={6} style={{ opacity: 0.8 }} />
         </View>
 
-        {/* Right section - Split type and time badge */}
+        {/* Right section - Share button + split type + time badge */}
         <View style={styles.amount}>
+          <View style={{ flexDirection: 'row', gap: 4, marginBottom: 4 }}>
+            <SkeletonLoader width={32} height={32} borderRadius={16} />
+          </View>
           <SkeletonLoader width={50} height={16} borderRadius={8} />
           <View style={[styles.metaBadge, { backgroundColor: colors.border + '20' }]}>
             <SkeletonLoader width={50} height={9} borderRadius={4} />
@@ -326,7 +329,7 @@ export const SkeletonGroupItem: React.FC = () => {
 };
 
 // Skeleton for group list
-export const SkeletonGroupList: React.FC<{ count?: number }> = ({ count = 3 }) => (
+export const SkeletonGroupList: React.FC<{ count?: number }> = ({ count = 10 }) => (
   <View style={styles.groupList}>
     {Array.from({ length: count }).map((_, index) => (
       <SkeletonGroupItem key={index} />
@@ -370,6 +373,59 @@ export const SkeletonKhataSummary: React.FC = () => {
           <View style={styles.khataSummaryItem}>
             <SkeletonLoader width={60} height={12} borderRadius={6} style={{ marginBottom: 8 }} />
             <SkeletonLoader width={80} height={20} borderRadius={8} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Skeleton for Dashboard Summary Card - EXACT match to DashboardSummaryCard
+export const SkeletonDashboardSummary: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <View style={styles.khataSummaryContainer}>
+      <View
+        style={[
+          styles.khataSummaryCard,
+          {
+            backgroundColor: theme === 'dark' ? '#2C2C2C' : '#FFFFFF',
+            borderColor: theme === 'dark' ? '#404040' : '#E0E0E0',
+            elevation: 4,
+          },
+        ]}
+      >
+        {/* Header with title and group count */}
+        <View style={styles.khataSummaryHeader}>
+          <SkeletonLoader width={140} height={16} borderRadius={8} />
+          <SkeletonLoader width={80} height={15} borderRadius={6} />
+        </View>
+
+        {/* Content with three summary items */}
+        <View style={styles.khataSummaryContent}>
+          {/* Net */}
+          <View style={styles.khataSummaryItem}>
+            <SkeletonLoader width={40} height={11} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width={70} height={15} borderRadius={8} />
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+
+          {/* You Owe */}
+          <View style={styles.khataSummaryItem}>
+            <SkeletonLoader width={50} height={11} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width={70} height={15} borderRadius={8} />
+          </View>
+
+          {/* Divider */}
+          <View style={[styles.khataDivider, { backgroundColor: theme === 'dark' ? '#404040' : '#E0E0E0' }]} />
+
+          {/* You Get */}
+          <View style={styles.khataSummaryItem}>
+            <SkeletonLoader width={50} height={11} borderRadius={6} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width={70} height={15} borderRadius={8} />
           </View>
         </View>
       </View>
@@ -476,7 +532,7 @@ export const SkeletonActivityItem: React.FC = () => {
 };
 
 // Skeleton for activity list
-export const SkeletonActivityList: React.FC<{ count?: number }> = ({ count = 3 }) => (
+export const SkeletonActivityList: React.FC<{ count?: number }> = ({ count = 10 }) => (
   <View style={styles.activityList}>
     {Array.from({ length: count }).map((_, index) => (
       <SkeletonActivityItem key={index} />
