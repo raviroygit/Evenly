@@ -18,13 +18,14 @@ export class GroupInvitationController {
   static sendInvitation = asyncHandler(async (request: FastifyRequest, reply: FastifyReply) => {
     const { user } = request as AuthenticatedRequest;
     const organizationId = (request as any).organizationId;
-    const { groupId, invitedEmail } = sendInvitationSchema.parse(request.body);
+    const { groupId, invitedEmail, invitedPhone } = sendInvitationSchema.parse(request.body);
 
     const invitation = await GroupInvitationService.sendInvitation(
       groupId,
       user.id,
       invitedEmail,
-      organizationId
+      organizationId,
+      invitedPhone
     );
 
     // Check if email was sent successfully

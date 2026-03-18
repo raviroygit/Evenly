@@ -152,7 +152,10 @@ export type DebtSimplificationQuery = z.infer<typeof debtSimplificationSchema>;
 // Group Invitation Schemas
 export const sendInvitationSchema = z.object({
   groupId: uuidSchema,
-  invitedEmail: z.string().email('Invalid email address'),
+  invitedEmail: z.string().email('Invalid email address').optional(),
+  invitedPhone: z.string().min(6, 'Invalid phone number').optional(),
+}).refine(data => data.invitedEmail || data.invitedPhone, {
+  message: 'Either email or phone number is required',
 });
 
 export const acceptInvitationSchema = z.object({

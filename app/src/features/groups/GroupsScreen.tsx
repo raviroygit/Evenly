@@ -171,11 +171,11 @@ export const GroupsScreen: React.FC = () => {
     setShowShareModal(true);
   };
 
-  const handleSendInvitation = async (email: string) => {
+  const handleSendInvitation = async (data: { email?: string; phone?: string }) => {
     if (!selectedGroupForInvite) return;
-    
+
     try {
-      await sendInvitation(selectedGroupForInvite.id, email);
+      await sendInvitation(selectedGroupForInvite.id, data.email, data.phone);
     } catch (error) {
       throw error; // Re-throw to let the modal handle the error
     }

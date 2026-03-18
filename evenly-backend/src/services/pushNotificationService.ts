@@ -2,7 +2,7 @@ import * as http2 from 'http2';
 import * as fs from 'fs';
 import * as jwt from 'jsonwebtoken';
 import * as admin from 'firebase-admin';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, or } from 'drizzle-orm';
 import { db, deviceTokens, users } from '../db';
 import { config } from '../config/config';
 import { t as translate, getUserLanguage, getUserCurrencySymbol } from '../i18n/emailTranslator';
@@ -504,24 +504,37 @@ export async function sendPaymentCompletedPush(
   }
 }
 
+/**
+ * Look up a registered user by email first, then fall back to phone number.
+ * Returns the userId or null if not found.
+ */
+async function findUserByEmailOrPhone(email?: string | null, phone?: string | null): Promise<string | null> {
+  if (email) {
+    const [found] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    if (found) return found.id;
+  }
+  if (phone) {
+    const [found] = await db.select({ id: users.id }).from(users).where(eq(users.phoneNumber, phone)).limit(1);
+    if (found) return found.id;
+  }
+  return null;
+}
+
 export async function sendKhataTransactionPush(
-  customerEmail: string,
+  customerEmail: string | null | undefined,
   customerName: string,
   userName: string,
-  transaction: { type: 'give' | 'get'; amount: string; currency: string }
+  transaction: { type: 'give' | 'get'; amount: string; currency: string },
+  customerPhone?: string | null
 ): Promise<void> {
   try {
-    // Look up the customer in the users table by email to get their userId
-    const [customerUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, customerEmail))
-      .limit(1);
+    // Look up the customer by email first, then fall back to phone number
+    const customerUserId = await findUserByEmailOrPhone(customerEmail, customerPhone);
 
-    if (!customerUser) return; // Customer is not a registered user — can't send push
+    if (!customerUserId) return; // Customer is not a registered user — can't send push
 
     await sendPersonalizedPush(
-      [customerUser.id],
+      [customerUserId],
       (lang, userPref) => {
         const formattedAmount = formatAmountForUser(transaction.amount, userPref);
         // From customer's perspective: 'give' means user gave → customer received (got)
@@ -540,21 +553,18 @@ export async function sendKhataTransactionPush(
 }
 
 export async function sendKhataTransactionUpdatedPush(
-  customerEmail: string,
+  customerEmail: string | null | undefined,
   userName: string,
-  transaction: { type: 'give' | 'get'; amount: string }
+  transaction: { type: 'give' | 'get'; amount: string },
+  customerPhone?: string | null
 ): Promise<void> {
   try {
-    const [customerUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, customerEmail))
-      .limit(1);
+    const customerUserId = await findUserByEmailOrPhone(customerEmail, customerPhone);
 
-    if (!customerUser) return;
+    if (!customerUserId) return;
 
     await sendPersonalizedPush(
-      [customerUser.id],
+      [customerUserId],
       (lang, userPref) => {
         const formattedAmount = formatAmountForUser(transaction.amount, userPref);
         const typeKey = transaction.type === 'give' ? 'khataGotBody' : 'khataGaveBody';
@@ -571,21 +581,18 @@ export async function sendKhataTransactionUpdatedPush(
 }
 
 export async function sendKhataTransactionDeletedPush(
-  customerEmail: string,
+  customerEmail: string | null | undefined,
   userName: string,
-  transaction: { type: 'give' | 'get'; amount: string }
+  transaction: { type: 'give' | 'get'; amount: string },
+  customerPhone?: string | null
 ): Promise<void> {
   try {
-    const [customerUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, customerEmail))
-      .limit(1);
+    const customerUserId = await findUserByEmailOrPhone(customerEmail, customerPhone);
 
-    if (!customerUser) return;
+    if (!customerUserId) return;
 
     await sendPersonalizedPush(
-      [customerUser.id],
+      [customerUserId],
       (lang, userPref) => {
         const formattedAmount = formatAmountForUser(transaction.amount, userPref);
         return {
@@ -601,20 +608,17 @@ export async function sendKhataTransactionDeletedPush(
 }
 
 export async function sendKhataCustomerAddedPush(
-  customerEmail: string,
-  userName: string
+  customerEmail: string | null | undefined,
+  userName: string,
+  customerPhone?: string | null
 ): Promise<void> {
   try {
-    const [customerUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, customerEmail))
-      .limit(1);
+    const customerUserId = await findUserByEmailOrPhone(customerEmail, customerPhone);
 
-    if (!customerUser) return;
+    if (!customerUserId) return;
 
     await sendPersonalizedPush(
-      [customerUser.id],
+      [customerUserId],
       (lang) => ({
         title: translate(lang, 'pushNotification.khataCustomerAddedTitle'),
         body: translate(lang, 'pushNotification.khataCustomerAddedBody', { userName }),

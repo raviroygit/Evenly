@@ -9,14 +9,15 @@ export async function groupInvitationRoutes(fastify: FastifyInstance) {
   // Send group invitation
   fastify.post('/send', {
     schema: {
-      description: 'Send a group invitation via email',
+      description: 'Send a group invitation via email or phone number',
       tags: ['Group Invitations'],
       body: {
         type: 'object',
-        required: ['groupId', 'invitedEmail'],
+        required: ['groupId'],
         properties: {
           groupId: { type: 'string', format: 'uuid' },
           invitedEmail: { type: 'string', format: 'email' },
+          invitedPhone: { type: 'string', minLength: 6 },
         },
       },
     },

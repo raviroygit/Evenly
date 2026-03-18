@@ -267,16 +267,18 @@ export class KhataService {
         })().catch(() => {});
 
         // Send push notification to customer if they are a registered user (non-blocking)
-        (async () => {
-          try {
-            const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
-            if (user) {
-              await sendKhataCustomerAddedPush(customerEmail, user.name);
+        if (customer.email || customer.phone) {
+          (async () => {
+            try {
+              const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+              if (user) {
+                await sendKhataCustomerAddedPush(customer.email, user.name, customer.phone);
+              }
+            } catch {
+              // Ignore — push is non-blocking
             }
-          } catch {
-            // Ignore — push is non-blocking
-          }
-        })().catch(() => {});
+          })().catch(() => {});
+        }
       }
 
       return customer;
@@ -479,16 +481,17 @@ export class KhataService {
       }
 
       // Send push notification to customer if they are a registered user (non-blocking)
-      if (customer.email) {
+      if (customer.email || customer.phone) {
         (async () => {
           try {
             const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
               await sendKhataTransactionPush(
-                customer.email!,
+                customer.email,
                 customer.name,
                 user.name,
-                { type: transactionData.type, amount: transactionData.amount, currency: transactionData.currency || 'INR' }
+                { type: transactionData.type, amount: transactionData.amount, currency: transactionData.currency || 'INR' },
+                customer.phone
               );
             }
           } catch {
@@ -567,11 +570,11 @@ export class KhataService {
       const finalAmount = transactionData.amount || existingTransaction.amount;
       (async () => {
         try {
-          const [customer] = await db.select({ email: khataCustomers.email }).from(khataCustomers).where(eq(khataCustomers.id, existingTransaction.customerId)).limit(1);
-          if (customer?.email) {
+          const [customer] = await db.select({ email: khataCustomers.email, phone: khataCustomers.phone }).from(khataCustomers).where(eq(khataCustomers.id, existingTransaction.customerId)).limit(1);
+          if (customer?.email || customer?.phone) {
             const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
-              await sendKhataTransactionUpdatedPush(customer.email, user.name, { type: finalType as 'give' | 'get', amount: finalAmount });
+              await sendKhataTransactionUpdatedPush(customer.email, user.name, { type: finalType as 'give' | 'get', amount: finalAmount }, customer.phone);
             }
           }
         } catch {
@@ -616,11 +619,11 @@ export class KhataService {
       // Send push notification to customer (non-blocking)
       (async () => {
         try {
-          const [customer] = await db.select({ email: khataCustomers.email }).from(khataCustomers).where(eq(khataCustomers.id, transaction.customerId)).limit(1);
-          if (customer?.email) {
+          const [customer] = await db.select({ email: khataCustomers.email, phone: khataCustomers.phone }).from(khataCustomers).where(eq(khataCustomers.id, transaction.customerId)).limit(1);
+          if (customer?.email || customer?.phone) {
             const [user] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
             if (user) {
-              await sendKhataTransactionDeletedPush(customer.email, user.name, { type: transaction.type as 'give' | 'get', amount: transaction.amount });
+              await sendKhataTransactionDeletedPush(customer.email, user.name, { type: transaction.type as 'give' | 'get', amount: transaction.amount }, customer.phone);
             }
           }
         } catch {

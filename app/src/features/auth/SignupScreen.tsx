@@ -325,7 +325,7 @@ export const SignupScreen: React.FC = () => {
                   <View style={[styles.phoneInputWrapper, { backgroundColor: colors.muted, borderColor: errors.phoneNumber ? '#FF3B30' : colors.border }]}>
                     <TextInput
                       style={[styles.phoneInput, { color: colors.foreground }]}
-                      placeholder="9876543210"
+                      placeholder={t('modals.enterPhoneNumber', { defaultValue: 'Enter phone number' })}
                       placeholderTextColor={colors.mutedForeground}
                       value={phoneNumber}
                       onChangeText={(t) => {

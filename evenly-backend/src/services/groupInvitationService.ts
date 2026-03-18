@@ -12,10 +12,15 @@ export class GroupInvitationService {
   static async sendInvitation(
     groupId: string,
     invitedBy: string,
-    invitedEmail: string,
-    organizationId?: string
+    invitedEmail?: string,
+    organizationId?: string,
+    invitedPhone?: string
   ): Promise<GroupInvitation> {
     try {
+      if (!invitedEmail && !invitedPhone) {
+        throw new ValidationError('Either email or phone number is required');
+      }
+
       // Validate group exists and belongs to organization (if specified)
       if (organizationId) {
         const [group] = await db
@@ -50,12 +55,17 @@ export class GroupInvitationService {
         throw new ForbiddenError('You must be a member of the group to send invitations');
       }
 
-      // Check if user is already a member
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, invitedEmail))
-        .limit(1);
+      // Look up user by email first, then fall back to phone number
+      let existingUser: any[] = [];
+      if (invitedEmail) {
+        existingUser = await db.select().from(users).where(eq(users.email, invitedEmail)).limit(1);
+      }
+      if (!existingUser.length && invitedPhone) {
+        existingUser = await db.select().from(users).where(eq(users.phoneNumber, invitedPhone)).limit(1);
+      }
+
+      // Use the found user's email for the invitation if we found them by phone
+      const resolvedEmail = invitedEmail || (existingUser.length > 0 ? existingUser[0].email : null);
 
       if (existingUser.length > 0) {
         const existingMember = await db
@@ -74,15 +84,16 @@ export class GroupInvitationService {
       }
 
       // Check for existing pending invitation
-      const existingInvitation = await db
-        .select()
-        .from(groupInvitations)
-        .where(and(
-          eq(groupInvitations.groupId, groupId),
-          eq(groupInvitations.invitedEmail, invitedEmail),
-          eq(groupInvitations.status, 'pending')
-        ))
-        .limit(1);
+      const pendingConditions = [
+        eq(groupInvitations.groupId, groupId),
+        eq(groupInvitations.status, 'pending'),
+      ];
+      // Match by resolved email if available
+      const existingInvitation = resolvedEmail
+        ? await db.select().from(groupInvitations)
+            .where(and(...pendingConditions, eq(groupInvitations.invitedEmail, resolvedEmail)))
+            .limit(1)
+        : [];
 
       if (existingInvitation.length > 0) {
         // If there's a pending invitation, resend the email using the existing invitation
@@ -96,12 +107,13 @@ export class GroupInvitationService {
         // Create invitation link
         const invitationLink = `${config.app.baseUrlRoot}/api/app/download?token=${invitation.token}`;
 
-        // Resend email (don't fail if email fails, but log prominently)
+        // Resend email if we have an email address
         let emailSent = false;
+        if (resolvedEmail) {
         try {
           const recipientUser = existingUser.length > 0 ? { preferredLanguage: existingUser[0].preferredLanguage ?? null } : undefined;
           await sendGroupInvitationEmail(
-            invitedEmail,
+            resolvedEmail,
             group[0].name,
             inviterName,
             invitationLink,
@@ -111,9 +123,9 @@ export class GroupInvitationService {
           );
           emailSent = true;
         } catch (emailError: any) {
-          // Add email failure info to invitation object for API response
           (invitation as any).emailSent = false;
           (invitation as any).emailError = emailError.message;
+        }
         }
 
         // Add email status to return object
@@ -128,7 +140,7 @@ export class GroupInvitationService {
       const newInvitation: NewGroupInvitation = {
         groupId,
         invitedBy,
-        invitedEmail,
+        invitedEmail: resolvedEmail || invitedPhone || '',
         invitedUserId: existingUser.length > 0 ? existingUser[0].id : null,
         status: 'pending',
         token,
@@ -147,24 +159,25 @@ export class GroupInvitationService {
       // Create invitation link
       const invitationLink = `${config.app.baseUrlRoot}/api/app/download?token=${token}`;
 
-      // Send email (don't fail invitation creation if email fails, but log prominently)
+      // Send email if we have an email address (don't fail invitation creation if email fails)
       let emailSent = false;
-      try {
-        const recipientUser = existingUser.length > 0 ? { preferredLanguage: existingUser[0].preferredLanguage ?? null } : undefined;
-        await sendGroupInvitationEmail(
-          invitedEmail,
-          group[0].name,
-          inviterName,
-          invitationLink,
-          existingUser.length > 0,
-          token, // Pass the invitation token
-          recipientUser
-        );
-        emailSent = true;
-      } catch (emailError: any) {
-        // Add email failure info to invitation object for API response
-        (createdInvitation as any).emailSent = false;
-        (createdInvitation as any).emailError = emailError.message;
+      if (resolvedEmail) {
+        try {
+          const recipientUser = existingUser.length > 0 ? { preferredLanguage: existingUser[0].preferredLanguage ?? null } : undefined;
+          await sendGroupInvitationEmail(
+            resolvedEmail,
+            group[0].name,
+            inviterName,
+            invitationLink,
+            existingUser.length > 0,
+            token,
+            recipientUser
+          );
+          emailSent = true;
+        } catch (emailError: any) {
+          (createdInvitation as any).emailSent = false;
+          (createdInvitation as any).emailError = emailError.message;
+        }
       }
 
       // Add email status to return object

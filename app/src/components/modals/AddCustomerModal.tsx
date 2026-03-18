@@ -365,7 +365,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         >
                           <TextInput
                             style={[styles.phoneInput, { color: colors.foreground }]}
-                            placeholder="9876543210"
+                            placeholder={t('modals.enterPhoneNumber', { defaultValue: 'Enter phone number' })}
                             placeholderTextColor={colors.mutedForeground}
                             value={phone}
                             onChangeText={(t) => {

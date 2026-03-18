@@ -41,7 +41,8 @@ interface GroupInvitation {
 
 interface SendInvitationData {
   groupId: string;
-  invitedEmail: string;
+  invitedEmail?: string;
+  invitedPhone?: string;
 }
 
 interface AcceptInvitationData {

@@ -55,12 +55,13 @@ export const useGroupInvitations = () => {
     }
   };
 
-  const sendInvitation = async (groupId: string, invitedEmail: string) => {
+  const sendInvitation = async (groupId: string, invitedEmail?: string, invitedPhone?: string) => {
     try {
       setError(null);
       const newInvitation = await GroupInvitationService.sendInvitation({
         groupId,
         invitedEmail,
+        invitedPhone,
       });
       return newInvitation;
     } catch (err) {
