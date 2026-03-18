@@ -56,7 +56,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
     };
 
-    register();
+    register().catch((error) => {
+      console.error('[NotificationContext] Push registration failed:', error);
+    });
   }, [user]);
 
   // Set up notification listeners
@@ -68,7 +70,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     // User tapped on a notification — navigate to the relevant screen
     cleanupResponseRef.current = addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
+      const data = response?.notification?.request?.content?.data;
       if (data?.groupId && data?.screen === 'group_detail') {
         router.push(`/tabs/groups/${data.groupId}` as any);
       }
@@ -77,7 +79,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Handle cold start: check if app was opened from a notification
     const lastResponse = getLastNotificationResponse();
     if (lastResponse) {
-      const data = lastResponse.notification.request.content.data;
+      const data = lastResponse?.notification?.request?.content?.data;
       if (data?.groupId && data?.screen === 'group_detail') {
         setTimeout(() => {
           router.push(`/tabs/groups/${data.groupId}` as any);

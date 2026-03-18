@@ -81,7 +81,12 @@
     "accountCreated": "अकाउंट बना दिया गया",
     "pleaseSignInToContinue": "जारी रखने के लिए कृपया अपने ईमेल से साइन इन करें।",
     "selectCountryCode": "देश कोड चुनें",
-    "appName": "EvenlySplit"
+    "appName": "EvenlySplit",
+    "orContinueWith": "या इसके साथ जारी रखें",
+    "continueWithGoogle": "Google से जारी रखें",
+    "signUpWithEmail": "ईमेल से साइन अप करें",
+    "loginWithEmail": "ईमेल से लॉगिन करें",
+    "googleSignInFailed": "Google साइन-इन विफल हुआ। कृपया फिर से प्रयास करें।"
   },
   "profile": {
     "title": "प्रोफाइल",

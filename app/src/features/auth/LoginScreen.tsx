@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, TSpan } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -9,18 +9,38 @@ import { SimpleInput } from '../../components/ui/SimpleInput';
 import { PlatformActionButton } from '../../components/ui/PlatformActionButton';
 import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
+import { GoogleLogo } from '../../components/ui/GoogleLogo';
 
 export const LoginScreen: React.FC = () => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { login, requestOTP } = useAuth();
+  const { login, requestOTP, signInWithGoogle } = useAuth();
   const router = useRouter();
   const { width } = Dimensions.get('window');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [step, setStep] = useState<'choose' | 'email' | 'otp'>('choose');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; otp?: string }>({});
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; otp?: string; google?: string }>({});
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setErrors({});
+    try {
+      const result = await signInWithGoogle();
+      if (!result.success) {
+        if (result.message !== 'Google sign-in was cancelled') {
+          setErrors({ google: result.message });
+        }
+      }
+      // On success, PublicRoute handles navigation
+    } catch (error: any) {
+      setErrors({ google: error.message || t('errors.tryAgain') });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -99,6 +119,11 @@ export const LoginScreen: React.FC = () => {
     setErrors({});
   };
 
+  const handleBackToChoose = () => {
+    setStep('choose');
+    setErrors({});
+  };
+
   const handleRequestNewOTP = async () => {
     setIsLoading(true);
     setErrors({});
@@ -132,8 +157,8 @@ export const LoginScreen: React.FC = () => {
         <View style={[styles.content, { paddingHorizontal: width > 600 ? 40 : 20 }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Image 
-              source={require('../../../assets/icon.png')} 
+            <Image
+              source={require('../../../assets/icon.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -162,39 +187,75 @@ export const LoginScreen: React.FC = () => {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {t('auth.welcomeBack')}
             </Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              {step === 'email'
-                ? t('auth.enterEmailToReceiveCode')
-                : t('auth.enter6DigitCodeSentToEmail')
-              }
-            </Text>
           </View>
 
-          {/* Form Card */}
-          <GlassListCard
-            title={step === 'email' ? t('auth.login') : t('auth.verifyCode')}
-            contentGap={20}
-            padding={{
-              small: 20,
-              medium: 24,
-              large: 28,
-              tablet: 32,
-            }}
-            marginBottom={24}
-          >
-            {step === 'email' ? (
-              <>
-                <SimpleInput
-                  label={t('auth.emailAddress')}
-                  placeholder={t('auth.enterYourEmail')}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  error={errors.email}
-                />
+          {step === 'choose' ? (
+            <>
+              {/* Google Sign-In Button */}
+              <TouchableOpacity
+                style={[styles.googleButton, { borderColor: colors.border }]}
+                onPress={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                activeOpacity={0.7}
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator size="small" color={colors.foreground} />
+                ) : (
+                  <>
+                    <View style={styles.googleIcon}>
+                      <GoogleLogo size={20} />
+                    </View>
+                    <Text style={[styles.googleButtonText, { color: colors.foreground }]}>
+                      {t('auth.continueWithGoogle')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
+              {errors.google ? (
+                <Text style={styles.googleError}>{errors.google}</Text>
+              ) : null}
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t('auth.orContinueWith')}</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
+
+              {/* Email Login Button */}
+              <PlatformActionButton
+                title={t('auth.loginWithEmail')}
+                onPress={() => setStep('email')}
+                variant="primary"
+                size="large"
+                disabled={isGoogleLoading}
+              />
+            </>
+          ) : step === 'email' ? (
+            <GlassListCard
+              title={t('auth.login')}
+              contentGap={20}
+              padding={{
+                small: 20,
+                medium: 24,
+                large: 28,
+                tablet: 32,
+              }}
+              marginBottom={24}
+            >
+              <SimpleInput
+                label={t('auth.emailAddress')}
+                placeholder={t('auth.enterYourEmail')}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={errors.email}
+              />
+
+              <View style={styles.buttonContainer}>
                 <PlatformActionButton
                   title={t('auth.sendLoginCode')}
                   onPress={handleRequestOTP}
@@ -203,56 +264,72 @@ export const LoginScreen: React.FC = () => {
                   disabled={isLoading}
                   loading={isLoading}
                 />
-              </>
-            ) : (
-              <>
-                <View style={styles.emailDisplay}>
-                  <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
-                    {t('auth.codeSentTo', { email })}
-                  </Text>
-                </View>
+                <PlatformActionButton
+                  title={t('common.back')}
+                  onPress={handleBackToChoose}
+                  variant="secondary"
+                  size="medium"
+                />
+              </View>
+            </GlassListCard>
+          ) : (
+            <GlassListCard
+              title={t('auth.verifyCode')}
+              contentGap={20}
+              padding={{
+                small: 20,
+                medium: 24,
+                large: 28,
+                tablet: 32,
+              }}
+              marginBottom={24}
+            >
+              <View style={styles.emailDisplay}>
+                <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
+                  {t('auth.codeSentTo', { email })}
+                </Text>
+              </View>
 
-                <SimpleInput
-                  label={t('auth.verificationCode')}
-                  placeholder={t('auth.enter6DigitCode')}
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="numeric"
-                  maxLength={6}
-                  error={errors.otp}
+              <SimpleInput
+                label={t('auth.verificationCode')}
+                placeholder={t('auth.enter6DigitCode')}
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="numeric"
+                maxLength={6}
+                error={errors.otp}
+              />
+
+              <View style={styles.buttonContainer}>
+                <PlatformActionButton
+                  title={t('auth.verifyAndLogin')}
+                  onPress={handleVerifyOTP}
+                  variant="primary"
+                  size="large"
+                  disabled={isLoading}
+                  loading={isLoading}
                 />
 
-                <View style={styles.buttonContainer}>
-                  <PlatformActionButton
-                    title={t('auth.verifyAndLogin')}
-                    onPress={handleVerifyOTP}
-                    variant="primary"
-                    size="large"
-                    disabled={isLoading}
-                    loading={isLoading}
-                  />
+                <PlatformActionButton
+                  title={t('auth.requestNewOTP')}
+                  onPress={handleRequestNewOTP}
+                  variant="secondary"
+                  size="medium"
+                  disabled={isLoading}
+                  loading={false}
+                />
 
-                  <PlatformActionButton
-                    title={t('auth.requestNewOTP')}
-                    onPress={handleRequestNewOTP}
-                    variant="secondary"
-                    size="medium"
-                    disabled={isLoading}
-                    loading={false}
-                  />
-
-                  <PlatformActionButton
-                    title={t('auth.backToEmail')}
-                    onPress={handleBackToEmail}
-                    variant="secondary"
-                    size="medium"
-                    disabled={isLoading}
-                    loading={false}
-                  />
-                </View>
-              </>
-            )}
-          </GlassListCard>
+                <PlatformActionButton
+                  title={t('auth.backToEmail')}
+                  onPress={handleBackToEmail}
+                  variant="secondary"
+                  size="medium"
+                  disabled={isLoading}
+                  loading={false}
+                />
+              </View>
+            </GlassListCard>
+          )}
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -341,5 +418,45 @@ const styles = StyleSheet.create({
     marginTop: 8,
     opacity: 0.8,
     lineHeight: 16,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    paddingHorizontal: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginHorizontal: 16,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginBottom: 8,
+    minHeight: 52,
+  },
+  googleIcon: {
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  googleError: {
+    fontSize: 12,
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });

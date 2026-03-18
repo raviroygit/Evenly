@@ -315,12 +315,21 @@ export class AuthService {
   /**
    * Google social login - proxy to auth service
    */
-  static async socialLoginGoogle(idToken: string): Promise<AuthResponse> {
+  static async socialLoginGoogle(idToken: string, request?: FastifyRequest): Promise<AuthResponse> {
     try {
-      const response = await axios.post(`${this.AUTH_SERVICE_URL}/social/google`, { idToken }, {
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        timeout: 30000,
-      });
+      const isMobile = this.isMobileClient(request);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Organization-Id': config.auth.evenlyOrganizationId,
+      };
+      if (isMobile) headers['x-client-type'] = 'mobile';
+
+      const response = await axios.post(
+        `${this.AUTH_SERVICE_URL}/google`,
+        { idToken, organizationId: config.auth.evenlyOrganizationId },
+        { headers, timeout: 30000 },
+      );
 
       // Extract sso_token from response headers
       const setCookieHeader = response.headers['set-cookie'];
@@ -332,10 +341,40 @@ export class AuthService {
       }
 
       if (response.data?.user && response.data?.accessToken) {
+        // Sync user to local PostgreSQL
+        let userPayload = {
+          id: response.data.user.id,
+          email: response.data.user.email,
+          name: response.data.user.name,
+          avatar: response.data.user.avatar,
+          phoneNumber: response.data.user.phoneNumber,
+          role: response.data.user.role,
+        };
+        try {
+          const syncedUser = await UserService.createOrUpdateUser({
+            id: response.data.user.id,
+            email: response.data.user.email,
+            name: response.data.user.name,
+            avatar: response.data.user.avatar,
+            phoneNumber: response.data.user.phoneNumber,
+          });
+          userPayload = {
+            id: syncedUser.id,
+            email: syncedUser.email,
+            name: syncedUser.name,
+            avatar: syncedUser.avatar,
+            phoneNumber: syncedUser.phoneNumber,
+            role: response.data.user.role,
+          };
+        } catch {
+          // Auth succeeded; user will sync on next API call
+        }
+
         return {
           success: true,
           message: response.data.message || 'Login successful!',
-          user: response.data.user,
+          user: userPayload,
+          organization: response.data.organization,
           ssoToken,
           accessToken: response.data.accessToken,
           refreshToken: response.data.refreshToken,

@@ -10,6 +10,7 @@ import { AuthInitializer } from '../src/components/auth/AuthInitializer';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
+import { configureGoogleSignIn } from '../src/lib/google-signin';
 import '../src/i18n/i18n'; // Initialize i18n
 
 // Keep native splash visible until video splash is ready to play
@@ -24,6 +25,11 @@ export default function RootLayout() {
 
   // Check for app updates on launch
   useAppUpdates();
+
+  // Configure Google Sign-In on mount
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   useEffect(() => {
     // Handle deep links when app is opened from a link

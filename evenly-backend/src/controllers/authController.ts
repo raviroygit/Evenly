@@ -539,7 +539,7 @@ export class AuthController {
       const { idToken } = request.body as { idToken: string };
       if (!idToken) return reply.status(400).send({ success: false, message: 'Missing idToken' });
 
-      const result = await AuthService.socialLoginGoogle(idToken);
+      const result = await AuthService.socialLoginGoogle(idToken, request);
       if (result.success && result.user) {
         if (result.ssoToken) {
           reply.setCookie('sso_token', result.ssoToken, {
@@ -552,11 +552,29 @@ export class AuthController {
           });
         }
 
+        // Sync organization to local database if provided
+        if (result.organization) {
+          try {
+            await OrganizationService.syncOrganizationFromData(
+              {
+                id: result.organization.id,
+                name: result.organization.name,
+                displayName: result.organization.displayName,
+                domainIdentifier: result.organization.domainIdentifier,
+                role: result.organization.role,
+              },
+              result.user.id
+            );
+          } catch {
+          }
+        }
+
         return reply.status(200).send({
           success: true,
           message: result.message || 'Login successful',
           data: {
             user: result.user,
+            organization: result.organization,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
           },

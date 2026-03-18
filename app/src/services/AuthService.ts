@@ -412,6 +412,66 @@ export class AuthService {
     }
   }
 
+  /**
+   * Sign in with Google: send the Google ID token to the backend.
+   * The backend handles both login and signup (auto-creates user if new).
+   */
+  async signInWithGoogle(idToken: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
+    try {
+      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/social/google', {
+        method: 'POST',
+        body: JSON.stringify({ idToken }),
+      });
+
+      const user = response.user || response.data?.user;
+      const organization = response.organization || response.data?.organization;
+
+      if (response.success && user) {
+        // Store organization if available
+        if (organization) {
+          await AuthStorage.setCurrentOrganizationId(organization.id);
+        }
+
+        // Sync user with evenly-backend
+        await this.syncUserWithEvenlyBackend(user);
+
+        const userResponse = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phoneNumber: user.phoneNumber,
+          stats: {
+            groups: 0,
+            totalSpent: 0,
+            owed: 0,
+          },
+          organizations: organization ? [organization] : undefined,
+          currentOrganization: organization,
+        };
+
+        return {
+          success: true,
+          message: response.message || 'Login successful!',
+          user: userResponse,
+          accessToken,
+          refreshToken,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Google sign-in failed',
+      };
+    } catch (error: any) {
+      const serverMsg = error?.response?.data?.message;
+      const status = error?.response?.status;
+      let userMessage = serverMsg || error.message || 'Google sign-in failed';
+      if (status === 400) userMessage = serverMsg || 'Invalid Google token. Please try again.';
+      if (status >= 500) userMessage = 'Server error. Please try again later.';
+      return { success: false, message: userMessage };
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       await this.makeRequest('/auth/logout', {

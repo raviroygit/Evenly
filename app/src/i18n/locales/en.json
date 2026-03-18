@@ -81,7 +81,12 @@
     "accountCreated": "Account created",
     "pleaseSignInToContinue": "Please sign in with your email to continue.",
     "selectCountryCode": "Select country code",
-    "appName": "EvenlySplit"
+    "appName": "EvenlySplit",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "signUpWithEmail": "Sign up with Email",
+    "loginWithEmail": "Login with Email",
+    "googleSignInFailed": "Google sign-in failed. Please try again."
   },
   "profile": {
     "title": "Profile",

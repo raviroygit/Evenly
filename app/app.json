@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -19,6 +19,12 @@
         "expo-notifications",
         {
           "color": "#667eea"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.374738393915-idtpnkmgkfk9tmh9h8pe2aqadhiga5n0"
         }
       ]
     ],
@@ -50,7 +56,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

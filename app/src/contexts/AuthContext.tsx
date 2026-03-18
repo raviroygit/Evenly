@@ -10,6 +10,7 @@ import { OfflineDataCache } from '../utils/offlineDataCache';
 import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 import { getStoredPushToken, unregisterTokenFromBackend, clearStoredPushToken } from '../services/PushNotificationService';
+import { googleSignOut } from '../lib/google-signin';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -31,6 +32,7 @@ interface AuthContextType {
   signupWithOtp: (name: string, email: string, phoneNumber: string) => Promise<{ success: boolean; message: string }>;
   signupVerifyOtp: (email: string, otp: string, signupData?: { name: string; phoneNumber: string }) => Promise<{ success: boolean; message: string }>;
   requestOTP: (email: string) => Promise<{ success: boolean; message: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 
@@ -439,6 +441,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService]);
 
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      // Lazy-require to avoid crashes if native module is unavailable (Expo Go)
+      const { nativeGoogleSignIn } = require('../lib/google-signin') as typeof import('../lib/google-signin');
+      const idToken = await nativeGoogleSignIn();
+      if (!idToken) {
+        // User cancelled or native module unavailable
+        return { success: false, message: 'Google sign-in was cancelled' };
+      }
+
+      const result = await authService.signInWithGoogle(idToken);
+
+      if (result.success && result.user) {
+        // Update organizations if received
+        if (result.user.organizations) {
+          setOrganizations(result.user.organizations);
+          if (result.user.currentOrganization) {
+            setCurrentOrganization(result.user.currentOrganization);
+            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
+          } else if (result.user.organizations.length > 0) {
+            setCurrentOrganization(result.user.organizations[0]);
+            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
+          }
+        }
+
+        // Save auth data BEFORE setting user state (prevents race conditions)
+        await AuthStorage.saveAuthData(
+          result.user,
+          result.accessToken,
+          result.user.organizations
+        );
+
+        setAuthState('authenticated');
+        setUser(result.user);
+
+        return { success: true, message: 'Login successful!' };
+      } else {
+        return { success: false, message: result.message || 'Google sign-in failed' };
+      }
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Google sign-in failed' };
+    }
+  }, [authService]);
+
   const requestOTP = useCallback(async (email: string) => {
     try {
       const result = await authService.requestOTP(email);
@@ -449,53 +495,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [authService]);
 
   const logout = useCallback(async () => {
-    try {
-      // Unregister push token from backend before clearing auth data
+    // Clear local state immediately so UI navigates to login instantly
+    setUser(null);
+    setCurrentOrganization(null);
+    setOrganizations([]);
+
+    // Clear local storage and caches (fast, local-only operations)
+    await AuthStorage.clearAuthData();
+    await AuthStorage.clearCurrentOrganization();
+    await CacheManager.invalidateAllData();
+    await HomeCache.clear();
+    await OfflineDataCache.clearAll();
+    await SilentTokenRefresh.clearRefreshTimestamp();
+    DataRefreshCoordinator.clearAll();
+    await googleSignOut();
+
+    // Fire-and-forget: backend cleanup in background (don't block UI)
+    (async () => {
       try {
         const pushToken = await getStoredPushToken();
         if (pushToken) {
           await unregisterTokenFromBackend(pushToken);
-          await clearStoredPushToken();
         }
-      } catch (pushError) {
-        // Non-blocking: don't fail logout if push cleanup fails
-      }
-
-      // Clear all cache and session data first to prevent race conditions and data leaks
-      await CacheManager.invalidateAllData();
-      await HomeCache.clear();
-      await OfflineDataCache.clearAll();
-      await SilentTokenRefresh.clearRefreshTimestamp();
-      DataRefreshCoordinator.clearAll();
-
-      // Call backend logout
-      await authService.logout();
-
-      // Clear local state
-      setUser(null);
-      setCurrentOrganization(null);
-      setOrganizations([]);
-
-      // Clear storage
-      await AuthStorage.clearAuthData();
-      await AuthStorage.clearCurrentOrganization();
-
-    } catch (error) {
-
-      // Even if logout fails, clear everything locally
+      } catch {}
+      try {
+        await authService.logout();
+      } catch {}
       await clearStoredPushToken();
-      await CacheManager.invalidateAllData();
-      await HomeCache.clear();
-      await OfflineDataCache.clearAll();
-      await SilentTokenRefresh.clearRefreshTimestamp();
-      DataRefreshCoordinator.clearAll();
-      setUser(null);
-      setCurrentOrganization(null);
-      setOrganizations([]);
-      await AuthStorage.clearAuthData();
-      await AuthStorage.clearCurrentOrganization();
-
-    }
+    })();
   }, [authService]);
 
   const refreshUser = useCallback(async () => {
@@ -545,13 +572,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signupWithOtp,
     signupVerifyOtp,
     requestOTP,
+    signInWithGoogle,
     logout,
     refreshUser,
     currentOrganization,
     organizations,
     switchOrganization,
     refreshOrganizations,
-  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, signupWithOtp, signupVerifyOtp, requestOTP, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
+  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, signupWithOtp, signupVerifyOtp, requestOTP, signInWithGoogle, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
 
   return (
     <AuthContext.Provider value={value}>

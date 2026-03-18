@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image, Modal, TouchableOpacity, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, Dimensions, Image, Modal, TouchableOpacity, FlatList, TextInput, ActivityIndicator } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { GlassListCard } from '../../components/ui/GlassListCard';
 import { ScreenContainer } from '../../components/common/ScreenContainer';
 import { COUNTRY_CODES, DEFAULT_COUNTRY_CODE } from '../../constants/countryCodes';
 import { ReferralService } from '../../services/ReferralService';
+import { GoogleLogo } from '../../components/ui/GoogleLogo';
 
 // E.164: + followed by country code + 10 digits (India: +91 + 10 digits)
 const PHONE_E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -23,7 +24,7 @@ const EMAIL_MAX_LENGTH = 254;
 export const SignupScreen: React.FC = () => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { signupWithOtp, signupVerifyOtp } = useAuth();
+  const { signupWithOtp, signupVerifyOtp, signInWithGoogle } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ referralCode?: string }>();
   const { width } = Dimensions.get('window');
@@ -34,9 +35,10 @@ export const SignupScreen: React.FC = () => {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'form' | 'otp'>('form');
+  const [step, setStep] = useState<'choose' | 'form' | 'otp'>('choose');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; phoneNumber?: string; otp?: string }>({});
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phoneNumber?: string; otp?: string; google?: string }>({});
 
   // Pre-fill referral code from deep link params
   useEffect(() => {
@@ -48,6 +50,23 @@ export const SignupScreen: React.FC = () => {
   const fullPhoneE164 = (): string => {
     const digits = phoneNumber.replace(/\D/g, '');
     return digits ? `${countryCode}${digits}` : '';
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setErrors({});
+    try {
+      const result = await signInWithGoogle();
+      if (!result.success) {
+        if (result.message !== 'Google sign-in was cancelled') {
+          setErrors({ google: result.message });
+        }
+      }
+    } catch (error: any) {
+      setErrors({ google: error.message || t('errors.tryAgain') });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const validateForm = () => {
@@ -149,6 +168,11 @@ export const SignupScreen: React.FC = () => {
     setErrors({});
   };
 
+  const handleBackToChoose = () => {
+    setStep('choose');
+    setErrors({});
+  };
+
   const handleResendOtp = async () => {
     setIsLoading(true);
     setErrors({});
@@ -206,107 +230,149 @@ export const SignupScreen: React.FC = () => {
             <Text style={[styles.title, { color: colors.foreground }]}>
               {step === 'otp' ? t('auth.verifyEmail') : t('auth.createAccount')}
             </Text>
-           
           </View>
 
-          <GlassListCard
-            title={step === 'otp' ? t('auth.verifyCode') : t('auth.signup')}
-            contentGap={20}
-            padding={{
-              small: 20,
-              medium: 24,
-              large: 28,
-              tablet: 32,
-            }}
-            marginBottom={24}
-          >
-            {step === 'form' ? (
-              <>
-                <SimpleInput
-                  label={t('auth.fullName')}
-                  placeholder={t('auth.enterYourName')}
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  required
-                  error={errors.name}
-                />
-                <SimpleInput
-                  label={t('auth.emailAddress')}
-                  placeholder={t('auth.enterYourEmail')}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  required
-                  error={errors.email}
-                />
-                <View style={styles.phoneRow}>
-                  <Text style={[styles.inputLabel, { color: colors.foreground }]}>
-                    {t('auth.phoneNumber')} <Text style={[styles.requiredAsterisk, { color: colors.destructive }]}>*</Text>
-                  </Text>
-                  <View style={styles.phoneInputRow}>
-                    <TouchableOpacity
-                      style={[styles.countryCodeTouchable, { backgroundColor: colors.muted, borderColor: errors.phoneNumber ? '#FF3B30' : colors.border }]}
-                      onPress={() => setShowCountryPicker(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.countryCodeText, { color: colors.foreground }]} numberOfLines={1}>
-                        {COUNTRY_CODES.find((c) => c.code === countryCode)?.label ?? countryCode}
-                      </Text>
-                      <Text style={[styles.countryCodeChevron, { color: colors.mutedForeground }]}>▼</Text>
-                    </TouchableOpacity>
-                    <View style={[styles.phoneInputWrapper, { backgroundColor: colors.muted, borderColor: errors.phoneNumber ? '#FF3B30' : colors.border }]}>
-                      <TextInput
-                        style={[styles.phoneInput, { color: colors.foreground }]}
-                        placeholder="9876543210"
-                        placeholderTextColor={colors.mutedForeground}
-                        value={phoneNumber}
-                        onChangeText={(t) => {
-                          setPhoneNumber(t.replace(/\D/g, '').slice(0, REQUIRED_PHONE_DIGITS));
-                          if (errors.phoneNumber) setErrors((e) => ({ ...e, phoneNumber: undefined }));
-                        }}
-                        keyboardType="phone-pad"
-                        maxLength={REQUIRED_PHONE_DIGITS}
-                      />
+          {step === 'choose' ? (
+            <>
+              {/* Google Sign-In Button */}
+              <TouchableOpacity
+                style={[styles.googleButton, { borderColor: colors.border }]}
+                onPress={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                activeOpacity={0.7}
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator size="small" color={colors.foreground} />
+                ) : (
+                  <>
+                    <View style={styles.googleIcon}>
+                      <GoogleLogo size={20} />
                     </View>
-                  </View>
-                  {errors.phoneNumber ? <Text style={styles.phoneError}>{errors.phoneNumber}</Text> : null}
-                </View>
-                <Modal visible={showCountryPicker} transparent animationType="slide">
-                  <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCountryPicker(false)}>
-                    <View style={[styles.countryPickerSheet, { backgroundColor: colors.background }]} onStartShouldSetResponder={() => true}>
-                      <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>{t('auth.selectCountryCode')}</Text>
-                      <FlatList
-                        data={COUNTRY_CODES}
-                        keyExtractor={(item) => item.code}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={[styles.countryOption, countryCode === item.code && { backgroundColor: colors.muted }]}
-                            onPress={() => {
-                              setCountryCode(item.code);
-                              setShowCountryPicker(false);
-                            }}
-                          >
-                            <Text style={[styles.countryOptionText, { color: colors.foreground }]}>{item.label}</Text>
-                            {countryCode === item.code && <Text style={{ color: colors.primary, fontWeight: '600' }}>✓</Text>}
-                          </TouchableOpacity>
-                        )}
-                        style={styles.countryList}
-                      />
-                      <PlatformActionButton title={t('common.cancel')} onPress={() => setShowCountryPicker(false)} variant="secondary" size="medium" />
-                    </View>
+                    <Text style={[styles.googleButtonText, { color: colors.foreground }]}>
+                      {t('auth.continueWithGoogle')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {errors.google ? (
+                <Text style={styles.googleError}>{errors.google}</Text>
+              ) : null}
+
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t('auth.orContinueWith')}</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
+
+              {/* Email Sign-Up Button */}
+              <PlatformActionButton
+                title={t('auth.signUpWithEmail')}
+                onPress={() => setStep('form')}
+                variant="primary"
+                size="large"
+                disabled={isGoogleLoading}
+              />
+            </>
+          ) : step === 'form' ? (
+            <GlassListCard
+              title={t('auth.signup')}
+              contentGap={20}
+              padding={{
+                small: 20,
+                medium: 24,
+                large: 28,
+                tablet: 32,
+              }}
+              marginBottom={24}
+            >
+              <SimpleInput
+                label={t('auth.fullName')}
+                placeholder={t('auth.enterYourName')}
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                required
+                error={errors.name}
+              />
+              <SimpleInput
+                label={t('auth.emailAddress')}
+                placeholder={t('auth.enterYourEmail')}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                required
+                error={errors.email}
+              />
+              <View style={styles.phoneRow}>
+                <Text style={[styles.inputLabel, { color: colors.foreground }]}>
+                  {t('auth.phoneNumber')} <Text style={[styles.requiredAsterisk, { color: colors.destructive }]}>*</Text>
+                </Text>
+                <View style={styles.phoneInputRow}>
+                  <TouchableOpacity
+                    style={[styles.countryCodeTouchable, { backgroundColor: colors.muted, borderColor: errors.phoneNumber ? '#FF3B30' : colors.border }]}
+                    onPress={() => setShowCountryPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.countryCodeText, { color: colors.foreground }]} numberOfLines={1}>
+                      {COUNTRY_CODES.find((c) => c.code === countryCode)?.label ?? countryCode}
+                    </Text>
+                    <Text style={[styles.countryCodeChevron, { color: colors.mutedForeground }]}>▼</Text>
                   </TouchableOpacity>
-                </Modal>
-                <SimpleInput
-                  label={t('referral.enterCode')}
-                  placeholder={t('referral.enterCodePlaceholder')}
-                  value={referralCode}
-                  onChangeText={setReferralCode}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                  <View style={[styles.phoneInputWrapper, { backgroundColor: colors.muted, borderColor: errors.phoneNumber ? '#FF3B30' : colors.border }]}>
+                    <TextInput
+                      style={[styles.phoneInput, { color: colors.foreground }]}
+                      placeholder="9876543210"
+                      placeholderTextColor={colors.mutedForeground}
+                      value={phoneNumber}
+                      onChangeText={(t) => {
+                        setPhoneNumber(t.replace(/\D/g, '').slice(0, REQUIRED_PHONE_DIGITS));
+                        if (errors.phoneNumber) setErrors((e) => ({ ...e, phoneNumber: undefined }));
+                      }}
+                      keyboardType="phone-pad"
+                      maxLength={REQUIRED_PHONE_DIGITS}
+                    />
+                  </View>
+                </View>
+                {errors.phoneNumber ? <Text style={styles.phoneError}>{errors.phoneNumber}</Text> : null}
+              </View>
+              <Modal visible={showCountryPicker} transparent animationType="slide">
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCountryPicker(false)}>
+                  <View style={[styles.countryPickerSheet, { backgroundColor: colors.background }]} onStartShouldSetResponder={() => true}>
+                    <Text style={[styles.countryPickerTitle, { color: colors.foreground }]}>{t('auth.selectCountryCode')}</Text>
+                    <FlatList
+                      data={COUNTRY_CODES}
+                      keyExtractor={(item) => item.code}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[styles.countryOption, countryCode === item.code && { backgroundColor: colors.muted }]}
+                          onPress={() => {
+                            setCountryCode(item.code);
+                            setShowCountryPicker(false);
+                          }}
+                        >
+                          <Text style={[styles.countryOptionText, { color: colors.foreground }]}>{item.label}</Text>
+                          {countryCode === item.code && <Text style={{ color: colors.primary, fontWeight: '600' }}>✓</Text>}
+                        </TouchableOpacity>
+                      )}
+                      style={styles.countryList}
+                    />
+                    <PlatformActionButton title={t('common.cancel')} onPress={() => setShowCountryPicker(false)} variant="secondary" size="medium" />
+                  </View>
+                </TouchableOpacity>
+              </Modal>
+              <SimpleInput
+                label={t('referral.enterCode')}
+                placeholder={t('referral.enterCodePlaceholder')}
+                value={referralCode}
+                onChangeText={setReferralCode}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <View style={styles.buttonContainer}>
                 <PlatformActionButton
                   title={t('auth.sendVerificationCode')}
                   onPress={handleSendOtp}
@@ -315,52 +381,68 @@ export const SignupScreen: React.FC = () => {
                   disabled={isLoading}
                   loading={isLoading}
                 />
-              </>
-            ) : (
-              <>
-                <View style={styles.emailDisplay}>
-                  <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
-                    {t('auth.codeSentTo', { email })}
-                  </Text>
-                </View>
-                <SimpleInput
-                  label={t('auth.verificationCode')}
-                  placeholder={t('auth.enter6DigitCode')}
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="numeric"
-                  maxLength={6}
-                  required
-                  error={errors.otp}
+                <PlatformActionButton
+                  title={t('common.back')}
+                  onPress={handleBackToChoose}
+                  variant="secondary"
+                  size="medium"
                 />
-                <View style={styles.buttonContainer}>
-                  <PlatformActionButton
-                    title={t('auth.verifyAndCreateAccount')}
-                    onPress={handleVerifyOtp}
-                    variant="primary"
-                    size="large"
-                    disabled={isLoading}
-                    loading={isLoading}
-                  />
-                  <PlatformActionButton
-                    title={t('auth.resendCode')}
-                    onPress={handleResendOtp}
-                    variant="secondary"
-                    size="medium"
-                    disabled={isLoading}
-                    loading={false}
-                  />
-                  <PlatformActionButton
-                    title={t('auth.backToForm')}
-                    onPress={handleBackToForm}
-                    variant="secondary"
-                    size="medium"
-                    loading={false}
-                  />
-                </View>
-              </>
-            )}
-          </GlassListCard>
+              </View>
+            </GlassListCard>
+          ) : (
+            <GlassListCard
+              title={t('auth.verifyCode')}
+              contentGap={20}
+              padding={{
+                small: 20,
+                medium: 24,
+                large: 28,
+                tablet: 32,
+              }}
+              marginBottom={24}
+            >
+              <View style={styles.emailDisplay}>
+                <Text style={[styles.emailText, { color: colors.mutedForeground }]}>
+                  {t('auth.codeSentTo', { email })}
+                </Text>
+              </View>
+              <SimpleInput
+                label={t('auth.verificationCode')}
+                placeholder={t('auth.enter6DigitCode')}
+                value={otp}
+                onChangeText={setOtp}
+                keyboardType="numeric"
+                maxLength={6}
+                required
+                error={errors.otp}
+              />
+              <View style={styles.buttonContainer}>
+                <PlatformActionButton
+                  title={t('auth.verifyAndCreateAccount')}
+                  onPress={handleVerifyOtp}
+                  variant="primary"
+                  size="large"
+                  disabled={isLoading}
+                  loading={isLoading}
+                />
+                <PlatformActionButton
+                  title={t('auth.resendCode')}
+                  onPress={handleResendOtp}
+                  variant="secondary"
+                  size="medium"
+                  disabled={isLoading}
+                  loading={false}
+                />
+                <PlatformActionButton
+                  title={t('auth.backToForm')}
+                  onPress={handleBackToForm}
+                  variant="secondary"
+                  size="medium"
+                  loading={false}
+                />
+              </View>
+            </GlassListCard>
+          )}
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
@@ -508,6 +590,46 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: 12,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    paddingHorizontal: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginHorizontal: 16,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginBottom: 8,
+    minHeight: 52,
+  },
+  googleIcon: {
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  googleError: {
+    fontSize: 12,
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   footer: {
     alignItems: 'center',
