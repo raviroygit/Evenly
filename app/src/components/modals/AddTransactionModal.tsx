@@ -31,6 +31,8 @@ interface Transaction {
   amountGot: string;
   hasAttachment: boolean;
   imageUrl?: string;
+  description?: string;
+  transactionDate: string;
 }
 
 interface AddTransactionModalProps {
@@ -84,18 +86,20 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const transactionAmount = editTransaction.amountGiven || editTransaction.amountGot;
       const cleanAmount = transactionAmount.replace(/,/g, '');
       setAmount(cleanAmount);
-      setDescription(''); // We don't have description in the transaction object
+      setDescription(editTransaction.description || '');
       const imageUrl = editTransaction.imageUrl || null;
       setImageUri(imageUrl);
       setOldImageUrl(imageUrl); // Track original image for deletion
       setImageRemoved(false);
 
-      // Parse transaction date (from date and time strings)
+      // Parse transaction date from raw ISO string
       try {
-        // Combine date and time strings to create a Date object
-        const dateTimeStr = `${editTransaction.date} ${editTransaction.time}`;
-        const parsedDate = new Date(dateTimeStr);
-        setTransactionDate(parsedDate);
+        const parsedDate = new Date(editTransaction.transactionDate);
+        if (!isNaN(parsedDate.getTime())) {
+          setTransactionDate(parsedDate);
+        } else {
+          setTransactionDate(new Date());
+        }
       } catch {
         setTransactionDate(new Date());
       }

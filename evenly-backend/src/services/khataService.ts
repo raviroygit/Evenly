@@ -442,6 +442,16 @@ export class KhataService {
         .values(newTransaction)
         .returning();
 
+      // Recalculate all balances to handle past-date transactions correctly
+      await this.recalculateCustomerBalances(transactionData.customerId);
+
+      // Re-fetch the transaction with recalculated balance
+      const [recalculatedTransaction] = await db
+        .select()
+        .from(khataTransactions)
+        .where(eq(khataTransactions.id, transaction.id))
+        .limit(1);
+
       // Send email notification in background (non-blocking)
       if (customer.email) {
         const customerEmail = customer.email; // Capture for closure
@@ -458,7 +468,7 @@ export class KhataService {
                 .limit(1);
               const recipientUser = recipientUserRow ? { preferredLanguage: recipientUserRow.preferredLanguage ?? null, preferredCurrency: recipientUserRow.preferredCurrency ?? null } : undefined;
               // Pass customer's current balance (negated): email is to customer so show their view (negative = they owe, positive = they will get)
-              const customerBalance = -newBalance;
+              const customerBalance = -parseFloat(recalculatedTransaction.balance);
               await sendKhataTransactionEmail(
                 customerEmail,
                 customer.name,
@@ -500,7 +510,7 @@ export class KhataService {
         })().catch(() => {});
       }
 
-      return transaction;
+      return recalculatedTransaction;
     } catch (error: any) {
       if (error instanceof NotFoundError) {
         throw error;

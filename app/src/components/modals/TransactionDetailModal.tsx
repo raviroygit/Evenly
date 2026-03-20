@@ -23,6 +23,8 @@ interface Transaction {
   amountGot: string;
   hasAttachment: boolean;
   imageUrl?: string;
+  description?: string;
+  transactionDate: string;
 }
 
 interface TransactionDetailModalProps {
@@ -162,6 +164,18 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                       {amountWithSign}
                     </Text>
                   </View>
+
+                  {/* Description */}
+                  {transaction.description ? (
+                    <View style={styles.section}>
+                      <Text style={[styles.label, { color: colors.mutedForeground }]}>
+                        {t('groups.description')}
+                      </Text>
+                      <Text style={[styles.descriptionValue, { color: colors.foreground }]}>
+                        {transaction.description}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {/* Date & Time */}
                   <View style={styles.section}>
@@ -339,6 +353,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     letterSpacing: -1,
+  },
+  descriptionValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    lineHeight: 22,
   },
   row: {
     flexDirection: 'row',

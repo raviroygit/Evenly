@@ -42,6 +42,8 @@ interface Transaction {
   amountGot: string;
   hasAttachment: boolean;
   imageUrl?: string;
+  description?: string;
+  transactionDate: string; // Raw ISO string for edit modal date parsing
 }
 
 export const CustomerDetailScreen: React.FC = () => {
@@ -133,6 +135,8 @@ export const CustomerDetailScreen: React.FC = () => {
             amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
+            description: t.description || undefined,
+            transactionDate: t.transactionDate,
           };
         });
 
@@ -209,6 +213,8 @@ export const CustomerDetailScreen: React.FC = () => {
             amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
+            description: t.description || undefined,
+            transactionDate: t.transactionDate,
           };
         });
 
@@ -268,6 +274,8 @@ export const CustomerDetailScreen: React.FC = () => {
             amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
+            description: t.description || undefined,
+            transactionDate: t.transactionDate,
           };
         });
 
@@ -319,6 +327,8 @@ export const CustomerDetailScreen: React.FC = () => {
             amountGot: t.type === 'get' ? t.amount : '',
             hasAttachment: !!t.imageUrl,
             imageUrl: t.imageUrl || undefined,
+            description: t.description || undefined,
+            transactionDate: t.transactionDate,
           };
         });
 
@@ -557,15 +567,28 @@ export const CustomerDetailScreen: React.FC = () => {
 
                   {/* Content area with badges */}
                   <View style={styles.transactionContent}>
-                    <View style={styles.badgesRow}>
-                      <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}>
-                        <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
-                          {transaction.date}
-                        </Text>
-                        <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
-                          {transaction.time}
-                        </Text>
-                      </View>
+                    <View style={[styles.dateTimeBadge, { backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF' }]}>
+                      <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
+                        {transaction.date}
+                      </Text>
+                      <Text style={[styles.dateTimeBadgeText, { color: colors.foreground }]}>
+                        {transaction.time}
+                      </Text>
+                    </View>
+                    <View style={styles.bottomBadgesRow}>
+                      {transaction.description ? (
+                        <View style={[styles.descriptionBadge, {
+                          backgroundColor: theme === 'dark' ? '#1C1C2E' : '#FFFFFF',
+                        }]}>
+                          <Text
+                            style={[styles.descriptionBadgeText, { color: colors.foreground }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {transaction.description}
+                          </Text>
+                        </View>
+                      ) : null}
                       <View style={[styles.balanceBadge, {
                         backgroundColor: theme === 'dark'
                           ? 'rgba(255, 59, 48, 0.15)'
@@ -799,10 +822,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  badgesRow: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 8,
+  bottomBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  descriptionBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    maxWidth: 160,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 150, 150, 0.4)',
+  },
+  descriptionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   dateTimeBadge: {
     flexDirection: 'row',
