@@ -15,7 +15,7 @@ import { CreateGroupModal } from '../../components/modals/CreateGroupModal';
 import { AddExpenseModal } from '../../components/modals/AddExpenseModal';
 import { DashboardSummaryCard } from '../../components/features/dashboard/DashboardSummaryCard';
 import { RecentActivity } from '../../components/features/dashboard/RecentActivity';
-import { CustomersListModal } from '../../components/modals/CustomersListModal';
+import { CustomersListModal, KhataCustomerItem } from '../../components/modals/CustomersListModal';
 import { GroupsListModal } from '../../components/modals/GroupsListModal';
 import { SkeletonKhataSummary, SkeletonDashboardSummary } from '../../components/ui/SkeletonLoader';
 import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
@@ -365,16 +365,22 @@ export const HomeScreen: React.FC = () => {
     setShowCustomersListModal(true);
   };
 
-  const handleCustomerPress = (customerId: string, customerName: string, customerInitials: string) => {
+  const handleCustomerPress = (customer: KhataCustomerItem) => {
     setShowCustomersListModal(false);
+    const initials = customer.name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
     // Small delay to allow modal to close smoothly before navigation
     setTimeout(() => {
       router.push({
         pathname: '/tabs/books/[customerId]',
         params: {
-          customerId,
-          customerName,
-          customerInitials,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerInitials: initials,
         },
       } as any);
     }, 300);

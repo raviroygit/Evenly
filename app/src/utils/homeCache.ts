@@ -10,6 +10,8 @@ export interface HomeCacheData {
   khataSummary: { totalGive: string; totalGet: string } | null;
   customerCount: number;
   customers: any[];
+  activities?: any[];
+  activitiesCount?: number;
   timestamp: number;
 }
 
@@ -30,15 +32,47 @@ export const HomeCache = {
     khataSummary: { totalGive: string; totalGet: string } | null;
     customerCount: number;
     customers: any[];
+    activities?: any[];
+    activitiesCount?: number;
   }): Promise<void> {
     try {
+      // Preserve optional fields not provided in this call
+      const existing = data.activities === undefined ? await this.get() : null;
+      const merged = {
+        ...data,
+        activities: data.activities ?? existing?.activities,
+        activitiesCount: data.activitiesCount ?? existing?.activitiesCount,
+        timestamp: Date.now(),
+      };
       await AsyncStorage.setItem(
         HOME_CACHE_KEY,
-        JSON.stringify({
-          ...data,
-          timestamp: Date.now(),
-        } as HomeCacheData)
+        JSON.stringify(merged as HomeCacheData)
       );
+    } catch {
+      // ignore
+    }
+  },
+
+  async getActivities(): Promise<{ activities: any[]; count: number } | null> {
+    try {
+      const data = await this.get();
+      if (!data?.activities || data.activities.length === 0) return null;
+      return { activities: data.activities, count: data.activitiesCount || data.activities.length };
+    } catch {
+      return null;
+    }
+  },
+
+  async setActivities(activities: any[], count: number): Promise<void> {
+    try {
+      const existing = await this.get();
+      await this.set({
+        khataSummary: existing?.khataSummary || null,
+        customerCount: existing?.customerCount || 0,
+        customers: existing?.customers || [],
+        activities,
+        activitiesCount: count,
+      });
     } catch {
       // ignore
     }

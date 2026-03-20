@@ -25,6 +25,7 @@ import { PullToRefreshSpinner } from '../../components/ui/PullToRefreshSpinner';
 import { PullToRefreshScrollView } from '../../components/ui/PullToRefreshScrollView';
 import { createPullToRefreshHandlers } from '../../utils/pullToRefreshUtils';
 import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
+import { HomeCache } from '../../utils/homeCache';
 
 interface Customer {
   id: string;
@@ -91,7 +92,31 @@ export const BooksScreen: React.FC = () => {
       if (isRefresh) {
         setRefreshing(true);
       } else if (customers.length === 0) {
-        setLoading(true);
+        // On initial load, try cache for instant display
+        if (isInitialLoad.current) {
+          isInitialLoad.current = false;
+          const cached = await HomeCache.get();
+          if (cached?.customers?.length > 0) {
+            const formattedCached: Customer[] = cached.customers.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              email: c.email,
+              phone: c.phone,
+              initials: getInitials(c.name),
+              amount: parseFloat(c.balance || '0').toFixed(2),
+              timestamp: formatTimeAgo(c.updatedAt || c.createdAt || new Date().toISOString()),
+              type: c.type || 'settled',
+              balance: c.balance || '0',
+            }));
+            setCustomers(formattedCached);
+            if (cached.khataSummary) setSummary(cached.khataSummary);
+            // Don't set loading=true — cached data is showing, API fetches silently below
+          } else {
+            setLoading(true); // No cache — show skeleton
+          }
+        } else {
+          setLoading(true);
+        }
       }
 
 
@@ -131,6 +156,8 @@ export const BooksScreen: React.FC = () => {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  const isInitialLoad = useRef(true);
 
   // Silently refresh when navigating back (e.g. after adding transaction on customer detail)
   const isFirstFocus = useRef(true);

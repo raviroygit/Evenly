@@ -4,6 +4,7 @@ import { useAllExpenses } from '../hooks/useAllExpenses';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { groupEvents, GROUP_EVENTS } from '../utils/groupEvents';
 import { useAuth } from './AuthContext';
+import { HomeCache } from '../utils/homeCache';
 
 interface ActivityItem {
   id: string;
@@ -87,6 +88,22 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isFirstExpensesFetchAfterLogin.current = true;
       lastGeneratedForUserId.current = null;
     }
+  }, [user, authState]);
+
+  // Load cached activities on mount for instant display (no skeleton)
+  useEffect(() => {
+    if (!user || authState !== 'authenticated') return;
+
+    const loadCachedActivities = async () => {
+      const cached = await HomeCache.getActivities();
+      if (cached && cached.activities.length > 0) {
+        setActivities(cached.activities);
+        setTotalCount(cached.count);
+        setHasInitiallyLoaded(true);
+        setLoading(false);
+      }
+    };
+    loadCachedActivities();
   }, [user, authState]);
 
   // Fetch groups directly (don't use useGroups hook to avoid state sync issues)
@@ -286,6 +303,9 @@ export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setActivities(generatedActivities);
       setTotalCount(generatedActivities.length);
       setHasInitiallyLoaded(true);
+
+      // Persist to cache for instant display on next cold start
+      HomeCache.setActivities(generatedActivities, generatedActivities.length);
 
     } catch (error) {
     } finally {
