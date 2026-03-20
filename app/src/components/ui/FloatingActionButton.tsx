@@ -1,6 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, StatusBar, Dimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, { useAnimatedStyle, useSharedValue, runOnJS } from 'react-native-reanimated';
 import { useTheme } from '../../contexts/ThemeContext';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Custom Grid Icon Component with 4x4 grid that fits perfectly to button border
 const GridIcon: React.FC<{ color: string; size?: number }> = ({ color, size = 48 }) => {
@@ -96,6 +100,13 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [animation] = useState(new Animated.Value(0));
 
+  // Drag support — reanimated shared values for real-time UI thread updates
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const offsetX = useSharedValue(0);
+  const offsetY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
+
   const toggleMenu = useCallback(() => {
     // Update state immediately - use functional update to avoid stale closure
     setIsOpen(prevIsOpen => {
@@ -115,6 +126,55 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       return newIsOpen;
     });
   }, [animation]);
+
+  // Gesture.Pan for dragging (only when menu is closed)
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      isDragging.value = false;
+      offsetX.value = translateX.value;
+      offsetY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      if (Math.abs(event.translationX) > 5 || Math.abs(event.translationY) > 5) {
+        isDragging.value = true;
+      }
+      if (isDragging.value) {
+        translateX.value = offsetX.value + event.translationX;
+        translateY.value = offsetY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      if (isDragging.value) {
+        translateX.value = Math.min(Math.max(translateX.value, -(screenWidth - 80)), 20);
+        translateY.value = Math.min(Math.max(translateY.value, -(screenHeight - 200)), 60);
+      }
+    });
+
+  // Gesture.Tap for toggling menu
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd(() => {
+      runOnJS(toggleMenu)();
+    });
+
+  // Race: pan wins if movement detected, otherwise tap fires
+  const combinedGesture = Gesture.Race(panGesture, tapGesture);
+
+  // Animated style for drag transform (runs on UI thread)
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
+
+  // Same drag offset for the actions container
+  const actionsDragStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+    ],
+  }));
 
   // Control status bar appearance when menu is open
   useEffect(() => {
@@ -198,107 +258,109 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
     <View style={styles.container}>
       {/* Action Items */}
       {isOpen && (
-        <Animated.View
-          style={[
-            styles.actionsContainer,
-            {
-              opacity: animation,
-              transform: [
-                {
-                  translateY: animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-                {
-                  scale: animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          {/* Background container for better visual separation */}
-          <View style={[
-            styles.actionsBackground,
-            {
-              backgroundColor: theme === 'dark' 
-                ? 'rgba(0, 0, 0, 0.4)' 
-                : 'rgba(255, 255, 255, 0.2)',
-            }
-          ]}>
-          {actions.map((action, index) => (
-            <Animated.View
-              key={action.id}
-              style={[
-                styles.actionItem,
-                {
-                  transform: [
-                    {
-                      translateY: animation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [20 * (index + 1), 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={getActionButtonStyle(action)}
-                onPress={() => {
-                  action.onPress();
-                  toggleMenu();
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[actionIconStyle, action.color && { color: '#FFFFFF', fontSize: 24 }]}>{action.icon}</Text>
-              </TouchableOpacity>
-              <Text style={actionTextStyle}>{action.title}</Text>
-            </Animated.View>
-          ))}
-          </View>
-        </Animated.View>
-      )}
-
-      {/* Main FAB Button with Glass Effect */}
-      <View style={[styles.mainButtonContainer, getPositionStyle()]}>
-        {/* Glass Effect Background */}
-        <View style={[styles.glassBackground, { 
-          backgroundColor: theme === 'dark' 
-            ? 'rgba(255, 255, 255, 0.1)' 
-            : 'rgba(0, 0, 0, 0.1)',
-          borderColor: theme === 'dark' 
-            ? 'rgba(255, 255, 255, 0.2)' 
-            : 'rgba(255, 255, 255, 0.3)',
-        }]}>
-          <TouchableOpacity
-            style={mainButtonStyle}
-            onPress={toggleMenu}
-            activeOpacity={0.8}
-            delayPressIn={0}
-            delayPressOut={0}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Animated.View
-              style={{
+        <Reanimated.View style={[styles.actionsContainer, actionsDragStyle]}>
+          <Animated.View
+            style={[
+              {
+                opacity: animation,
                 transform: [
                   {
-                    rotate: animation.interpolate({
+                    translateY: animation.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ['0deg', '45deg'],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                  {
+                    scale: animation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
                     }),
                   },
                 ],
-              }}
-            >
-              <GridIcon color={colors.primaryForeground} size={48} />
-            </Animated.View>
-          </TouchableOpacity>
-        </View>
-      </View>
+              },
+            ]}
+          >
+            {/* Background container for better visual separation */}
+            <View style={[
+              styles.actionsBackground,
+              {
+                backgroundColor: theme === 'dark'
+                  ? 'rgba(0, 0, 0, 0.4)'
+                  : 'rgba(255, 255, 255, 0.2)',
+              }
+            ]}>
+            {actions.map((action, index) => (
+              <Animated.View
+                key={action.id}
+                style={[
+                  styles.actionItem,
+                  {
+                    transform: [
+                      {
+                        translateY: animation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20 * (index + 1), 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  style={getActionButtonStyle(action)}
+                  onPress={() => {
+                    action.onPress();
+                    toggleMenu();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[actionIconStyle, action.color && { color: '#FFFFFF', fontSize: 24 }]}>{action.icon}</Text>
+                </TouchableOpacity>
+                <Text style={actionTextStyle}>{action.title}</Text>
+              </Animated.View>
+            ))}
+            </View>
+          </Animated.View>
+        </Reanimated.View>
+      )}
+
+      {/* Main FAB Button with Glass Effect */}
+      <GestureDetector gesture={combinedGesture}>
+        <Reanimated.View
+          style={[
+            styles.mainButtonContainer,
+            getPositionStyle(),
+            dragStyle,
+          ]}
+        >
+          {/* Glass Effect Background */}
+          <View style={[styles.glassBackground, {
+            backgroundColor: theme === 'dark'
+              ? 'rgba(255, 255, 255, 0.1)'
+              : 'rgba(0, 0, 0, 0.1)',
+            borderColor: theme === 'dark'
+              ? 'rgba(255, 255, 255, 0.2)'
+              : 'rgba(255, 255, 255, 0.3)',
+          }]}>
+            <View style={mainButtonStyle}>
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: animation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '45deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <GridIcon color={colors.primaryForeground} size={48} />
+              </Animated.View>
+            </View>
+          </View>
+        </Reanimated.View>
+      </GestureDetector>
 
       {/* Overlay to close menu when tapping outside */}
       {isOpen && (
