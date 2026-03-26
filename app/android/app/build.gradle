@@ -101,8 +101,8 @@ android {
         applicationId 'com.nxtgenaidev.evenly'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "2.0.4"
+        versionCode 20
+        versionName "2.0.5"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -203,6 +203,8 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+apply plugin: 'com.google.gms.google-services'
 // Verify release signing and print keystore SHA1 (run: cd android && ./gradlew checkReleaseSigning)
 tasks.register("checkReleaseSigning") {
     doLast {
@@ -247,5 +249,3 @@ tasks.register("checkReleaseSigning") {
     }
 }
 
-
-apply plugin: 'com.google.gms.google-services'

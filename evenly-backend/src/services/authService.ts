@@ -327,7 +327,7 @@ export class AuthService {
 
       const response = await axios.post(
         `${this.AUTH_SERVICE_URL}/google`,
-        { idToken, organizationId: config.auth.evenlyOrganizationId },
+        { idToken, organizationId: config.auth.evenlyOrganizationId, googleClientId: config.auth.googleClientId },
         { headers, timeout: 30000 },
       );
 
