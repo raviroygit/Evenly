@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { sessionEvents, SESSION_EVENTS } from '../../utils/sessionEvents';
+import { markAppBooted } from '../../services/EvenlyApiClient';
 
 interface AuthInitializerProps {
   children: React.ReactNode;
@@ -62,8 +63,11 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
       pendingUnauthorized.current = false;
       return;
     }
-    if (pathname !== '/' && pendingUnauthorized.current) {
-      showUnauthorizedAlertAndLogout();
+    if (pathname !== '/') {
+      markAppBooted();
+      if (pendingUnauthorized.current) {
+        showUnauthorizedAlertAndLogout();
+      }
     }
   }, [pathname, showUnauthorizedAlertAndLogout]);
 

@@ -5,6 +5,14 @@ import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
 import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
 
+// Gate SESSION_EXPIRED emission until the app is past its splash/boot phase,
+// so a transient 401 during boot (e.g. auth service cold start) cannot log the user out.
+// Flipped by AuthInitializer once it sees a non-'/' pathname.
+let appBooted = false;
+export const markAppBooted = () => {
+  appBooted = true;
+};
+
 /**
  * Axios instance for Evenly Backend API with automatic authentication.
  * Organization ID is always taken from env (EXPO_PUBLIC_ORGANIZATION_ID) – no storage or user resolution.
@@ -122,14 +130,16 @@ class EvenlyApiClient {
         // Handle 401 Unauthorized
         if (error.response?.status === 401) {
           const message = error.response?.data?.message ?? '';
-          if (message === 'Unauthorized Access') {
+          if (message === 'Unauthorized Access' && appBooted) {
             if (!this.unauthorizedEmitted) {
               this.unauthorizedEmitted = true;
               sessionEvents.emit(SESSION_EVENTS.SESSION_EXPIRED);
             }
             return Promise.reject(error);
           }
-          // Other 401s: keep user logged in with cached data (e.g. network/backend issue)
+          // Boot-time 401s or other 401s: keep user logged in with cached data.
+          // Mobile tokens are 10-year JWTs; a single boot-time rejection (auth service
+          // cold start, transient DB blip) must never eject the user.
           return Promise.reject({
             ...error,
             _offlineMode: true,

@@ -93,52 +93,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
 
-          // Try to validate session with backend in background (non-blocking)
-          // Preserve phoneNumber from stored user before refreshing
-          const storedPhoneNumber = authData.user?.phoneNumber;
-          
-          authService.getCurrentUser()
-            .then(async (currentUser) => {
-              if (currentUser) {
-                // Preserve phoneNumber if it's missing from the response
-                if (!currentUser.phoneNumber && storedPhoneNumber) {
-                  currentUser.phoneNumber = storedPhoneNumber;
-                }
-
-                // Session is still valid - update user data if changed
-                setUser(currentUser);
-
-                // Update organizations if received
-                if (currentUser.organizations) {
-                  setOrganizations(currentUser.organizations);
-
-                  // Update current organization if not set
-                  if (!currentOrganization && currentUser.organizations.length > 0) {
-                    const storedOrgId = await AuthStorage.getCurrentOrganizationId();
-                    const storedOrg = currentUser.organizations.find(org => org.id === storedOrgId);
-                    if (storedOrg) {
-                      setCurrentOrganization(storedOrg);
-                    } else {
-                      setCurrentOrganization(currentUser.organizations[0]);
-                    }
-                  }
-                }
-
-                await AuthStorage.saveAuthData(
-                  currentUser,
-                  authData.accessToken,
-                  currentUser.organizations
-                );
-                // Let screens fetch their own data fresh
-              } else {
-                // Session invalid on backend - but DON'T log out yet
-                // User might be offline - keep them logged in with local data
-              }
-            })
-            .catch((error) => {
-              // Network error - DON'T log out! User might be offline
-              // User stays logged in with local data
-            });
+          // Trust stored token on cold start. Screens that need fresh data fetch it on mount,
+          // and validateSessionOnForeground refreshes user info when the app returns from background.
         } else {
           setUser(null);
           setAuthState('unauthenticated');
