@@ -452,7 +452,9 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   }, AuthController.googleLogin);
 
-  // Logout
+  // Logout — unauthenticated on purpose so old clients that clear local
+  // storage before calling /logout still succeed. The handler will opportunistically
+  // resolve the caller from the Authorization header and revoke API keys when it can.
   fastify.post('/logout', {
     schema: {
       description: 'Logout current user',
@@ -476,6 +478,32 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, AuthController.logout);
+
+  // Mint / fetch the caller's long-lived API key. Used by already-logged-in
+  // mobile clients to upgrade to key-auth without a fresh login.
+  fastify.post('/ensure-api-key', {
+    preHandler: authenticateToken,
+    schema: {
+      description: 'Return an existing or newly minted API key for the authenticated user',
+      tags: ['Authentication'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            data: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                apiKey: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+  }, AuthController.ensureApiKey);
 
   // Mobile-specific: Silent token refresh
   fastify.post('/mobile/refresh', {

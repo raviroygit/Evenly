@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const authData = await AuthStorage.getAuthData();
 
-        if (authData && authData.user && authData.accessToken) {
+        if (authData && authData.user && (authData.accessToken || authData.apiKey)) {
           // Set user immediately from storage - stay logged in!
           setUser(authData.user);
           setAuthState('authenticated');
@@ -91,6 +91,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } else if (authData.organizations.length > 0) {
               setCurrentOrganization(authData.organizations[0]);
             }
+          }
+
+          // Legacy-session upgrade: users who logged in before the backend
+          // exposed api keys have only a JWT on disk. Exchange it for a
+          // long-lived key in the background so subsequent requests stop
+          // depending on JWT/auth-service availability.
+          if (!authData.apiKey && authData.accessToken) {
+            authService.ensureApiKey().catch(() => {});
           }
 
           // Trust stored token on cold start. Screens that need fresh data fetch it on mount,
@@ -295,7 +303,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AuthStorage.saveAuthData(
           result.user,
           result.accessToken,
-          result.user.organizations
+          result.user.organizations,
+          result.refreshToken,
+          result.apiKey
         );
 
         // Set auth state to authenticated
@@ -303,8 +313,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Now set user - this will trigger storage monitor
         setUser(result.user);
-
-        // Mobile tokens never expire (10 years) - no refresh needed
 
         // Screens will load fresh data when they mount
 
@@ -365,7 +373,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AuthStorage.saveAuthData(
           enrichedUser,
           result.accessToken,
-          enrichedUser.organizations
+          enrichedUser.organizations,
+          result.refreshToken,
+          result.apiKey
         );
 
         setAuthState('authenticated');
@@ -426,7 +436,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await AuthStorage.saveAuthData(
           result.user,
           result.accessToken,
-          result.user.organizations
+          result.user.organizations,
+          result.refreshToken,
+          result.apiKey
         );
 
         setAuthState('authenticated');

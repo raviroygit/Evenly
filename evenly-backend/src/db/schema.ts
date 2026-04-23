@@ -243,6 +243,21 @@ export const referrals = pgTable('referrals', {
   statusIdx: index('referrals_status_idx').on(table.status),
 }));
 
+// User API keys — long-lived, DB-backed credentials that let the mobile client
+// stay signed in without depending on the external auth service's token expiry.
+// The plaintext key is returned once on login/signup; subsequent requests present it
+// as a Bearer token and the auth middleware validates by DB lookup.
+export const userApiKeys = pgTable('user_api_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  key: text('key').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  revokedAt: timestamp('revoked_at'),
+}, (table) => ({
+  userIdIdx: index('user_api_keys_user_id_idx').on(table.userId),
+  keyIdx: index('user_api_keys_key_idx').on(table.key),
+}));
+
 // App config table (single row — stores latest version info for in-app update prompts)
 export const appConfig = pgTable('app_config', {
   id: integer('id').primaryKey().default(1),
@@ -297,6 +312,9 @@ export type NewReferral = typeof referrals.$inferInsert;
 
 export type DeviceToken = typeof deviceTokens.$inferSelect;
 export type NewDeviceToken = typeof deviceTokens.$inferInsert;
+
+export type UserApiKey = typeof userApiKeys.$inferSelect;
+export type NewUserApiKey = typeof userApiKeys.$inferInsert;
 
 // Simplified debt type for debt calculations
 export type SimplifiedDebt = {

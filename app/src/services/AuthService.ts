@@ -11,6 +11,34 @@ interface AuthResponse {
 
 export class AuthService {
   /**
+   * Upgrade a legacy session (JWT-only) to an API-key session by asking the
+   * backend to mint/return our long-lived key. Called after login for existing
+   * users whose initial login happened before the backend exposed `apiKey`.
+   * Returns the key (and stores it) or null on failure.
+   */
+  async ensureApiKey(): Promise<string | null> {
+    try {
+      const { data, apiKey } = await this.makeRequest('/auth/ensure-api-key', { method: 'POST' });
+      const key = apiKey || data?.data?.apiKey || data?.apiKey;
+      if (!key) return null;
+
+      const existing = await AuthStorage.getAuthData();
+      if (existing) {
+        await AuthStorage.saveAuthData(
+          existing.user,
+          existing.accessToken,
+          existing.organizations,
+          existing.refreshToken,
+          key
+        );
+      }
+      return key;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Sync user with evenly-backend after successful authentication
    */
   private async syncUserWithEvenlyBackend(user: any): Promise<void> {
@@ -27,7 +55,7 @@ export class AuthService {
   private async makeRequest(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<{ data: any; accessToken?: string; refreshToken?: string }> {
+  ): Promise<{ data: any; accessToken?: string; refreshToken?: string; apiKey?: string }> {
     try {
       // Convert RequestInit to Axios config
       const axiosConfig: any = {
@@ -47,11 +75,12 @@ export class AuthService {
       // Use the Axios client
       const response = await evenlyApiClient.getInstance().request(axiosConfig);
 
-      // Extract JWT tokens from response body if available
+      // Extract JWT tokens + long-lived API key from response body if available
       const accessToken = response.data.accessToken || response.data.data?.accessToken;
       const refreshToken = response.data.refreshToken || response.data.data?.refreshToken;
+      const apiKey = response.data.apiKey || response.data.data?.apiKey;
 
-      return { data: response.data, accessToken, refreshToken };
+      return { data: response.data, accessToken, refreshToken, apiKey };
     } catch (error: any) {
       throw error;
     }
@@ -101,9 +130,9 @@ export class AuthService {
   /**
    * Verify signup OTP and complete registration; returns user and tokens (same shape as verifyOTP).
    */
-  async signupVerifyOtp(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
+  async signupVerifyOtp(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string; apiKey?: string }> {
     try {
-      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/signup/verify-otp', {
+      const { data: response, accessToken, refreshToken, apiKey } = await this.makeRequest('/auth/signup/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, otp }),
       });
@@ -134,6 +163,7 @@ export class AuthService {
           user: userResponse,
           accessToken,
           refreshToken,
+          apiKey,
         };
       }
 
@@ -259,9 +289,9 @@ export class AuthService {
     }
   }
 
-  async verifyOTP(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
+  async verifyOTP(email: string, otp: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string; apiKey?: string }> {
     try {
-      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/login/verify-otp', {
+      const { data: response, accessToken, refreshToken, apiKey } = await this.makeRequest('/auth/login/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email, otp }),
       });
@@ -298,6 +328,7 @@ export class AuthService {
           user: userResponse,
           accessToken,
           refreshToken,
+          apiKey,
         };
       }
 
@@ -416,9 +447,9 @@ export class AuthService {
    * Sign in with Google: send the Google ID token to the backend.
    * The backend handles both login and signup (auto-creates user if new).
    */
-  async signInWithGoogle(idToken: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string }> {
+  async signInWithGoogle(idToken: string): Promise<AuthResponse & { accessToken?: string; refreshToken?: string; apiKey?: string }> {
     try {
-      const { data: response, accessToken, refreshToken } = await this.makeRequest('/auth/social/google', {
+      const { data: response, accessToken, refreshToken, apiKey } = await this.makeRequest('/auth/social/google', {
         method: 'POST',
         body: JSON.stringify({ idToken }),
       });
@@ -455,6 +486,7 @@ export class AuthService {
           user: userResponse,
           accessToken,
           refreshToken,
+          apiKey,
         };
       }
 

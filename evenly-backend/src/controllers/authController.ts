@@ -1,11 +1,28 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import jwt from 'jsonwebtoken';
 import { AuthService } from '../services/authService';
 import { OrganizationService } from '../services/organizationService';
 import { UserService } from '../services/userService';
+import { ApiKeyService } from '../services/apiKeyService';
 import { z } from 'zod';
 import { db, users, expenses, payments, groupInvitations, groups, groupMembers, organizations, organizationMembers } from '../db';
 import { eq, or, and, ne } from 'drizzle-orm';
 import { AuthenticatedRequest } from '../types';
+import { config } from '../config/config';
+
+/**
+ * Resolve the local user uuid for an auth-service user id and mint/fetch
+ * their long-lived API key. Swallows errors so a key outage never blocks login.
+ */
+async function mintApiKeyForAuthUser(authServiceId: string): Promise<string | undefined> {
+  try {
+    const localUser = await UserService.getUserByAuthServiceId(authServiceId);
+    if (!localUser) return undefined;
+    return await ApiKeyService.ensureKey(localUser.id);
+  } catch {
+    return undefined;
+  }
+}
 
 // Validation schemas
 const signupSchema = z.object({
@@ -280,6 +297,8 @@ export class AuthController {
           }
         }
 
+        const apiKey = await mintApiKeyForAuthUser(result.user.id);
+
         return reply.status(200).send({
           success: true,
           message: result.message,
@@ -288,6 +307,7 @@ export class AuthController {
             organization: result.organization,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
+            apiKey,
           },
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
@@ -404,6 +424,8 @@ export class AuthController {
           }
         }
 
+        const apiKey = await mintApiKeyForAuthUser(result.user.id);
+
         return reply.status(200).send({
           success: true,
           message: result.message,
@@ -412,6 +434,7 @@ export class AuthController {
             organization: result.organization,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
+            apiKey,
           },
           ssoToken: result.ssoToken, // Include ssoToken in response
         });
@@ -507,11 +530,39 @@ export class AuthController {
   }
 
   /**
-   * Logout user
+   * Logout user. Unauthenticated: old clients clear local storage before
+   * calling this, so we can't require a valid token. Best-effort — resolve
+   * the caller from the Authorization header if we can and revoke their keys.
    */
   static async logout(request: FastifyRequest, reply: FastifyReply) {
     try {
       const result = await AuthService.logout(request);
+
+      // Best-effort key revocation: accept either the long-lived API key or
+      // a local JWT, both of which let us resolve the user without calling
+      // the external auth service.
+      try {
+        const authHeader = request.headers.authorization;
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+          let userId: string | null = null;
+          if (ApiKeyService.looksLikeApiKey(token)) {
+            userId = await ApiKeyService.findUserIdByKey(token);
+          } else {
+            try {
+              const decoded = jwt.verify(token, config.auth.jwtSecret, { ignoreExpiration: true }) as { userId?: string };
+              userId = decoded?.userId ?? null;
+            } catch {
+              userId = null;
+            }
+          }
+          if (userId) {
+            await ApiKeyService.revokeAllForUser(userId);
+          }
+        }
+      } catch {
+        // Never block logout on revocation failure.
+      }
 
       // Clear the sso_token cookie
       reply.clearCookie('sso_token', {
@@ -527,6 +578,30 @@ export class AuthController {
       return reply.status(500).send({
         success: false,
         message: error.message || 'Failed to logout',
+      });
+    }
+  }
+
+  /**
+   * Mint or fetch the caller's long-lived API key. Lets existing logged-in
+   * clients upgrade to key-auth without going through a fresh login flow.
+   */
+  static async ensureApiKey(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const authed = (request as AuthenticatedRequest).user;
+      if (!authed?.id) {
+        return reply.status(401).send({ success: false, message: 'Unauthorized' });
+      }
+      const apiKey = await ApiKeyService.ensureKey(authed.id);
+      return reply.status(200).send({
+        success: true,
+        message: 'API key ready',
+        data: { apiKey },
+      });
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to ensure API key',
       });
     }
   }
@@ -569,6 +644,8 @@ export class AuthController {
           }
         }
 
+        const apiKey = await mintApiKeyForAuthUser(result.user.id);
+
         return reply.status(200).send({
           success: true,
           message: result.message || 'Login successful',
@@ -577,6 +654,7 @@ export class AuthController {
             organization: result.organization,
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
+            apiKey,
           },
           ssoToken: result.ssoToken,
         });

@@ -172,11 +172,12 @@ export class SilentTokenRefresh {
 
           newAccessToken = response.data.accessToken;
 
-          // CRITICAL: Save BOTH new tokens (access + refresh) to enable token rotation
-          // The refresh token is rotated on each refresh - old one becomes invalid
+          // CRITICAL: Save BOTH new tokens (access + refresh) to enable token rotation.
+          // The refresh token is rotated on each refresh — old one becomes invalid.
           await AuthStorage.saveAuthData(
             response.data.user || authData.user, // Use updated user if provided
             response.data.accessToken,
+            authData.organizations, // preserve organizations on disk
             response.data.refreshToken // NEW refresh token (rotated)
           );
 

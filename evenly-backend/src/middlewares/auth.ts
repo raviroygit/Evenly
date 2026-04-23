@@ -3,9 +3,32 @@ import jwt from 'jsonwebtoken';
 import { AuthService } from '../utils/auth';
 import { UserService } from '../services/userService';
 import { OrganizationService } from '../services/organizationService';
+import { ApiKeyService } from '../services/apiKeyService';
 import { UnauthorizedError, AuthServiceError } from '../utils/errors';
 import { AuthenticatedRequest } from '../types';
 import { config } from '../config/config';
+
+/**
+ * Resolve a request authenticated by a long-lived API key (evn_-prefixed).
+ * Bypasses the external auth service entirely — the key itself is the credential.
+ */
+async function tryApiKeyAuth(token: string, request: FastifyRequest): Promise<boolean> {
+  const userId = await ApiKeyService.findUserIdByKey(token);
+  if (!userId) return false;
+
+  const user = await UserService.getUserById(userId);
+  if (!user) return false;
+
+  (request as AuthenticatedRequest).user = {
+    ...user,
+    avatar: user.avatar ?? undefined,
+    phoneNumber: user.phoneNumber ?? undefined,
+  } as AuthenticatedRequest['user'];
+
+  await extractOrganizationContext(request, '', user.id);
+  await ensureOrganizationIdSet(request, user.id);
+  return true;
+}
 
 /**
  * Try to verify a JWT locally using the shared JWT_SECRET.
@@ -77,6 +100,13 @@ export const authenticateToken = async (
 
     if (!token) {
       throw new UnauthorizedError('No authentication token provided');
+    }
+
+    // Long-lived API keys short-circuit the auth service entirely — validated by DB lookup.
+    if (ApiKeyService.looksLikeApiKey(token)) {
+      const ok = await tryApiKeyAuth(token, request);
+      if (ok) return;
+      throw new UnauthorizedError('Unauthorized Access');
     }
 
     // Validate token with external auth service first; fall back to local session only when auth is unavailable

@@ -714,4 +714,17 @@ async function createTablesFromSchema(sql: any): Promise<void> {
     VALUES (1, '2.0.1', '2.0.0', false, '')
     ON CONFLICT (id) DO NOTHING
   `;
+
+  // user_api_keys — long-lived bearer credentials for mobile clients
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_api_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      key TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      revoked_at TIMESTAMP
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS user_api_keys_user_id_idx ON user_api_keys(user_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS user_api_keys_key_idx ON user_api_keys(key)`;
 }

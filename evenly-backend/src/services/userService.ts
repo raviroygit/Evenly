@@ -133,6 +133,22 @@ export class UserService {
   }
 
   /**
+   * Get user by auth service id (MongoDB ObjectId).
+   */
+  static async getUserByAuthServiceId(authServiceId: string): Promise<User | null> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.authServiceId, authServiceId))
+        .limit(1);
+      return user || null;
+    } catch (error) {
+      throw new DatabaseError('Failed to fetch user by auth service id');
+    }
+  }
+
+  /**
    * Get user by email
    */
   static async getUserByEmail(email: string): Promise<User | null> {

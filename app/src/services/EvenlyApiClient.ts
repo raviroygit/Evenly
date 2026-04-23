@@ -3,7 +3,9 @@ import { Platform } from 'react-native';
 import { ENV } from '../config/env';
 import { AuthStorage } from '../utils/storage';
 import ErrorHandler from '../utils/ErrorHandler';
-import { sessionEvents, SESSION_EVENTS } from '../utils/sessionEvents';
+import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
+
+type RetryableRequestConfig = AxiosRequestConfig & { _retriedAfterRefresh?: boolean };
 
 // Gate SESSION_EXPIRED emission until the app is past its splash/boot phase,
 // so a transient 401 during boot (e.g. auth service cold start) cannot log the user out.
@@ -75,17 +77,18 @@ class EvenlyApiClient {
             console.log('[EvenlyApiClient] FormData headers after setup:', Object.keys(config.headers || {}));
           }
 
-          // Get auth data from storage
+          // Get auth data from storage. Prefer the long-lived apiKey when
+          // present — it's DB-backed and bypasses the external auth service,
+          // which is what keeps sessions stable across auth-service restarts.
           const authData = await AuthStorage.getAuthData();
-          const accessToken = authData?.accessToken;
-          if (!accessToken) {
+          const token = authData?.apiKey || authData?.accessToken;
+          if (!token) {
             this.unauthorizedEmitted = false;
           }
 
-          if (accessToken) {
-            // Simply attach the token - it never expires for mobile
+          if (token) {
             config.headers = config.headers || {};
-            config.headers['Authorization'] = `Bearer ${accessToken}`;
+            config.headers['Authorization'] = `Bearer ${token}`;
           }
 
           // Org id from env only (same as backend EVENLY_ORGANIZATION_ID)
@@ -127,23 +130,41 @@ class EvenlyApiClient {
           });
         }
 
-        // Handle 401 Unauthorized
+        // Handle 401 Unauthorized.
+        // Strategy: attempt a silent token refresh + retry once. If refresh succeeds,
+        // transparently retry the original request. If refresh is impossible (no
+        // refresh token on disk) or fails (network blip, auth service cold start),
+        // keep the user logged in with cached data — the sibling nextgenai app
+        // behaves the same way and users explicitly want persistent sessions here.
         if (error.response?.status === 401) {
           const message = error.response?.data?.message ?? '';
-          if (message === 'Unauthorized Access' && appBooted) {
-            if (!this.unauthorizedEmitted) {
-              this.unauthorizedEmitted = true;
-              sessionEvents.emit(SESSION_EVENTS.SESSION_EXPIRED);
+          const originalRequest = error.config as RetryableRequestConfig | undefined;
+
+          if (message === 'Unauthorized Access' && appBooted && originalRequest && !originalRequest._retriedAfterRefresh) {
+            originalRequest._retriedAfterRefresh = true;
+            let refreshed = false;
+            try {
+              refreshed = await SilentTokenRefresh.refresh();
+            } catch {
+              refreshed = false;
             }
-            return Promise.reject(error);
+            if (refreshed) {
+              // Drop the stale Authorization header so the request interceptor
+              // re-reads the freshly-stored accessToken from storage on retry.
+              if (originalRequest.headers && 'Authorization' in originalRequest.headers) {
+                delete (originalRequest.headers as any).Authorization;
+              }
+              this.unauthorizedEmitted = false;
+              return this.client.request(originalRequest);
+            }
           }
-          // Boot-time 401s or other 401s: keep user logged in with cached data.
-          // Mobile tokens are 10-year JWTs; a single boot-time rejection (auth service
-          // cold start, transient DB blip) must never eject the user.
+
+          // Refresh not possible / failed, or non-"Unauthorized Access" 401.
+          // Never force-logout — surface as a transient error so cached data stays.
           return Promise.reject({
             ...error,
             _offlineMode: true,
-            message: 'Network error - using cached data'
+            message: 'Network error - using cached data',
           });
         }
 

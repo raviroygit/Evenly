@@ -5,7 +5,10 @@ import { Organization } from '../types';
 interface StorageData {
   user: any;
   accessToken?: string;
-  // No refreshToken - mobile tokens never expire
+  refreshToken?: string;
+  // Long-lived server-minted bearer credential. When present, it is the
+  // preferred auth token — it bypasses the external auth service entirely.
+  apiKey?: string;
   organizations?: Organization[];
   timestamp: number;
 }
@@ -58,11 +61,36 @@ class StorageManager {
 const storage = new StorageManager();
 
 export const AuthStorage = {
-  async saveAuthData(user: any, accessToken?: string, organizations?: Organization[]): Promise<void> {
+  async saveAuthData(
+    user: any,
+    accessToken?: string,
+    organizations?: Organization[],
+    refreshToken?: string,
+    apiKey?: string
+  ): Promise<void> {
+    // Preserve any existing refreshToken / apiKey on disk when the caller
+    // doesn't supply one (e.g. profile edits re-save auth data with only
+    // user + accessToken — they shouldn't clobber long-lived credentials).
+    let preservedRefresh = refreshToken;
+    let preservedApiKey = apiKey;
+    if (preservedRefresh === undefined || preservedApiKey === undefined) {
+      try {
+        const existing = await storage.getItem(STORAGE_KEY);
+        if (existing) {
+          const parsed = JSON.parse(existing) as StorageData;
+          if (preservedRefresh === undefined) preservedRefresh = parsed.refreshToken;
+          if (preservedApiKey === undefined) preservedApiKey = parsed.apiKey;
+        }
+      } catch {
+        // ignore — treat as no existing values
+      }
+    }
+
     const data: StorageData = {
       user,
       accessToken,
-      // No refreshToken - mobile tokens never expire
+      refreshToken: preservedRefresh,
+      apiKey: preservedApiKey,
       organizations,
       timestamp: Date.now(),
     };
@@ -70,7 +98,7 @@ export const AuthStorage = {
     await storage.setItem(STORAGE_KEY, JSON.stringify(data));
   },
 
-  async getAuthData(): Promise<{ user: any; accessToken?: string; organizations?: Organization[]; timestamp?: number } | null> {
+  async getAuthData(): Promise<{ user: any; accessToken?: string; refreshToken?: string; apiKey?: string; organizations?: Organization[]; timestamp?: number } | null> {
     try {
       const dataString = await storage.getItem(STORAGE_KEY);
 
@@ -83,18 +111,18 @@ export const AuthStorage = {
       // Handle backward compatibility - if no timestamp, use current time
       const timestamp = data.timestamp || Date.now();
 
-      // NO LOCAL EXPIRY CHECK - Mobile tokens never expire (10 years)
-      // Users stay logged in forever until manual logout
-
-      // Check if accessToken is present (required for backend authentication)
-      if (!data.accessToken) {
+      // Session is considered valid if *either* the long-lived apiKey or an
+      // accessToken is present. This lets clients that have upgraded to
+      // key-auth drop the JWT without appearing logged out.
+      if (!data.accessToken && !data.apiKey) {
         return null;
       }
 
       return {
         user: data.user,
         accessToken: data.accessToken,
-        // No refreshToken - mobile tokens never expire
+        refreshToken: data.refreshToken,
+        apiKey: data.apiKey,
         organizations: data.organizations,
         timestamp: timestamp,
       };
