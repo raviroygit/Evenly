@@ -18,7 +18,12 @@ export class AuthService {
    */
   async ensureApiKey(): Promise<string | null> {
     try {
-      const { data, apiKey } = await this.makeRequest('/auth/ensure-api-key', { method: 'POST' });
+      // Send an explicit empty JSON body — Fastify rejects POST requests
+      // with Content-Type: application/json and an empty payload.
+      const { data, apiKey } = await this.makeRequest('/auth/ensure-api-key', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
       const key = apiKey || data?.data?.apiKey || data?.apiKey;
       if (!key) return null;
 
