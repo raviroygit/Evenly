@@ -23,7 +23,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!isLoading && !isAuthenticated) {
       // Add a small delay to ensure the Slot component is mounted
       const timer = setTimeout(() => {
-        router.replace('/auth/login');
+        router.replace('/auth');
       }, 100); // 100ms delay
 
       return () => clearTimeout(timer);

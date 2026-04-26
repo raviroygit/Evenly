@@ -1,7 +1,6 @@
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ENV } from '../config/env';
 import { AuthStorage } from './storage';
+import { UnifiedAuthService } from '../services/UnifiedAuthService';
 
 /**
  * Silent Token Refresh Manager
@@ -150,35 +149,21 @@ export class SilentTokenRefresh {
           throw new Error('No refresh token available');
         }
 
-        // Call MOBILE-SPECIFIC refresh endpoint for 90-day sessions with token rotation
-        const response = await Promise.race([
-          axios.post(
-            `${ENV.EVENLY_BACKEND_URL}/auth/mobile/refresh`,
-            { refreshToken: authData.refreshToken },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true',
-              },
-            }
-          ),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Token refresh timeout')), 10000)
-          ),
-        ]) as any;
+        // Refresh against the auth service directly. Service rotates the refresh
+        // token on every call, so we always overwrite with whatever it returned;
+        // if the response only includes a new access token, keep the old refresh.
+        const response = await UnifiedAuthService.refreshTokens(authData.refreshToken);
 
-        if (response.data.accessToken && response.data.refreshToken) {
+        if (response?.accessToken) {
           const duration = Date.now() - startTime;
 
-          newAccessToken = response.data.accessToken;
+          newAccessToken = response.accessToken;
 
-          // CRITICAL: Save BOTH new tokens (access + refresh) to enable token rotation.
-          // The refresh token is rotated on each refresh — old one becomes invalid.
           await AuthStorage.saveAuthData(
-            response.data.user || authData.user, // Use updated user if provided
-            response.data.accessToken,
-            authData.organizations, // preserve organizations on disk
-            response.data.refreshToken // NEW refresh token (rotated)
+            (response.user as any) || authData.user,
+            response.accessToken,
+            authData.organizations,
+            response.refreshToken || authData.refreshToken
           );
 
           // Save refresh timestamp for cache invalidation tracking

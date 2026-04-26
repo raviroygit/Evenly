@@ -31,7 +31,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
           onPress: async () => {
             try {
               await logout();
-              router.replace('/auth/login');
+              router.replace('/auth');
             } finally {
               handlingExpired.current = false;
             }
@@ -59,7 +59,7 @@ export const AuthInitializer: React.FC<AuthInitializerProps> = ({ children }) =>
 
   // Once we leave splash, show pending alert if any. Never show on login screen (avoid second alert after redirect).
   useEffect(() => {
-    if (pathname === '/auth/login') {
+    if (pathname === '/auth' || pathname === '/auth/login' || pathname === '/auth/signup') {
       pendingUnauthorized.current = false;
       return;
     }

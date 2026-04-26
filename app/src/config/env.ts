@@ -1,7 +1,7 @@
 // Environment configuration for Evenly app
 export const ENV = {
   // API URLs
-  // AUTH_SERVICE_URL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL,
+  AUTH_SERVICE_URL: process.env.EXPO_PUBLIC_AUTH_SERVICE_URL,
   EVENLY_BACKEND_URL: process.env.EXPO_PUBLIC_EVENLY_BACKEND_URL,
   VOAGENTS_API_URL: process.env.EXPO_PUBLIC_VOAGENTS_API_URL,
   VOAGENTS_AGENT_ID: process.env.EXPO_PUBLIC_VOAGENTS_AGENT_ID,
@@ -27,9 +27,9 @@ const isDevelopment = () => {
 const validateEnvironment = () => {
   const missingVars: string[] = [];
 
-  // if (!ENV.AUTH_SERVICE_URL) {
-  //   missingVars.push('EXPO_PUBLIC_AUTH_SERVICE_URL');
-  // }
+  if (!ENV.AUTH_SERVICE_URL) {
+    missingVars.push('EXPO_PUBLIC_AUTH_SERVICE_URL');
+  }
 
   if (!ENV.EVENLY_BACKEND_URL) {
     missingVars.push('EXPO_PUBLIC_EVENLY_BACKEND_URL');

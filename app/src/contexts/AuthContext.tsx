@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { AuthService } from '../services/AuthService';
+import { UnifiedAuthService, SendOtpInput, SendOtpResponse, VerifyOtpInput } from '../services/UnifiedAuthService';
 import { EvenlyBackendService } from '../services/EvenlyBackendService';
 import { AuthStorage } from '../utils/storage';
 import { evenlyApiClient } from '../services/EvenlyApiClient';
@@ -11,6 +12,9 @@ import { SilentTokenRefresh } from '../utils/silentTokenRefresh';
 import { DataRefreshCoordinator } from '../utils/dataRefreshCoordinator';
 import { getStoredPushToken, unregisterTokenFromBackend, clearStoredPushToken } from '../services/PushNotificationService';
 import { googleSignOut } from '../lib/google-signin';
+import i18n from '../i18n/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HAS_LOGGED_IN_BEFORE_KEY } from '../features/referral/pendingReferralStorage';
 
 import { User as UserType, Organization as OrganizationType } from '../types';
 
@@ -27,11 +31,10 @@ interface AuthContextType {
   authState: AuthState;
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
-  login: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
-  signup: (email: string) => Promise<{ success: boolean; message: string }>;
-  signupWithOtp: (name: string, email: string, phoneNumber: string) => Promise<{ success: boolean; message: string }>;
-  signupVerifyOtp: (email: string, otp: string, signupData?: { name: string; phoneNumber: string }) => Promise<{ success: boolean; message: string }>;
-  requestOTP: (email: string) => Promise<{ success: boolean; message: string }>;
+  /** Unified passwordless: ask the auth service to send an OTP. Returns the raw response so the OTP screen can branch on intent + user.has* flags. */
+  sendOtp: (input: SendOtpInput) => Promise<SendOtpResponse & { success: boolean; message: string }>;
+  /** Unified passwordless: verify the OTP and sign the user in. Stores tokens and sets organization. */
+  verifyOtpUnified: (input: VerifyOtpInput) => Promise<{ success: boolean; message: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -91,14 +94,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } else if (authData.organizations.length > 0) {
               setCurrentOrganization(authData.organizations[0]);
             }
-          }
-
-          // Legacy-session upgrade: users who logged in before the backend
-          // exposed api keys have only a JWT on disk. Exchange it for a
-          // long-lived key in the background so subsequent requests stop
-          // depending on JWT/auth-service availability.
-          if (!authData.apiKey && authData.accessToken) {
-            authService.ensureApiKey().catch(() => {});
           }
 
           // Trust stored token on cold start. Screens that need fresh data fetch it on mount,
@@ -211,6 +206,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // NO background token refresh timer needed - mobile tokens never expire (10 years)
 
+  // First time the user authenticates on this device, mark the device as
+  // "seen". The auth screen reads this flag pre-Google to decide whether to
+  // surface the referral prompt for first-ever signups even with no
+  // deep-link code. Best-effort; failure to persist is non-fatal.
+  useEffect(() => {
+    if (!user) return;
+    AsyncStorage.setItem(HAS_LOGGED_IN_BEFORE_KEY, '1').catch(() => {});
+  }, [user]);
+
+  // Sync the locally-selected language to the backend whenever a user is
+  // present and the local choice differs from `user.preferredLanguage`. Lets
+  // the first-launch language picker (run before login) silently propagate
+  // its choice once the user authenticates. Best-effort, fire-and-forget.
+  const lastSyncedLanguage = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user) {
+      lastSyncedLanguage.current = null;
+      return;
+    }
+    const localLang = i18n.language;
+    if (!localLang) return;
+    if (localLang === user.preferredLanguage) return;
+    if (lastSyncedLanguage.current === localLang) return;
+    lastSyncedLanguage.current = localLang;
+    EvenlyBackendService.updateUserLanguage(localLang)
+      .then(() => {
+        // Optimistically reflect the new language on the local user object so
+        // this effect doesn't re-fire on the next user-state update.
+        setUser((prev) => (prev ? { ...prev, preferredLanguage: localLang } : prev));
+      })
+      .catch(() => {
+        // Reset so we'll retry next time the user state changes.
+        lastSyncedLanguage.current = null;
+      });
+  }, [user]);
+
   // Monitor auth storage for silent logouts - check every 5 seconds
   useEffect(() => {
     if (!user) return; // Only monitor when user is logged in
@@ -278,132 +309,108 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService, currentOrganization]);
 
-  const login = useCallback(async (email: string, otp: string) => {
+  const sendOtp = useCallback(async (input: SendOtpInput) => {
     try {
-      const result = await authService.verifyOTP(email, otp);
-
-      // If login was successful and we have user data, use it directly
-      if (result.success && result.user) {
-        // Update organizations if received from login
-
-        if (result.user.organizations) {
-          setOrganizations(result.user.organizations);
-          if (result.user.currentOrganization) {
-            setCurrentOrganization(result.user.currentOrganization);
-            await AuthStorage.setCurrentOrganizationId(result.user.currentOrganization.id);
-          } else if (result.user.organizations.length > 0) {
-            // Set first organization as current if not specified
-            setCurrentOrganization(result.user.organizations[0]);
-            await AuthStorage.setCurrentOrganizationId(result.user.organizations[0].id);
-          }
-        }
-
-        // IMPORTANT: Save auth data BEFORE setting user state
-        // This prevents race conditions with storage monitor
-        await AuthStorage.saveAuthData(
-          result.user,
-          result.accessToken,
-          result.user.organizations,
-          result.refreshToken,
-          result.apiKey
-        );
-
-        // Set auth state to authenticated
-        setAuthState('authenticated');
-
-        // Now set user - this will trigger storage monitor
-        setUser(result.user);
-
-        // Screens will load fresh data when they mount
-
-        return { success: true, message: 'Login successful!' };
-      } else {
-        return { success: false, message: result.message || 'Login failed' };
-      }
+      const result = await UnifiedAuthService.sendOtp(input);
+      return {
+        ...result,
+        success: !!result.success,
+        message: result.message || (result.success ? 'OTP sent' : 'Failed to send OTP'),
+      };
     } catch (error: any) {
-      return { success: false, message: error.message || 'Login failed' };
+      const serverMsg = error?.response?.data?.message;
+      return {
+        success: false,
+        message: serverMsg || error?.message || 'Failed to send OTP',
+      } as SendOtpResponse & { success: boolean; message: string };
     }
-  }, [authService]);
+  }, []);
 
-  const signup = useCallback(async (email: string) => {
+  const verifyOtpUnified = useCallback(async (input: VerifyOtpInput) => {
     try {
-      const result = await authService.signup(email);
-      return { success: result.success, message: result.message };
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Signup failed' };
-    }
-  }, [authService]);
+      const result = await UnifiedAuthService.verifyOtp(input);
 
-  const signupWithOtp = useCallback(async (name: string, email: string, phoneNumber: string) => {
-    try {
-      const result = await authService.signupWithOtp(name, email, phoneNumber);
-      return { success: result.success, message: result.message };
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Failed to send OTP' };
-    }
-  }, [authService]);
-
-  const signupVerifyOtp = useCallback(async (email: string, otp: string, signupData?: { name: string; phoneNumber: string }) => {
-    try {
-      const result = await authService.signupVerifyOtp(email, otp);
-
-      if (result.success && result.user) {
-        // Merge signup form data into user if backend didn't return them
-        // The shared auth service may not return name/phoneNumber in verify-otp response
-        const enrichedUser = {
-          ...result.user,
-          name: result.user.name || signupData?.name || '',
-          email: result.user.email || email,
-          phoneNumber: result.user.phoneNumber || signupData?.phoneNumber || '',
+      if (!result.success || !result.user || !result.accessToken) {
+        return {
+          success: false,
+          message: result.message || 'Invalid or expired OTP',
         };
-
-        // Auto-login after signup — same flow as login()
-        if (enrichedUser.organizations) {
-          setOrganizations(enrichedUser.organizations);
-          if (enrichedUser.currentOrganization) {
-            setCurrentOrganization(enrichedUser.currentOrganization);
-            await AuthStorage.setCurrentOrganizationId(enrichedUser.currentOrganization.id);
-          } else if (enrichedUser.organizations.length > 0) {
-            setCurrentOrganization(enrichedUser.organizations[0]);
-            await AuthStorage.setCurrentOrganizationId(enrichedUser.organizations[0].id);
-          }
-        }
-
-        // Save auth data BEFORE setting user state (prevents race conditions)
-        await AuthStorage.saveAuthData(
-          enrichedUser,
-          result.accessToken,
-          enrichedUser.organizations,
-          result.refreshToken,
-          result.apiKey
-        );
-
-        setAuthState('authenticated');
-        setUser(enrichedUser);
-
-        // Refresh user from backend in background to get full profile data
-        authService.getCurrentUser().then(async (freshUser) => {
-          if (freshUser) {
-            // Preserve enriched data if backend still doesn't have it
-            const mergedUser = {
-              ...freshUser,
-              name: freshUser.name || enrichedUser.name,
-              phoneNumber: freshUser.phoneNumber || enrichedUser.phoneNumber,
-            };
-            setUser(mergedUser);
-            const authData = await AuthStorage.getAuthData();
-            if (authData?.accessToken) {
-              await AuthStorage.saveAuthData(mergedUser, authData.accessToken, mergedUser.organizations);
-            }
-          }
-        }).catch(() => {});
-
-        return { success: true, message: 'Account created successfully!' };
       }
 
-      return { success: false, message: result.message || 'Invalid or expired OTP' };
+      // The auth service returns a minimal user shape. Enrich with the inputs
+      // the user just provided so the dashboard renders the right name/phone
+      // immediately without waiting on the Evenly-backend sync to complete.
+      const enrichedUser: User = {
+        id: result.user.id,
+        email: result.user.email || input.email || '',
+        name: result.user.name || input.name || '',
+        phoneNumber: result.user.phoneNumber || input.phoneNumber || '',
+        avatar: result.user.avatar || undefined,
+        stats: { groups: 0, totalSpent: 0, owed: 0 },
+        organizations: result.organization ? [result.organization as any] : undefined,
+        currentOrganization: result.organization as any,
+      };
+
+      const orgs = enrichedUser.organizations || [];
+      if (orgs.length > 0) {
+        setOrganizations(orgs);
+        const orgToUse = enrichedUser.currentOrganization || orgs[0];
+        if (orgToUse) {
+          setCurrentOrganization(orgToUse);
+          await AuthStorage.setCurrentOrganizationId(orgToUse.id);
+        }
+      }
+
+      // Save tokens BEFORE setting user state to avoid the storage monitor
+      // briefly seeing user-without-token and treating it as a silent logout.
+      await AuthStorage.saveAuthData(
+        enrichedUser,
+        result.accessToken,
+        orgs,
+        result.refreshToken,
+        undefined
+      );
+
+      setAuthState('authenticated');
+      setUser(enrichedUser);
+
+      // Background refresh from the Evenly backend. The first authenticated
+      // request triggers `authenticateToken` middleware, which creates the
+      // local users row + populates stats/orgs. We then merge that richer
+      // payload back over the minimal shape from the auth service.
+      authService.getCurrentUser().then(async (freshUser) => {
+        if (!freshUser) return;
+        const mergedUser: User = {
+          ...freshUser,
+          name: freshUser.name || enrichedUser.name,
+          phoneNumber: freshUser.phoneNumber || enrichedUser.phoneNumber,
+          avatar: freshUser.avatar || enrichedUser.avatar,
+        };
+        setUser(mergedUser);
+        if (mergedUser.organizations?.length) {
+          setOrganizations(mergedUser.organizations);
+        }
+        const authData = await AuthStorage.getAuthData();
+        if (authData?.accessToken) {
+          await AuthStorage.saveAuthData(
+            mergedUser,
+            authData.accessToken,
+            mergedUser.organizations,
+            authData.refreshToken
+          );
+        }
+      }).catch(() => {});
+
+      return {
+        success: true,
+        message: result.message || 'Logged in successfully',
+      };
     } catch (error: any) {
-      return { success: false, message: error.message || 'Verification failed' };
+      const serverMsg = error?.response?.data?.message;
+      return {
+        success: false,
+        message: serverMsg || error?.message || 'Verification failed',
+      };
     }
   }, [authService]);
 
@@ -453,22 +460,55 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [authService]);
 
-  const requestOTP = useCallback(async (email: string) => {
-    try {
-      const result = await authService.requestOTP(email);
-      return { success: result.success, message: result.message };
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Failed to send OTP' };
-    }
-  }, [authService]);
-
   const logout = useCallback(async () => {
-    // Clear local state immediately so UI navigates to login instantly
+    // Snapshot tokens BEFORE wiping storage. We need them for the two
+    // server-side cleanup calls below.
+    const authDataBefore = await AuthStorage.getAuthData().catch(() => null);
+    const accessTokenSnapshot = authDataBefore?.accessToken;
+    const pushTokenSnapshot = await getStoredPushToken().catch(() => null);
+
+    // CRITICAL ORDERING: hit /api/v1/auth/logout (auth service) BEFORE we
+    // clear local state. Previously this ran in a fire-and-forget IIFE
+    // after `setUser(null)` flipped auth state and PublicRoute redirected
+    // to /auth — the navigation cancelled the in-flight request and the
+    // server-side session was never invalidated. Await it inline so the
+    // refresh token + active sessions are reliably revoked.
+    if (accessTokenSnapshot) {
+      try {
+        await UnifiedAuthService.logoutDirect(accessTokenSnapshot);
+        if (__DEV__) {
+          console.log('[AuthContext.logout] auth-service /api/v1/auth/logout: ok');
+        }
+      } catch (error: any) {
+        if (__DEV__) {
+          console.warn(
+            '[AuthContext.logout] auth-service /api/v1/auth/logout failed:',
+            error?.response?.status,
+            error?.response?.data || error?.message
+          );
+        }
+        // Continue with local cleanup regardless — a network failure must
+        // not strand the user "logged in" on their device.
+      }
+    }
+
+    // Push token unregister: also best-effort and also done while the
+    // bearer is still on hand (the EvenlyApiClient interceptor would
+    // otherwise fail to authenticate post-clear).
+    if (pushTokenSnapshot && accessTokenSnapshot) {
+      try {
+        await unregisterTokenFromBackend(pushTokenSnapshot, accessTokenSnapshot);
+      } catch {
+        // best-effort
+      }
+    }
+
+    // Now clear local state so the UI navigates to /auth.
     setUser(null);
     setCurrentOrganization(null);
     setOrganizations([]);
 
-    // Clear local storage and caches (fast, local-only operations)
+    // Clear local storage and caches (fast, local-only operations).
     await AuthStorage.clearAuthData();
     await AuthStorage.clearCurrentOrganization();
     await CacheManager.invalidateAllData();
@@ -477,21 +517,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await SilentTokenRefresh.clearRefreshTimestamp();
     DataRefreshCoordinator.clearAll();
     await googleSignOut();
-
-    // Fire-and-forget: backend cleanup in background (don't block UI)
-    (async () => {
-      try {
-        const pushToken = await getStoredPushToken();
-        if (pushToken) {
-          await unregisterTokenFromBackend(pushToken);
-        }
-      } catch {}
-      try {
-        await authService.logout();
-      } catch {}
-      await clearStoredPushToken();
-    })();
-  }, [authService]);
+    await clearStoredPushToken();
+  }, []);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -535,11 +562,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authState,
     isAuthenticated,
     setUser,
-    login,
-    signup,
-    signupWithOtp,
-    signupVerifyOtp,
-    requestOTP,
+    sendOtp,
+    verifyOtpUnified,
     signInWithGoogle,
     logout,
     refreshUser,
@@ -547,7 +571,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     organizations,
     switchOrganization,
     refreshOrganizations,
-  }), [user, isLoading, authState, isAuthenticated, setUser, login, signup, signupWithOtp, signupVerifyOtp, requestOTP, signInWithGoogle, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
+  }), [user, isLoading, authState, isAuthenticated, setUser, sendOtp, verifyOtpUnified, signInWithGoogle, logout, refreshUser, currentOrganization, organizations, switchOrganization, refreshOrganizations]);
 
   return (
     <AuthContext.Provider value={value}>

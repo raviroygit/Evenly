@@ -141,10 +141,18 @@ export async function registerTokenWithBackend(token: string): Promise<void> {
 
 /**
  * Unregister the push token from the backend.
+ *
+ * Accepts an optional explicit `accessToken`. During logout the AuthStorage
+ * is cleared before this fires, so the request interceptor would otherwise
+ * send no Authorization header and the backend would 401. Passing the token
+ * we captured pre-clear ensures the request is authenticated.
  */
-export async function unregisterTokenFromBackend(token: string): Promise<void> {
+export async function unregisterTokenFromBackend(token: string, accessToken?: string): Promise<void> {
   try {
-    await evenlyApiClient.post('/notifications/unregister-token', { token });
+    const config = accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : undefined;
+    await evenlyApiClient.post('/notifications/unregister-token', { token }, config);
   } catch (error) {
     console.error('[PushNotification] unregisterTokenFromBackend error:', error);
   }

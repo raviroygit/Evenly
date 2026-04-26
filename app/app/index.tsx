@@ -1,10 +1,14 @@
-import React, { useState, useCallback, Suspense } from 'react';
+import React, { useState, useCallback, Suspense, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
+import { LanguageSelectionModal } from '../src/components/modals/LanguageSelectionModal';
+
+const LANGUAGE_PICKED_KEY = 'evenly_language_picked';
 
 const LOGO_ANIMATION_MAX_DURATION_MS = 6000;
 const STATIC_LOGO_MS = 2500;
@@ -35,6 +39,8 @@ function IndexScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const [showLogoAnimation, setShowLogoAnimation] = useState(true);
+  /** Tri-state gate so we don't redirect before the picker decision is made. */
+  const [languageGate, setLanguageGate] = useState<'checking' | 'picking' | 'ready'>('checking');
 
   const finishLogoAnimation = useCallback(() => {
     setShowLogoAnimation(false);
@@ -46,18 +52,48 @@ function IndexScreen() {
     return () => clearTimeout(timeout);
   }, [showLogoAnimation, finishLogoAnimation]);
 
+  // After the splash animation finishes, decide whether the language picker
+  // should appear. We only show it on the very first launch — subsequent
+  // launches read the flag and proceed straight to redirect.
+  useEffect(() => {
+    if (showLogoAnimation) return;
+    if (languageGate !== 'checking') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const picked = await AsyncStorage.getItem(LANGUAGE_PICKED_KEY);
+        if (cancelled) return;
+        setLanguageGate(picked === '1' ? 'ready' : 'picking');
+      } catch {
+        if (!cancelled) setLanguageGate('ready');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showLogoAnimation, languageGate]);
+
+  const handleLanguagePickerClose = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem(LANGUAGE_PICKED_KEY, '1');
+    } catch {
+      // best-effort: even if the flag fails to persist, don't block the user
+    }
+    setLanguageGate('ready');
+  }, []);
+
   React.useEffect(() => {
-    if (!showLogoAnimation && !isLoading && pathname === '/') {
+    if (!showLogoAnimation && !isLoading && pathname === '/' && languageGate === 'ready') {
       const timer = setTimeout(() => {
         if (isAuthenticated) {
           router.replace('/tabs');
         } else {
-          router.replace('/auth/login');
+          router.replace('/auth');
         }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [showLogoAnimation, isAuthenticated, isLoading, router, pathname]);
+  }, [showLogoAnimation, isAuthenticated, isLoading, router, pathname, languageGate]);
 
   if (showLogoAnimation) {
     return (
@@ -85,6 +121,11 @@ function IndexScreen() {
       <Text style={[styles.loadingText, { color: colors.foreground }]}>
         Loading...
       </Text>
+      <LanguageSelectionModal
+        visible={languageGate === 'picking'}
+        onClose={handleLanguagePickerClose}
+        silent
+      />
     </View>
   );
 }

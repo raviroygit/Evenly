@@ -32,6 +32,8 @@ import { usePreferredCurrency } from '../../hooks/usePreferredCurrency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStorage } from '../../utils/storage';
 import { useReferral } from '../../hooks/useReferral';
+import { ReferralPromptModal } from '../referral/ReferralPromptModal';
+import { ReferralService } from '../../services/ReferralService';
 import ENV from '../../config/env';
 
 export const ProfileScreen: React.FC = () => {
@@ -54,6 +56,8 @@ export const ProfileScreen: React.FC = () => {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showFriendsJoinedModal, setShowFriendsJoinedModal] = useState(false);
+  const [showReferralEntryModal, setShowReferralEntryModal] = useState(false);
+  const [applyingReferralFromProfile, setApplyingReferralFromProfile] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [currentCurrency, setCurrentCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
@@ -227,7 +231,7 @@ export const ProfileScreen: React.FC = () => {
           onPress: async () => {
             try {
               await logout();
-              router.replace('/auth/login');
+              router.replace('/auth');
             } catch (error) {
               // Handle logout error silently
             }
@@ -488,6 +492,11 @@ export const ProfileScreen: React.FC = () => {
               : t('common.loading'),
             onPress: () => setShowFriendsJoinedModal(true),
           },
+          {
+            title: t('referral.haveCodeButton'),
+            subtitle: t('referral.haveCodeButtonSubtitle'),
+            onPress: () => setShowReferralEntryModal(true),
+          },
         ]}
       />
 
@@ -652,6 +661,36 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setShowFriendsJoinedModal(false)}
         referredUsers={stats?.referredUsers ?? []}
         loading={referralLoading}
+      />
+
+      {/* Manual referral-code entry from the profile menu. */}
+      <ReferralPromptModal
+        visible={showReferralEntryModal}
+        loading={applyingReferralFromProfile}
+        onSkip={() => setShowReferralEntryModal(false)}
+        onApply={async (code) => {
+          if (!code) {
+            setShowReferralEntryModal(false);
+            return;
+          }
+          setApplyingReferralFromProfile(true);
+          try {
+            const result = await ReferralService.applyReferralCode(code);
+            setShowReferralEntryModal(false);
+            if (result.success) {
+              Alert.alert(t('common.success'), t('referral.codeApplied'));
+              // Refresh stats so the "friends joined" line updates if applicable.
+              loadReferralStats();
+            } else {
+              Alert.alert(t('common.error'), result.message || t('referral.invalidCode'));
+            }
+          } catch (error: any) {
+            setShowReferralEntryModal(false);
+            Alert.alert(t('common.error'), error?.message || t('referral.invalidCode'));
+          } finally {
+            setApplyingReferralFromProfile(false);
+          }
+        }}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { ActivitiesProvider } from '../src/contexts/ActivitiesContext';
 import { SwipeActionProvider } from '../src/contexts/SwipeActionContext';
 import { NotificationProvider } from '../src/contexts/NotificationContext';
 import { AuthInitializer } from '../src/components/auth/AuthInitializer';
+import { ReferralPromptHost } from '../src/features/referral/ReferralPromptHost';
 import { Slot, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useAppUpdates } from '../src/hooks/useAppUpdates';
@@ -135,8 +136,9 @@ export default function RootLayout() {
           }
 
           if (code) {
-            // Navigate to signup with referral code pre-filled
-            router.replace(`/auth/signup?referralCode=${code}`);
+            // Navigate to the unified auth screen with referral code pre-filled.
+            // Applied automatically after a successful signup verify.
+            router.replace(`/auth?referralCode=${code}`);
           }
         }
 
@@ -186,6 +188,7 @@ export default function RootLayout() {
               <SwipeActionProvider>
                 <AuthInitializer>
                   <Slot />
+                  <ReferralPromptHost />
                 </AuthInitializer>
               </SwipeActionProvider>
             </ActivitiesProvider>

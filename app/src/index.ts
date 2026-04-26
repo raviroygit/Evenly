@@ -51,9 +51,7 @@ export { ModalButtonContainer } from './components/ui/ModalButtonContainer';
 // Export authentication components
 export { AuthProvider, useAuth } from './contexts/AuthContext';
 export { AuthService } from './services/AuthService';
-export { LoginScreen } from './features/auth/LoginScreen';
-export { SignupScreen } from './features/auth/SignupScreen';
-export { AuthNavigator } from './features/auth/AuthNavigator';
+export { UnifiedAuthScreen } from './features/auth/UnifiedAuthScreen';
 export { AuthGuard } from './components/auth/AuthGuard';
 export { TabNavigator } from './components/navigation/TabNavigator';
 

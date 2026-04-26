@@ -10,6 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface LanguageSelectionModalProps {
   visible: boolean;
   onClose: () => void;
+  /**
+   * When true, skip the success Alert and the backend update call. Used for
+   * the first-launch picker before the user is authenticated — local i18n +
+   * AsyncStorage are sufficient there, and AuthContext will sync the choice
+   * to the backend after login.
+   */
+  silent?: boolean;
 }
 
 const LANGUAGES = [
@@ -20,6 +27,7 @@ const LANGUAGES = [
 export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
   visible,
   onClose,
+  silent = false,
 }) => {
   const { colors, theme } = useTheme();
   const { t, i18n } = useTranslation();
@@ -38,18 +46,20 @@ export const LanguageSelectionModal: React.FC<LanguageSelectionModalProps> = ({
       // Save to AsyncStorage
       await AsyncStorage.setItem('userLanguage', languageCode);
 
-      // Update in backend database
-      try {
-        await EvenlyBackendService.updateUserLanguage(languageCode);
-      } catch (backendError) {
-        // Log error but don't block language change if backend fails
-        console.error('Failed to update language in backend:', backendError);
-      }
+      if (!silent) {
+        // Update in backend database
+        try {
+          await EvenlyBackendService.updateUserLanguage(languageCode);
+        } catch (backendError) {
+          // Log error but don't block language change if backend fails
+          console.error('Failed to update language in backend:', backendError);
+        }
 
-      Alert.alert(
-        t('common.success'),
-        t('profile.languageChanged')
-      );
+        Alert.alert(
+          t('common.success'),
+          t('profile.languageChanged')
+        );
+      }
       onClose();
     } catch (error) {
       Alert.alert(

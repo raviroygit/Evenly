@@ -108,7 +108,7 @@ export default function AcceptInvitationScreen() {
             text: 'Login',
             onPress: () => {
               // Navigate to login and pass invitation token
-              router.push(`/auth/login?invitationToken=${token}`);
+              router.push(`/auth?invitationToken=${token}`);
             },
           },
         ]

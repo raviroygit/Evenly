@@ -28,7 +28,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Redirect href="/auth/login" />;
+    return <Redirect href="/auth" />;
   }
 
   return <>{children}</>;

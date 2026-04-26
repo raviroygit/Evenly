@@ -24,7 +24,7 @@ class EvenlyApiClient {
   private unauthorizedEmitted = false;
 
   constructor() {
-    // Ensure base URL ends with /api so paths like /auth/signup/otp resolve to .../api/auth/signup/otp
+    // Ensure base URL ends with /api so paths like /auth/me resolve to .../api/auth/me.
     const base = (ENV.EVENLY_BACKEND_URL || '').replace(/\/+$/, '');
     const baseURL = base.endsWith('/api') ? base : `${base}/api`;
 
@@ -77,11 +77,11 @@ class EvenlyApiClient {
             console.log('[EvenlyApiClient] FormData headers after setup:', Object.keys(config.headers || {}));
           }
 
-          // Get auth data from storage. Prefer the long-lived apiKey when
-          // present — it's DB-backed and bypasses the external auth service,
-          // which is what keeps sessions stable across auth-service restarts.
+          // The unified auth service mints fresh access tokens on every login
+          // and rotates them via /refresh-token, so we read accessToken only.
+          // The legacy DB-backed apiKey path is gone.
           const authData = await AuthStorage.getAuthData();
-          const token = authData?.apiKey || authData?.accessToken;
+          const token = authData?.accessToken;
           if (!token) {
             this.unauthorizedEmitted = false;
           }

@@ -1,11 +1,8 @@
 import React from 'react';
-import { LoginScreen } from '../../src/features/auth/LoginScreen';
-import { PublicRoute } from '../../src/components/auth/PublicRoute';
+import { Redirect } from 'expo-router';
 
 export default function LoginPage() {
-  return (
-    <PublicRoute>
-      <LoginScreen />
-    </PublicRoute>
-  );
+  // The two-screen split was replaced by a single unified passwordless screen.
+  // Existing deep links / inline links to /auth/login still work via this redirect.
+  return <Redirect href="/auth" />;
 }
