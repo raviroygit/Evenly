@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -32,9 +32,9 @@ import {
   HAS_LOGGED_IN_BEFORE_KEY,
 } from '../referral/pendingReferralStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OtpBoxes } from '../../components/auth/OtpBoxes';
 import {
   composeE164,
-  isEmailIdentifier,
   buildAvatarFilePart,
   type SendOtpResponse,
   type VerifyOtpInput,
@@ -86,6 +86,11 @@ export const UnifiedAuthScreen: React.FC = () => {
   const [referralPromptInput, setReferralPromptInput] = useState('');
   const [referralPromptDismissed, setReferralPromptDismissed] = useState(false);
 
+  // Bumped on every verify failure to trigger the OTP-row shake animation.
+  const [otpErrorKey, setOtpErrorKey] = useState(0);
+  // Reentrancy guard for auto-submit-on-complete (login intent only).
+  const autoSubmittedRef = useRef(false);
+
   // Pre-fill referral code from deep link
   useEffect(() => {
     if (params.referralCode) {
@@ -93,7 +98,17 @@ export const UnifiedAuthScreen: React.FC = () => {
     }
   }, [params.referralCode]);
 
-  const identifierIsEmail = useMemo(() => isEmailIdentifier(identifier.trim()), [identifier]);
+  // Progressive input-mode detection: anything that *could* be a phone (pure
+  // digits with optional + / spaces / hyphens) flips us into phone mode and
+  // surfaces the country-code dropdown. As soon as the user types a letter
+  // (or `@`) we're definitively in email mode and the dropdown disappears.
+  // Empty input defaults to email mode — letters are the more common first
+  // keystroke for the email path on a default keyboard.
+  const identifierIsEmail = useMemo(() => {
+    const v = identifier.trim();
+    if (v.length === 0) return true;
+    return !/^[+\d\s-]+$/.test(v);
+  }, [identifier]);
 
   /** Channel actually used for the OTP (whichever field was sent in send-otp). */
   const usedChannel: 'email' | 'phone' = identifierIsEmail ? 'email' : 'phone';
@@ -105,10 +120,9 @@ export const UnifiedAuthScreen: React.FC = () => {
   const intent = otpInfo?.intent;
   const needsName = intent === 'signup' || otpInfo?.user?.hasName === false;
   const needsAvatar = intent === 'signup' || otpInfo?.user?.hasAvatar === false; // tile is shown but never required
-  const needsCrossChannel =
-    intent === 'signup' ||
-    (usedChannel === 'email' && otpInfo?.user?.hasPhoneNumber === false) ||
-    (usedChannel === 'phone' && otpInfo?.user?.hasEmail === false);
+  // Cross-channel input is a signup-only nicety. Existing users get a
+  // clean OTP-only screen; profile editing handles missing fields later.
+  const needsCrossChannel = intent === 'signup';
 
   const validateIdentifier = (): string | undefined => {
     const value = identifier.trim();
@@ -310,6 +324,11 @@ export const UnifiedAuthScreen: React.FC = () => {
 
       if (!result.success) {
         setErrors({ otp: result.message });
+        // Shake + clear OTP boxes so the user can retype without leftover
+        // wrong digits, and unblock the auto-submit guard for the next try.
+        setOtpErrorKey((k) => k + 1);
+        setOtp('');
+        autoSubmittedRef.current = false;
         return;
       }
 
@@ -326,6 +345,9 @@ export const UnifiedAuthScreen: React.FC = () => {
       // PublicRoute will redirect to /tabs once isAuthenticated flips true.
     } catch (error: any) {
       setErrors({ otp: error?.message || t('errors.tryAgain') });
+      setOtpErrorKey((k) => k + 1);
+      setOtp('');
+      autoSubmittedRef.current = false;
     } finally {
       setIsLoading(false);
     }
@@ -675,19 +697,36 @@ export const UnifiedAuthScreen: React.FC = () => {
                 )
               ) : null}
 
-              <SimpleInput
-                label={t('auth.verificationCode')}
-                placeholder={t('auth.enter6DigitCode')}
-                value={otp}
-                onChangeText={(v) => {
-                  setOtp(v.replace(/\D/g, '').slice(0, 6));
-                  if (errors.otp) setErrors((e) => ({ ...e, otp: undefined }));
-                }}
-                keyboardType="numeric"
-                maxLength={6}
-                required
-                error={errors.otp}
-              />
+              <View style={styles.otpFieldBlock}>
+                <Text style={[styles.inputLabel, { color: colors.foreground }]}>
+                  {t('auth.verificationCode')}
+                </Text>
+                <OtpBoxes
+                  value={otp}
+                  onChange={(next) => {
+                    setOtp(next);
+                    if (errors.otp) setErrors((e) => ({ ...e, otp: undefined }));
+                    // If the user edits after a complete-with-error state, allow
+                    // a fresh auto-submit when they re-fill all 6 digits.
+                    if (next.length < 6) {
+                      autoSubmittedRef.current = false;
+                    }
+                  }}
+                  onComplete={() => {
+                    // Auto-verify only on login. Signups need Name to be filled
+                    // first, so let the user tap "Verify & Create Account".
+                    if (intent !== 'login') return;
+                    if (autoSubmittedRef.current) return;
+                    if (isLoading) return;
+                    autoSubmittedRef.current = true;
+                    handleVerify();
+                  }}
+                  length={6}
+                  autoFocus
+                  errorKey={otpErrorKey}
+                />
+                {errors.otp ? <Text style={styles.fieldError}>{errors.otp}</Text> : null}
+              </View>
 
               {needsName ? (
                 <SimpleInput
@@ -797,7 +836,7 @@ export const UnifiedAuthScreen: React.FC = () => {
                   onPress={handleVerify}
                   variant="primary"
                   size="large"
-                  disabled={isLoading}
+                  disabled={isLoading || otp.trim().length !== 6}
                   loading={isLoading}
                 />
                 <View style={styles.resendRow}>
@@ -885,6 +924,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  otpFieldBlock: {
+    width: '100%',
   },
   identifierRow: {
     flexDirection: 'row',

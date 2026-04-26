@@ -64,6 +64,7 @@ export const ProfileScreen: React.FC = () => {
   const [khataSummary, setKhataSummary] = useState<{ totalGive: string; totalGet: string } | null>(null);
   const [customers, setCustomers] = useState<Array<{ id: string; name: string; email?: string; phone?: string; balance: string; type: 'give' | 'get' | 'settled'; createdAt?: string; updatedAt?: string }>>([]);
   const [khataSummaryLoading, setKhataSummaryLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showCustomersListModal, setShowCustomersListModal] = useState(false);
   const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<{
@@ -229,11 +230,14 @@ export const ProfileScreen: React.FC = () => {
           text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
+            setIsLoggingOut(true);
             try {
               await logout();
               router.replace('/auth');
             } catch (error) {
               // Handle logout error silently
+            } finally {
+              setIsLoggingOut(false);
             }
           },
         },
@@ -556,6 +560,8 @@ export const ProfileScreen: React.FC = () => {
           onPress={handleLogout}
           variant="destructive"
           size="large"
+          loading={isLoggingOut}
+          disabled={isLoggingOut}
         />
       </View>
 

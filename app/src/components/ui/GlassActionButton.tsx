@@ -133,26 +133,27 @@ export const GlassActionButton: React.FC<GlassActionButtonProps> = ({
             <ActivityIndicator 
               size="small" 
               color={buttonColors.textColor} 
-              style={styles.loadingIndicator}
             />
           ) : (
-            icon && <View style={styles.iconContainer}>{icon}</View>
+            <>
+              {icon && <View style={styles.iconContainer}>{icon}</View>}
+              <Text
+                style={[
+                  styles.buttonText,
+                  {
+                    color: buttonColors.textColor,
+                    fontSize: sizeStyles.fontSize,
+                    opacity: 1,
+                  },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.8}
+              >
+                {title}
+              </Text>
+            </>
           )}
-          <Text
-            style={[
-              styles.buttonText,
-              {
-                color: buttonColors.textColor,
-                fontSize: sizeStyles.fontSize,
-                opacity: loading ? 0.7 : 1,
-              },
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit={true}
-            minimumFontScale={0.8}
-          >
-            {loading ? 'Loading...' : title}
-          </Text>
         </View>
       </View>
     </TouchableOpacity>
