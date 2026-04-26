@@ -3,10 +3,7 @@ import { GroupInvitationService } from '../services/groupInvitationService';
 import { 
   sendInvitationSchema,
   acceptInvitationSchema,
-  declineInvitationSchema,
-  type SendInvitationInput,
-  type AcceptInvitationInput,
-  type DeclineInvitationInput
+  declineInvitationSchema
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';

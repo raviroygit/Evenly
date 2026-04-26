@@ -71,7 +71,6 @@ const OrganizationMemberSchema = new mongoose.Schema({
  * Connect to Auth Service MongoDB
  */
 async function connectAuthServiceDB() {
-  try {
     const mongoUri = process.env.AUTH_MONGODB_URL || process.env.MONGODB_URL;
     if (!mongoUri) {
       throw new Error('AUTH_MONGODB_URL or MONGODB_URL not found in environment variables');
@@ -84,9 +83,6 @@ async function connectAuthServiceDB() {
       Organization: mongoose.model('Organization', OrganizationSchema),
       OrganizationMember: mongoose.model('OrganizationMember', OrganizationMemberSchema),
     };
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**
@@ -96,6 +92,7 @@ async function disconnectAuthServiceDB() {
   try {
     await mongoose.disconnect();
   } catch (error) {
+    console.error('Failed to disconnect MongoDB', error);
   }
 }
 
@@ -315,13 +312,8 @@ async function syncOrganizations() {
       .where(isNull(groups.organizationId))
       .limit(10);
 
-    if (orgsWithoutAssignedData.length === 0) {
-    } else {
-    }
+    // Verification check done
 
-
-  } catch (error: any) {
-    throw error;
   } finally {
     if (authModels) {
       await disconnectAuthServiceDB();

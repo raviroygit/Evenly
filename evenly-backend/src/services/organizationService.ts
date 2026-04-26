@@ -297,7 +297,7 @@ export class OrganizationService {
     userId: string
   ): Promise<string | null> {
     try {
-      let localOrg = await this.getOrganizationByAuthServiceId(authServiceOrgId);
+      const localOrg = await this.getOrganizationByAuthServiceId(authServiceOrgId);
       if (localOrg) {
         const isMember = await this.isMember(localOrg.id, userId);
         if (!isMember) {

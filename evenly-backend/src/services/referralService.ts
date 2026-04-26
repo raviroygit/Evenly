@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { db, users, referrals } from '../db';
 

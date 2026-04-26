@@ -293,7 +293,7 @@ export class AuthController {
               },
               result.user.id
             );
-          } catch {
+          } catch { /* ignore error */
           }
         }
 
@@ -401,7 +401,7 @@ export class AuthController {
             name: result.user.name,
             avatar: result.user.avatar,
           });
-        } catch (syncError: any) {
+        } catch (syncError: any) { /* ignore error */
         }
 
         // Sync organization to local database if provided
@@ -417,10 +417,9 @@ export class AuthController {
               },
               result.user.id
             );
-            if (localOrgId) {
-            } else {
-            }
-          } catch (orgSyncError: any) {
+            // Successfully synced
+
+          } catch (orgSyncError: any) { /* ignore error */
           }
         }
 
@@ -640,7 +639,7 @@ export class AuthController {
               },
               result.user.id
             );
-          } catch {
+          } catch { /* ignore error */
           }
         }
 

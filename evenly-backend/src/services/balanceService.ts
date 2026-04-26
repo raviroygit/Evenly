@@ -1,4 +1,4 @@
-import { eq, and, desc, sum } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db, userBalances, users, groups, type UserBalance, type SimplifiedDebt } from '../db';
 import { GroupService } from './groupService';
 import { NotFoundError, ForbiddenError, DatabaseError } from '../utils/errors';

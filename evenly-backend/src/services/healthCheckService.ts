@@ -11,7 +11,7 @@ interface HealthCheckResult {
 
 export class HealthCheckService {
   private static isRunning = false;
-  private static intervalId: NodeJS.Timeout | null = null;
+  private static intervalId: ReturnType<typeof setInterval> | null = null;
   private static readonly INTERVAL_MS = 2 * 60 * 1000; // 2 minutes in milliseconds
 
   /**
@@ -72,9 +72,8 @@ export class HealthCheckService {
         responseTime,
         status: response.data?.status || 'unknown',
       };
-      // Log additional details if available
-      if (response.data) {
-      }
+      // Return result
+      return;
 
     } catch (error: any) {
       const responseTime = Date.now() - startTime;
@@ -85,10 +84,8 @@ export class HealthCheckService {
         responseTime,
         error: error.message || 'Unknown error',
       };
-      // Log additional error details
-      if (error.response) {
-      } else if (error.request) {
-      }
+      // Return result
+      return;
     }
   }
 

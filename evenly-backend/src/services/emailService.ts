@@ -1,9 +1,43 @@
 import * as nodemailer from 'nodemailer';
 import * as ejs from 'ejs';
 import * as path from 'path';
+import { eq } from 'drizzle-orm';
 import { config } from '../config/config';
+import { db } from '../db';
+import { organizations } from '../db/schema';
 import { t, getUserLanguage, getUserCurrencySymbol } from '../i18n/emailTranslator';
 import { getCurrencySymbol, DEFAULT_CURRENCY } from '../utils/currency';
+
+let cachedOrgBrand: { appName: string; orgSlug: string; orgUrl: string } | null = null;
+
+/**
+ * Returns brand fields used by every template footer/header.
+ * Looked up once from the EvenlySplit organization row, then cached.
+ * orgUrl: env EVENLY_ORG_URL wins; otherwise derived as https://<slug>.com.
+ */
+async function getOrgBrand(): Promise<{ appName: string; orgSlug: string; orgUrl: string }> {
+  if (cachedOrgBrand) return cachedOrgBrand;
+  let appName = 'EvenlySplit';
+  let orgSlug = 'evenlysplit';
+  try {
+    const [row] = await db
+      .select({
+        name: organizations.name,
+        displayName: organizations.displayName,
+        slug: organizations.slug,
+      })
+      .from(organizations)
+      .where(eq(organizations.authServiceOrgId, config.auth.evenlyOrganizationId))
+      .limit(1);
+    appName = row?.displayName || row?.name || appName;
+    orgSlug = row?.slug || orgSlug;
+  } catch {
+    // fall through to defaults
+  }
+  const orgUrl = process.env.EVENLY_ORG_URL || `https://${orgSlug}.com`;
+  cachedOrgBrand = { appName, orgSlug, orgUrl };
+  return cachedOrgBrand;
+}
 
 // Create a transporter object using Zoho SMTP settings (matching nxgenaidev_auth)
 const transporter = nodemailer.createTransport({
@@ -120,6 +154,7 @@ export async function sendGroupInvitationEmail(
       copyright: t(lang, 'groupInvitation.copyright')
     };
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('groupInvitation.ejs', {
       groupName,
       inviterName,
@@ -127,7 +162,11 @@ export async function sendGroupInvitationEmail(
       isExistingUser,
       appDownloadLink,
       msg,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'INVITATION'
     });
 
     await sendEmail(email, subject, htmlBody);
@@ -190,6 +229,7 @@ export async function sendExpenseNotificationEmail(
 
   const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/expense/${group.id}`;
 
+  const brand = await getOrgBrand();
   const htmlBody = await renderTemplate('expenseNotification.ejs', {
     expense,
     addedBy,
@@ -199,7 +239,11 @@ export async function sendExpenseNotificationEmail(
     appOpenLink,
     msg,
     currencySymbol,
-    year: new Date().getFullYear()
+    year: new Date().getFullYear(),
+    appName: brand.appName,
+    orgSlug: brand.orgSlug,
+    orgUrl: brand.orgUrl,
+    subtitle: 'NEW EXPENSE'
   });
 
   await sendEmail(email, subject, htmlBody);
@@ -543,6 +587,7 @@ export async function sendExpenseUpdatedEmail(
     // Create smart app open link for expense/group
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/expense/${group.id}`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('expenseUpdated.ejs', {
       expense,
       updatedBy,
@@ -550,7 +595,11 @@ export async function sendExpenseUpdatedEmail(
       userSplit,
       appBaseUrl: config.app.baseUrl,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'EXPENSE UPDATED'
     });
 
     const subject = `Expense "${expense.title}" updated in ${group.name}`;
@@ -587,13 +636,18 @@ export async function sendExpenseDeletedEmail(
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('expenseDeleted.ejs', {
       expense,
       deletedBy,
       group,
       appBaseUrl: config.app.baseUrl,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'EXPENSE DELETED'
     });
 
     const subject = `Expense "${expense.title}" deleted from ${group.name}`;
@@ -628,12 +682,17 @@ export async function sendCustomerAddedEmail(
       footer: t(lang, 'customerAdded.footer', { userName })
     };
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('customerAdded.ejs', {
       customerName,
       userName,
       appOpenLink,
       msg,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'KHATA · NEW CUSTOMER'
     });
     await sendEmail(customerEmail, subject, htmlBody);
   } catch {
@@ -654,12 +713,17 @@ export async function sendCustomerDeletedEmail(
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('customerDeleted.ejs', {
       customerName,
       userName,
       finalBalance,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'KHATA · ACCOUNT CLOSED'
     });
 
     const subject = `Khata account closed with ${userName}`;
@@ -699,6 +763,7 @@ export async function sendTransactionUpdatedEmail(
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('transactionUpdated.ejs', {
       customerName,
       userName,
@@ -711,7 +776,11 @@ export async function sendTransactionUpdatedEmail(
       balanceColor,
       balanceAmountFormatted,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'KHATA · TRANSACTION UPDATED'
     });
 
     const subject = `Transaction Updated: ${transactionType} ${amountWithSign}`;
@@ -750,6 +819,7 @@ export async function sendTransactionDeletedEmail(
     // Create smart app open link for Khata
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/khata`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('transactionDeleted.ejs', {
       customerName,
       userName,
@@ -761,7 +831,11 @@ export async function sendTransactionDeletedEmail(
       balanceColor,
       balanceAmountFormatted,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'KHATA · TRANSACTION DELETED'
     });
 
     const subject = `Transaction Deleted: ${transactionType} ${amountWithSign}`;
@@ -789,13 +863,18 @@ export async function sendGroupJoinedEmail(
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('groupJoined.ejs', {
       groupName: group.name,
       groupDescription: group.description,
       memberCount,
       appBaseUrl: config.app.baseUrl,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'JOINED GROUP'
     });
 
     const subject = `Welcome to ${group.name}!`;
@@ -825,6 +904,7 @@ export async function sendNewMemberJoinedEmail(
     // Create smart app open link for group
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/open/group/${group.id}`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('newMemberJoined.ejs', {
       newMemberName: newMember.name,
       newMemberEmail: newMember.email,
@@ -832,7 +912,11 @@ export async function sendNewMemberJoinedEmail(
       memberCount,
       appBaseUrl: config.app.baseUrl,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'NEW MEMBER'
     });
 
     const subject = `${newMember.name} joined ${group.name}`;
@@ -855,10 +939,15 @@ export async function sendWelcomeEmail(
   try {
     const appOpenLink = `${config.app.baseUrlRoot}/api/app/download`;
 
+    const brand = await getOrgBrand();
     const htmlBody = await renderTemplate('welcome.ejs', {
       userName,
       appOpenLink,
-      year: new Date().getFullYear()
+      year: new Date().getFullYear(),
+      appName: brand.appName,
+      orgSlug: brand.orgSlug,
+      orgUrl: brand.orgUrl,
+      subtitle: 'WELCOME'
     });
 
     await sendEmail(email, `Welcome to EvenlySplit, ${userName}!`, htmlBody);

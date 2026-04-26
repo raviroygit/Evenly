@@ -6,11 +6,7 @@ import {
   createGroupSchema, 
   updateGroupSchema, 
   addGroupMemberSchema,
-  paginationSchema,
-  type CreateGroupInput,
-  type UpdateGroupInput,
-  type AddGroupMemberInput,
-  type PaginationQuery
+  paginationSchema
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';

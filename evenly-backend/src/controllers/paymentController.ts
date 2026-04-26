@@ -1,12 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PaymentService } from '../services/paymentService';
 import { 
-  createPaymentSchema, 
-  updatePaymentSchema,
-  paginationSchema,
-  type CreatePaymentInput,
-  type UpdatePaymentInput,
-  type PaginationQuery
+  createPaymentSchema,
+  paginationSchema
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';

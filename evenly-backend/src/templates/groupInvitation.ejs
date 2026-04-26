@@ -1,189 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
-    <title>You're invited to join <%= groupName %> on EvenlySplit</title>
-    <style>
-        /* Force light mode rendering */
-        :root {
-            color-scheme: light only;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5 !important;
-        }
-        /* Prevent dark mode overrides */
-        * {
-            color-scheme: light only !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>You're invited to join <%= groupName %> on <%= appName %></title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5 !important;">
-    <!-- Wrapper table for email client compatibility -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
-        <tr>
-            <td align="center">
-                <!-- Main container -->
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
-                            <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #6366f1;">Evenly</h1>
-                            <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px;">Expense sharing made simple</p>
-                            <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #1f2937;">
-                                <% if (isExistingUser) { %>
-                                    <%= (msg && msg.inviteHeadingExisting) ? msg.inviteHeadingExisting : "You've been invited to a group!" %>
-                                <% } else { %>
-                                    <%= (msg && msg.inviteHeadingNew) ? msg.inviteHeadingNew : "Welcome to Evenly!" %>
-                                <% } %>
-                            </h2>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 0 30px 40px 30px; background-color: #ffffff;">
-                            <!-- Group Info -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; border-left: 4px solid #6366f1; border-radius: 8px; margin-bottom: 24px;">
-                                <tr>
-                                    <td style="padding: 20px;">
-                                        <h3 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #1f2937;"><%= groupName %></h3>
-                                        <p style="margin: 0; color: #6b7280; font-size: 14px;"><%= (msg && msg.invitedByLabel) ? msg.invitedByLabel : 'Invited by' %> <%= inviterName %></p>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <% if (isExistingUser) { %>
-                                <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px;">
-                                    <% if (msg && msg.bodyExisting) { %><%= msg.bodyExisting %><% } else { %><strong><%= inviterName %></strong> has invited you to join the group "<strong><%= groupName %></strong>" on Evenly. Click the button below to accept the invitation and start sharing expenses with your group.<% } %>
-                                </p>
-                            <% } else { %>
-                                <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px;">
-                                    <% if (msg && msg.bodyNew) { %><%= msg.bodyNew %><% } else { %><strong><%= inviterName %></strong> has invited you to join the group "<strong><%= groupName %></strong>" on Evenly. Evenly makes it easy to split expenses, track who owes what, and settle up with friends, family, or colleagues.<% } %>
-                                </p>
-
-                                <!-- Features -->
-                                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #1f2937;"><%= (msg && msg.whatYouCanDo) ? msg.whatYouCanDo : "What you can do with Evenly:" %></h3>
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
-                                    <tr>
-                                        <td style="padding: 8px 0;">
-                                            <table cellpadding="0" cellspacing="0" border="0">
-                                                <tr>
-                                                    <td style="padding-right: 12px; vertical-align: top; font-size: 16px;">💰</td>
-                                                    <td style="color: #6b7280; font-size: 16px;"><%= (msg && msg.feature1) ? msg.feature1 : "Split bills and expenses easily" %></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0;">
-                                            <table cellpadding="0" cellspacing="0" border="0">
-                                                <tr>
-                                                    <td style="padding-right: 12px; vertical-align: top; font-size: 16px;">📊</td>
-                                                    <td style="color: #6b7280; font-size: 16px;"><%= (msg && msg.feature2) ? msg.feature2 : "Track who owes what in real-time" %></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0;">
-                                            <table cellpadding="0" cellspacing="0" border="0">
-                                                <tr>
-                                                    <td style="padding-right: 12px; vertical-align: top; font-size: 16px;">🤝</td>
-                                                    <td style="color: #6b7280; font-size: 16px;"><%= (msg && msg.feature3) ? msg.feature3 : "Settle up with group members" %></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px 0;">
-                                            <table cellpadding="0" cellspacing="0" border="0">
-                                                <tr>
-                                                    <td style="padding-right: 12px; vertical-align: top; font-size: 16px;">📱</td>
-                                                    <td style="color: #6b7280; font-size: 16px;"><%= (msg && msg.feature4) ? msg.feature4 : "Access from any device" %></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </table>
-                            <% } %>
-
-                            <!-- CTA Button -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td align="center" style="padding: 20px 0;">
-                                        <a href="<%= invitationLink %>" style="display: inline-block; padding: 16px 40px; background-color: #6366f1; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            <% if (isExistingUser) { %>
-                                                <%= (msg && msg.acceptInvitation) ? msg.acceptInvitation : "Accept Invitation" %>
-                                            <% } else { %>
-                                                <%= (msg && msg.openInBrowser) ? msg.openInBrowser : "Open in Browser" %>
-                                            <% } %>
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <% if (!isExistingUser) { %>
-                                <!-- App Download Box -->
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; margin-bottom: 24px;">
-                                    <tr>
-                                        <td style="padding: 20px;">
-                                            <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: #065f46;">📱 <%= (msg && msg.downloadBoxTitle) ? msg.downloadBoxTitle : "Download the Evenly App" %></h3>
-                                            <p style="margin: 0 0 16px 0; color: #047857; font-size: 16px;">
-                                                <%= (msg && msg.downloadBoxText) ? msg.downloadBoxText : "For the best experience, download our mobile app and accept the invitation there!" %>
-                                            </p>
-                                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                                <tr>
-                                                    <td align="center" style="padding: 8px 0;">
-                                                        <a href="<%= appDownloadLink %>" style="display: inline-block; padding: 16px 40px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                                            📲 <%= (msg && msg.getTheApp) ? msg.getTheApp : "Get the App" %>
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                            </table>
-                                            <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 13px; text-align: center;">
-                                                <%= (msg && msg.worksOnDevices) ? msg.worksOnDevices : "Works on both Android and iOS" %>
-                                            </p>
-                                        </td>
-                                    </tr>
-                                </table>
-
-                                <!-- Warning Box -->
-                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; margin-bottom: 24px;">
-                                    <tr>
-                                        <td style="padding: 16px;">
-                                            <p style="margin: 0; color: #92400e; font-size: 14px;">
-                                                <strong>Note:</strong> <%= (msg && msg.downloadNote) ? msg.downloadNote : "The \"Get the App\" button will automatically detect your device and take you to the Play Store (Android) or App Store (iOS). Once installed, open the app and accept your invitation!" %>
-                                            </p>
-                                        </td>
-                                    </tr>
-                                </table>
-                            <% } %>
-
-                            <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                                <%= (msg && msg.expireNote) ? msg.expireNote : "This invitation will expire in 7 days. If you don't want to join this group, you can simply ignore this email." %>
-                            </p>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 24px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
-                                <%= (msg && msg.footerSent) ? msg.footerSent : "This email was sent by Evenly. If you have any questions, please contact us." %>
-                            </p>
-                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © <%= year %> <%= (msg && msg.copyright) ? msg.copyright : "Evenly. All rights reserved." %>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" valign="top" style="padding:0;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; border-collapse:separate;">
+          <!-- Header -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:32px 40px; border-top-left-radius:16px; border-top-right-radius:16px;">
+              <p style="font-size:28px; font-weight:800; color:#ffffff; margin:0; letter-spacing:-0.5px;"><%= appName %></p>
+              <p style="font-size:12px; color:#ffffff; opacity:0.85; margin-top:4px; letter-spacing:1.5px; text-transform:uppercase;"><%= subtitle %></p>
             </td>
-        </tr>
-    </table>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td bgcolor="#000000" style="background-color:#000000; padding:40px;">
+              <h1 style="font-size:22px; font-weight:700; color:#f3f4f6; margin:0 0 20px 0;">
+                <% if (isExistingUser) { %>
+                  <%= (msg && msg.inviteHeadingExisting) ? msg.inviteHeadingExisting : "You've been invited to a group!" %>
+                <% } else { %>
+                  <%= (msg && msg.inviteHeadingNew) ? msg.inviteHeadingNew : "Welcome to " + appName + "!" %>
+                <% } %>
+              </h1>
+
+              <!-- Group info card -->
+              <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #4f46e5; border-radius:10px; margin:0 0 24px 0;">
+                <tr>
+                  <td align="center" style="padding:18px 20px; text-align:center;">
+                    <p style="margin:0 0 6px 0; font-size:18px; font-weight:700; color:#f3f4f6;"><%= groupName %></p>
+                    <p style="margin:0; color:#a5b4fc; font-size:13px;"><%= (msg && msg.invitedByLabel) ? msg.invitedByLabel : 'Invited by' %> <strong style="color:#c7d2fe;"><%= inviterName %></strong></p>
+                  </td>
+                </tr>
+              </table>
+
+              <% if (isExistingUser) { %>
+                <p style="font-size:15px; color:#9ca3af; line-height:1.7; margin:0 0 24px 0;">
+                  <% if (msg && msg.bodyExisting) { %><%= msg.bodyExisting %><% } else { %><strong style="color:#f3f4f6;"><%= inviterName %></strong> has invited you to join the group "<strong style="color:#f3f4f6;"><%= groupName %></strong>" on <%= appName %>. Click the button below to accept the invitation and start sharing expenses with your group.<% } %>
+                </p>
+              <% } else { %>
+                <p style="font-size:15px; color:#9ca3af; line-height:1.7; margin:0 0 24px 0;">
+                  <% if (msg && msg.bodyNew) { %><%= msg.bodyNew %><% } else { %><strong style="color:#f3f4f6;"><%= inviterName %></strong> has invited you to join the group "<strong style="color:#f3f4f6;"><%= groupName %></strong>" on <%= appName %>. <%= appName %> makes it easy to split expenses, track who owes what, and settle up with friends, family, or colleagues.<% } %>
+                </p>
+
+                <h2 style="font-size:16px; font-weight:700; color:#f3f4f6; margin:0 0 14px 0;"><%= (msg && msg.whatYouCanDo) ? msg.whatYouCanDo : "What you can do with " + appName + ":" %></h2>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                  <tr><td style="padding:8px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:30px; font-size:18px;">💰</td>
+                        <td style="color:#9ca3af; font-size:14px; line-height:1.6;"><%= (msg && msg.feature1) ? msg.feature1 : "Split bills and expenses easily" %></td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                  <tr><td style="padding:8px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:30px; font-size:18px;">📊</td>
+                        <td style="color:#9ca3af; font-size:14px; line-height:1.6;"><%= (msg && msg.feature2) ? msg.feature2 : "Track who owes what in real-time" %></td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                  <tr><td style="padding:8px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:30px; font-size:18px;">🤝</td>
+                        <td style="color:#9ca3af; font-size:14px; line-height:1.6;"><%= (msg && msg.feature3) ? msg.feature3 : "Settle up with group members" %></td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                  <tr><td style="padding:8px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:30px; font-size:18px;">📱</td>
+                        <td style="color:#9ca3af; font-size:14px; line-height:1.6;"><%= (msg && msg.feature4) ? msg.feature4 : "Access from any device" %></td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                </table>
+              <% } %>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:8px 0 16px 0;">
+                    <a href="<%= invitationLink %>" style="display:inline-block; padding:16px 40px; background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%); color:#ffffff !important; text-decoration:none; border-radius:10px; font-weight:700; font-size:16px; letter-spacing:0.3px;">
+                      <% if (isExistingUser) { %>
+                        <%= (msg && msg.acceptInvitation) ? msg.acceptInvitation : "Accept Invitation" %>
+                      <% } else { %>
+                        <%= (msg && msg.openInBrowser) ? msg.openInBrowser : "Open in Browser" %>
+                      <% } %>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <% if (!isExistingUser) { %>
+                <!-- Download box (card) -->
+                <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #4f46e5; border-radius:10px; margin:16px 0 0 0;">
+                  <tr>
+                    <td align="center" style="padding:20px; text-align:center;">
+                      <p style="margin:0 0 8px 0; font-size:15px; font-weight:700; color:#f3f4f6;">📱 <%= (msg && msg.downloadBoxTitle) ? msg.downloadBoxTitle : "Download the " + appName + " App" %></p>
+                      <p style="margin:0 0 16px 0; color:#a5b4fc; font-size:13px; line-height:1.6;">
+                        <%= (msg && msg.downloadBoxText) ? msg.downloadBoxText : "For the best experience, download our mobile app and accept the invitation there!" %>
+                      </p>
+                      <a href="<%= appDownloadLink %>" style="display:inline-block; padding:14px 32px; background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%); color:#ffffff !important; text-decoration:none; border-radius:10px; font-weight:700; font-size:15px;">
+                        📲 <%= (msg && msg.getTheApp) ? msg.getTheApp : "Get the App" %>
+                      </a>
+                      <p style="margin:14px 0 0 0; color:#9ca3af; font-size:12px;">
+                        <%= (msg && msg.worksOnDevices) ? msg.worksOnDevices : "Works on both Android and iOS" %>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Note (card) -->
+                <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #5a4520; border-radius:10px; margin-top:16px;">
+                  <tr>
+                    <td align="center" style="padding:14px 18px; font-size:13px; color:#fbbf24; line-height:1.6; text-align:center;">
+                      <strong style="color:#fcd34d;">Note:</strong> <%= (msg && msg.downloadNote) ? msg.downloadNote : "The \"Get the App\" button will automatically detect your device and take you to the Play Store (Android) or App Store (iOS). Once installed, open the app and accept your invitation!" %>
+                    </td>
+                  </tr>
+                </table>
+              <% } %>
+
+              <!-- Expiry (card) -->
+              <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #5a4520; border-radius:10px; margin-top:20px;">
+                <tr>
+                  <td align="center" style="padding:14px 18px; font-size:13px; color:#fbbf24; line-height:1.6; text-align:center;">
+                    <%= (msg && msg.expireNote) ? msg.expireNote : "This invitation will expire in 7 days. If you don't want to join this group, you can simply ignore this email." %>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0 0;">
+                <tr><td bgcolor="#2d2d3d" height="1" style="background-color:#2d2d3d; height:1px; line-height:1px; font-size:0;">&nbsp;</td></tr>
+              </table>
+
+              <p style="font-size:13px; color:#9ca3af; line-height:1.7; margin:20px 0 0 0;">
+                <%= (msg && msg.footerSent) ? msg.footerSent : "This email was sent by " + appName + ". If you have any questions, please contact us." %>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:24px 40px 32px; border-bottom-left-radius:16px; border-bottom-right-radius:16px;">
+              <p style="font-size:13px; font-weight:600; color:#ffffff; margin:0 0 4px 0;"><a href="<%= orgUrl %>" target="_blank" style="color:#ffffff; text-decoration:none;"><%= appName %></a> &middot; <%= orgSlug %></p>
+              <p style="font-size:11px; color:#ffffff; opacity:0.75; margin:0;">Powered By <a href="https://nxtgenaidev.com/" target="_blank" style="color:#ffffff; text-decoration:underline;">NextGen AI Dev Private Limited</a>. &copy; <%= year %> All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

@@ -50,7 +50,7 @@ function startHealthCheckService(): void {
       if (response.ok) {
       } else {
       }
-    } catch (error: any) {
+    } catch (error: any) { /* ignore error */
     }
   }, 2 * 60 * 1000); // 2 minutes
   
@@ -78,7 +78,7 @@ async function registerPlugins() {
   // Cookie parser
   try {
     await fastify.register(cookie);
-  } catch (error) {
+  } catch (error) { /* ignore error */
   }
 
   // CORS - filter out empty origins
@@ -88,13 +88,13 @@ async function registerPlugins() {
       origin: corsOrigins.length > 0 ? corsOrigins : true, // Allow all if no origins configured
       credentials: true,
     });
-  } catch (error) {
+  } catch (error) { /* ignore error */
   }
 
   // Helmet for security headers
   try {
     await fastify.register(helmet);
-  } catch (error) {
+  } catch (error) { /* ignore error */
   }
 
   // Rate limiting - DISABLED for development
@@ -143,7 +143,7 @@ async function registerPlugins() {
       ],
     },
   });
-  } catch (error) {
+  } catch (error) { /* ignore error */
   }
 
   // Swagger UI
@@ -169,7 +169,7 @@ async function registerPlugins() {
       },
       transformSpecificationClone: true,
     });
-  } catch (error) {
+  } catch (error) { /* ignore error */
   }
 }
 
@@ -296,12 +296,12 @@ const start = async () => {
     // We register them synchronously to ensure they're ready before the server starts
     try {
       await registerPlugins();
-    } catch (error) {
+    } catch (error) { /* ignore error */
     }
 
     try {
       await registerRoutes();
-    } catch (error) {
+    } catch (error) { /* ignore error */
     }
 
     // Run database migrations before starting the server

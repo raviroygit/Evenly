@@ -1,6 +1,5 @@
 import { eq, and, desc, count, inArray } from 'drizzle-orm';
 import { db, groups, groupMembers, users, type Group, type NewGroup, type GroupMember, type NewGroupMember } from '../db';
-import { UserService } from './userService';
 import { NotFoundError, ForbiddenError, ConflictError, DatabaseError, ValidationError } from '../utils/errors';
 
 export class GroupService {

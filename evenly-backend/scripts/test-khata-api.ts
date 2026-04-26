@@ -197,7 +197,7 @@ class KhataAPITester {
     this.log('Step 6: Testing PUT /api/khata/customers/:id', 'info');
     const updateData = {
       name: 'Updated Test Customer',
-      phone: '+9876543210',
+      phone: '+91XXXXXXXXXX',
     };
 
     const result = await this.makeRequest('PUT', `/api/khata/customers/${this.createdCustomerId}`, updateData);

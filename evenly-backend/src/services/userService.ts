@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db, users, type User, type NewUser } from '../db';
+import { db, users, type User } from '../db';
 import { AuthService } from '../utils/auth';
 import { NotFoundError, DatabaseError } from '../utils/errors';
 import { UUIDUtils } from '../utils/uuid';
@@ -256,18 +256,14 @@ export class UserService {
     totalOwed: number;
     totalOwing: number;
   }> {
-    try {
-      // This would require joins with other tables
-      // For now, return basic stats
-      return {
-        totalGroups: 0,
-        totalExpenses: 0,
-        totalOwed: 0,
-        totalOwing: 0,
-      };
-    } catch (error) {
-      throw new DatabaseError('Failed to fetch user statistics');
-    }
+    // This would require joins with other tables
+    // For now, return basic stats
+    return {
+      totalGroups: 0,
+      totalExpenses: 0,
+      totalOwed: 0,
+      totalOwing: 0,
+    };
   }
 
   /**

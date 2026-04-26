@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, or, like, sql } from 'drizzle-orm';
+import { eq, and, desc, or, like } from 'drizzle-orm';
 import {
   db,
   khataCustomers,
@@ -9,7 +9,7 @@ import {
   type KhataTransaction,
   type NewKhataTransaction,
 } from '../db';
-import { NotFoundError, ValidationError, DatabaseError } from '../utils/errors';
+import { NotFoundError, DatabaseError } from '../utils/errors';
 import { sendKhataTransactionEmail, sendCustomerAddedEmail } from './emailService';
 import { sendKhataTransactionPush, sendKhataTransactionUpdatedPush, sendKhataTransactionDeletedPush, sendKhataCustomerAddedPush } from './pushNotificationService';
 

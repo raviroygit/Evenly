@@ -1,10 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import axios from 'axios';
 import { authenticateToken } from '../middlewares/auth';
-import { AuthenticatedRequest } from '../types';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { db, users, organizationMembers, organizations, appConfig, expenses, payments, groupInvitations, groups, groupMembers, referrals } from '../db';
-import { eq, or, and, ne, inArray, sql } from 'drizzle-orm';
+import { eq, or, and, ne } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { config } from '../config/config';
 import { AuthService } from '../utils/auth';

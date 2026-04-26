@@ -2,7 +2,7 @@ import * as http2 from 'http2';
 import * as fs from 'fs';
 import * as jwt from 'jsonwebtoken';
 import * as admin from 'firebase-admin';
-import { eq, and, inArray, or } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db, deviceTokens, users } from '../db';
 import { config } from '../config/config';
 import { t as translate, getUserLanguage, getUserCurrencySymbol } from '../i18n/emailTranslator';

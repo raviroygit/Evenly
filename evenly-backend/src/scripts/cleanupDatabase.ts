@@ -92,7 +92,6 @@ async function cleanupDatabase(): Promise<CleanupStats> {
   };
 
 
-  try {
     // Use raw SQL with CASCADE to handle foreign key constraints
 
     const tablesToTruncate = [
@@ -116,15 +115,14 @@ async function cleanupDatabase(): Promise<CleanupStats> {
       } catch (error: any) {
         // Table doesn't exist yet
         if (error.code === '42P01') {
+          // ignore
         } else {
+          console.error(`Failed to truncate ${tableName}:`, error);
         }
       }
     }
 
     return stats;
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**
@@ -149,23 +147,19 @@ async function countDocuments() {
     }
   };
 
-  try {
-    const counts = {
-      users: await safeCount(users, 'users'),
-      groups: await safeCount(groups, 'groups'),
-      groupMembers: await safeCount(groupMembers, 'groupMembers'),
-      expenses: await safeCount(expenses, 'expenses'),
-      expenseSplits: await safeCount(expenseSplits, 'expenseSplits'),
-      payments: await safeCount(payments, 'payments'),
-      khataCustomers: await safeCount(khataCustomers, 'khataCustomers'),
-      khataTransactions: await safeCount(khataTransactions, 'khataTransactions'),
-      organizationMembers: await safeCount(organizationMembers, 'organizationMembers'),
-      organizations: await safeCount(organizations, 'organizations'),
-    };
-    return counts;
-  } catch (error) {
-    throw error;
-  }
+  const counts = {
+    users: await safeCount(users, 'users'),
+    groups: await safeCount(groups, 'groups'),
+    groupMembers: await safeCount(groupMembers, 'groupMembers'),
+    expenses: await safeCount(expenses, 'expenses'),
+    expenseSplits: await safeCount(expenseSplits, 'expenseSplits'),
+    payments: await safeCount(payments, 'payments'),
+    khataCustomers: await safeCount(khataCustomers, 'khataCustomers'),
+    khataTransactions: await safeCount(khataTransactions, 'khataTransactions'),
+    organizationMembers: await safeCount(organizationMembers, 'organizationMembers'),
+    organizations: await safeCount(organizations, 'organizations'),
+  };
+  return counts;
 }
 
 /**
@@ -189,7 +183,9 @@ async function main() {
     const allClean = Object.values(afterCounts).every(count => count === 0);
 
     if (allClean) {
+      console.log('Database cleanup successful.');
     } else {
+      console.error('Database cleanup failed, some records remain.', afterCounts);
     }
 
 

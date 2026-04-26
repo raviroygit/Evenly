@@ -1,140 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
-    <title>Expense Updated - EvenlySplit</title>
-    <style>
-        /* Force light mode rendering */
-        :root {
-            color-scheme: light only;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5 !important;
-        }
-        /* Prevent dark mode overrides */
-        * {
-            color-scheme: light only !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Expense Updated - <%= appName %></title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5 !important;">
-    <!-- Wrapper table for email client compatibility -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
-        <tr>
-            <td align="center">
-                <!-- Main container -->
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 30px; text-align: center; background-color: #ffffff;">
-                            <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: #6366f1;">Evenly</h1>
-                            <h2 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Expense Updated</h2>
-                            <p style="margin: 0; font-size: 16px; color: #6b7280;"><%= updatedBy.name %> has updated an expense</p>
-                        </td>
-                    </tr>
-
-                    <!-- Badge -->
-                    <tr>
-                        <td align="center" style="padding: 0 30px 20px 30px; background-color: #ffffff;">
-                            <span style="display: inline-block; background-color: #fbbf24; color: #78350f; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 600;">📝 UPDATED</span>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 0 30px 40px 30px; background-color: #ffffff;">
-                            <!-- Expense Card -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9fafb; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
-                                <tr>
-                                    <td style="padding: 24px;">
-                                        <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1f2937;"><%= expense.title %></h3>
-
-                                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                            <tr>
-                                                <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Updated by:</span>
-                                                    <span style="color: #6b7280;"><%= updatedBy.name %></span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Group:</span>
-                                                    <span style="color: #6b7280;"><%= group.name %></span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Date:</span>
-                                                    <span style="color: #6b7280;"><%= new Date(expense.date).toLocaleDateString() %></span>
-                                                </td>
-                                            </tr>
-                                            <% if (expense.description) { %>
-                                            <tr>
-                                                <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Description:</span>
-                                                    <span style="color: #6b7280;"><%= expense.description %></span>
-                                                </td>
-                                            </tr>
-                                            <% } %>
-                                            <tr>
-                                                <td style="padding: 4px 0;">
-                                                    <span style="font-weight: 600; color: #374151;">Category:</span>
-                                                    <span style="color: #6b7280;"><%= expense.category %></span>
-                                                </td>
-                                            </tr>
-                                        </table>
-
-                                        <div style="margin: 20px 0; font-size: 28px; font-weight: 700; color: #f59e0b;">
-                                            ₹<%= parseFloat(expense.totalAmount).toFixed(2) %>
-                                        </div>
-
-                                        <!-- Split Info -->
-                                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border: 2px solid #fcd34d; border-radius: 6px; margin-top: 16px;">
-                                            <tr>
-                                                <td style="padding: 16px;">
-                                                    <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">Your updated share:</div>
-                                                    <div style="font-size: 20px; font-weight: 600; color: #92400e;">
-                                                        ₹<%= parseFloat(userSplit.amount).toFixed(2) %>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- CTA Button -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td align="center" style="padding: 20px 0;">
-                                        <a href="<%= appOpenLink %>" style="display: inline-block; padding: 16px 40px; background-color: #6366f1; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            📱 Open in App
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 24px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
-                                This is an automated notification from Evenly.
-                            </p>
-                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                © <%= year %> Evenly. All rights reserved.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" valign="top" style="padding:0;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; border-collapse:separate;">
+          <!-- Header -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:32px 40px; border-top-left-radius:16px; border-top-right-radius:16px;">
+              <p style="font-size:28px; font-weight:800; color:#ffffff; margin:0; letter-spacing:-0.5px;"><%= appName %></p>
+              <p style="font-size:12px; color:#ffffff; opacity:0.85; margin-top:4px; letter-spacing:1.5px; text-transform:uppercase;"><%= subtitle %></p>
             </td>
-        </tr>
-    </table>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td bgcolor="#000000" style="background-color:#000000; padding:40px;">
+              <h1 style="font-size:22px; font-weight:700; color:#f3f4f6; margin:0 0 8px 0;">Expense Updated</h1>
+              <p style="font-size:14px; color:#9ca3af; line-height:1.7; margin:0 0 18px 0;"><strong style="color:#f3f4f6;"><%= updatedBy.name %></strong> has updated an expense.</p>
+
+              <!-- Updated badge -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
+                <tr>
+                  <td style="padding:6px 14px; background-color:#1a1a24; border:1px solid #5a4520; border-radius:999px; font-size:12px; font-weight:700; color:#fbbf24; letter-spacing:0.5px;">📝 UPDATED</td>
+                </tr>
+              </table>
+
+              <!-- Expense card (content centered) -->
+              <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #5a4520; border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:22px; text-align:center;">
+                    <p style="margin:0 0 18px 0; font-size:18px; font-weight:700; color:#f3f4f6;"><%= expense.title %></p>
+
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr><td align="center" style="padding:6px 0; text-align:center;">
+                        <p style="margin:0 0 2px 0; color:#6b7280; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;">Updated by</p>
+                        <p style="margin:0; color:#f3f4f6; font-size:14px; font-weight:600;"><%= updatedBy.name %></p>
+                      </td></tr>
+                      <tr><td align="center" style="padding:6px 0; text-align:center;">
+                        <p style="margin:0 0 2px 0; color:#6b7280; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;">Group</p>
+                        <p style="margin:0; color:#f3f4f6; font-size:14px; font-weight:600;"><%= group.name %></p>
+                      </td></tr>
+                      <tr><td align="center" style="padding:6px 0; text-align:center;">
+                        <p style="margin:0 0 2px 0; color:#6b7280; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;">Date</p>
+                        <p style="margin:0; color:#f3f4f6; font-size:14px; font-weight:600;"><%= new Date(expense.date).toLocaleDateString() %></p>
+                      </td></tr>
+                      <% if (expense.description) { %>
+                      <tr><td align="center" style="padding:6px 0; text-align:center;">
+                        <p style="margin:0 0 2px 0; color:#6b7280; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;">Description</p>
+                        <p style="margin:0; color:#f3f4f6; font-size:14px; font-weight:600;"><%= expense.description %></p>
+                      </td></tr>
+                      <% } %>
+                      <tr><td align="center" style="padding:6px 0; text-align:center;">
+                        <p style="margin:0 0 2px 0; color:#6b7280; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;">Category</p>
+                        <p style="margin:0; color:#f3f4f6; font-size:14px; font-weight:600;"><%= expense.category %></p>
+                      </td></tr>
+                    </table>
+
+                    <p style="margin:18px 0 0 0; font-size:30px; font-weight:800; color:#fbbf24; letter-spacing:-0.5px;">
+                      ₹<%= parseFloat(expense.totalAmount).toFixed(2) %>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Your share card -->
+              <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #5a4520; border-radius:10px; margin-top:16px;">
+                <tr>
+                  <td align="center" style="padding:18px 20px; text-align:center;">
+                    <p style="margin:0 0 6px 0; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#fbbf24; font-weight:700;">Your updated share</p>
+                    <p style="margin:0; font-size:24px; font-weight:800; color:#fcd34d;">
+                      ₹<%= parseFloat(userSplit.amount).toFixed(2) %>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:28px 0 8px 0;">
+                    <a href="<%= appOpenLink %>" style="display:inline-block; padding:16px 40px; background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%); color:#ffffff !important; text-decoration:none; border-radius:10px; font-weight:700; font-size:16px; letter-spacing:0.3px;">📱 Open in App</a>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0 0;">
+                <tr><td bgcolor="#2d2d3d" height="1" style="background-color:#2d2d3d; height:1px; line-height:1px; font-size:0;">&nbsp;</td></tr>
+              </table>
+
+              <p style="font-size:13px; color:#9ca3af; line-height:1.7; margin:20px 0 0 0;">This is an automated notification from <%= appName %>.</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:24px 40px 32px; border-bottom-left-radius:16px; border-bottom-right-radius:16px;">
+              <p style="font-size:13px; font-weight:600; color:#ffffff; margin:0 0 4px 0;"><a href="<%= orgUrl %>" target="_blank" style="color:#ffffff; text-decoration:none;"><%= appName %></a> &middot; <%= orgSlug %></p>
+              <p style="font-size:11px; color:#ffffff; opacity:0.75; margin:0;">Powered By <a href="https://nxtgenaidev.com/" target="_blank" style="color:#ffffff; text-decoration:underline;">NextGen AI Dev Private Limited</a>. &copy; <%= year %> All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

@@ -1,7 +1,6 @@
-import { eq, and, desc, sum, count } from 'drizzle-orm';
+import { eq, and, desc, count } from 'drizzle-orm';
 import { db, expenses, expenseSplits, userBalances, groups, users, groupMembers, type Expense, type NewExpense, type ExpenseSplit, type NewExpenseSplit } from '../db';
 import { GroupService } from './groupService';
-import { UserService } from './userService';
 import { NotFoundError, ForbiddenError, ValidationError, DatabaseError } from '../utils/errors';
 import { sendExpenseNotificationEmail } from './emailService';
 import { sendExpenseCreatedPush, sendExpenseUpdatedPush, sendExpenseDeletedPush } from './pushNotificationService';
@@ -652,15 +651,16 @@ export class ExpenseService {
 
     // Validate split amounts based on split type
     switch (expenseData.splitType) {
-      case 'equal':
+      case 'equal': {
         // Validate that all splits sum to the total (allow remainder distribution to one member)
         const equalSplitTotal = splits.reduce((s, split) => s + parseFloat(split.amount), 0);
         if (Math.abs(equalSplitTotal - totalAmount) > 0.01) {
           throw new ValidationError('Equal split amounts do not match total');
         }
         break;
+      }
 
-      case 'percentage':
+      case 'percentage': {
         let totalPercentage = 0;
         for (const split of splits) {
           if (!split.percentage) {
@@ -672,8 +672,9 @@ export class ExpenseService {
           throw new ValidationError('Percentages must sum to 100%');
         }
         break;
+      }
 
-      case 'shares':
+      case 'shares': {
         let totalShares = 0;
         for (const split of splits) {
           if (!split.shares || split.shares <= 0) {
@@ -688,8 +689,9 @@ export class ExpenseService {
           }
         }
         break;
+      }
 
-      case 'exact':
+      case 'exact': {
         let totalSplitAmount = 0;
         for (const split of splits) {
           totalSplitAmount += parseFloat(split.amount);
@@ -698,6 +700,7 @@ export class ExpenseService {
           throw new ValidationError('Exact split amounts must sum to total amount');
         }
         break;
+      }
     }
   }
 

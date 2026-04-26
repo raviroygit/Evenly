@@ -1,146 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
-    <title>Welcome to EvenlySplit!</title>
-    <style>
-        /* Force light mode rendering */
-        :root {
-            color-scheme: light only;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5 !important;
-        }
-        /* Prevent dark mode overrides */
-        * {
-            color-scheme: light only !important;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Welcome to <%= appName %></title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5 !important;">
-    <!-- Wrapper table for email client compatibility -->
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
-        <tr>
-            <td align="center">
-                <!-- Main container -->
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 30px; text-align: center; background-color: #6366f1; color: #ffffff;">
-                            <h1 style="margin: 0 0 8px 0; font-size: 36px; font-weight: 700; color: #ffffff;">Welcome to Evenly!</h1>
-                            <p style="margin: 0; font-size: 16px; color: #e0e7ff;">Expense sharing made simple</p>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style="padding: 40px 30px; background-color: #ffffff;">
-                            <!-- Welcome Message -->
-                            <h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Hey <%= userName %>!</h2>
-                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px;">
-                                Thanks for signing up for EvenlySplit. We're excited to have you on board! Here's what you can do to get started:
-                            </p>
-
-                            <!-- Features -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
-                                <tr>
-                                    <td style="padding: 12px 0;">
-                                        <table cellpadding="0" cellspacing="0" border="0">
-                                            <tr>
-                                                <td style="padding-right: 12px; vertical-align: top; font-size: 20px;">1.</td>
-                                                <td>
-                                                    <strong style="color: #1f2937; font-size: 16px;">Create a Group</strong>
-                                                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Start a group for your trip, flatmates, or any shared expense.</p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 0;">
-                                        <table cellpadding="0" cellspacing="0" border="0">
-                                            <tr>
-                                                <td style="padding-right: 12px; vertical-align: top; font-size: 20px;">2.</td>
-                                                <td>
-                                                    <strong style="color: #1f2937; font-size: 16px;">Invite Friends</strong>
-                                                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Add members to your group by sending them an email invitation.</p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 0;">
-                                        <table cellpadding="0" cellspacing="0" border="0">
-                                            <tr>
-                                                <td style="padding-right: 12px; vertical-align: top; font-size: 20px;">3.</td>
-                                                <td>
-                                                    <strong style="color: #1f2937; font-size: 16px;">Add Expenses</strong>
-                                                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">Log any expense and split it equally or by custom amounts.</p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 0;">
-                                        <table cellpadding="0" cellspacing="0" border="0">
-                                            <tr>
-                                                <td style="padding-right: 12px; vertical-align: top; font-size: 20px;">4.</td>
-                                                <td>
-                                                    <strong style="color: #1f2937; font-size: 16px;">Settle Up</strong>
-                                                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">See who owes what and settle balances with one tap.</p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- Khata Box -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; margin-bottom: 24px;">
-                                <tr>
-                                    <td style="padding: 20px;">
-                                        <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #065f46;">Also try Khata!</h3>
-                                        <p style="margin: 0; color: #047857; font-size: 14px;">
-                                            Keep a digital ledger with anyone &mdash; track who owes you and who you owe, even outside groups.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- CTA Button -->
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td align="center" style="padding: 20px 0;">
-                                        <a href="<%= appOpenLink %>" style="display: inline-block; padding: 16px 40px; background-color: #6366f1; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                                            Open EvenlySplit
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 24px 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
-                                Happy splitting!
-                            </p>
-                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                &copy; <%= year %> Evenly. All rights reserved.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" valign="top" style="padding:0;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; border-collapse:separate;">
+          <!-- Header -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:32px 40px; border-top-left-radius:16px; border-top-right-radius:16px;">
+              <p style="font-size:28px; font-weight:800; color:#ffffff; margin:0; letter-spacing:-0.5px;"><%= appName %></p>
+              <p style="font-size:12px; color:#ffffff; opacity:0.85; margin-top:4px; letter-spacing:1.5px; text-transform:uppercase;"><%= subtitle %></p>
             </td>
-        </tr>
-    </table>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td bgcolor="#000000" style="background-color:#000000; padding:40px;">
+              <h1 style="font-size:22px; font-weight:700; color:#f3f4f6; margin:0 0 12px 0;">Hey <%= userName %>!</h1>
+              <p style="font-size:15px; color:#9ca3af; line-height:1.7; margin:0 0 28px 0;">
+                Thanks for signing up for <strong style="color:#f3f4f6;"><%= appName %></strong>. We're excited to have you on board! Here's what you can do to get started:
+              </p>
+
+              <!-- Numbered features -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:36px; font-size:13px; font-weight:700; color:#a5b4fc; letter-spacing:1px; white-space:nowrap;">1.</td>
+                        <td>
+                          <p style="margin:0 0 4px 0; color:#f3f4f6; font-size:16px; font-weight:700;">Create a Group</p>
+                          <p style="margin:0; color:#9ca3af; font-size:13px; line-height:1.6;">Start a group for your trip, flatmates, or any shared expense.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:36px; font-size:13px; font-weight:700; color:#a5b4fc; letter-spacing:1px; white-space:nowrap;">2.</td>
+                        <td>
+                          <p style="margin:0 0 4px 0; color:#f3f4f6; font-size:16px; font-weight:700;">Invite Friends</p>
+                          <p style="margin:0; color:#9ca3af; font-size:13px; line-height:1.6;">Add members to your group by sending them an email invitation.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:36px; font-size:13px; font-weight:700; color:#a5b4fc; letter-spacing:1px; white-space:nowrap;">3.</td>
+                        <td>
+                          <p style="margin:0 0 4px 0; color:#f3f4f6; font-size:16px; font-weight:700;">Add Expenses</p>
+                          <p style="margin:0; color:#9ca3af; font-size:13px; line-height:1.6;">Log any expense and split it equally or by custom amounts.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td valign="top" style="padding-right:14px; width:36px; font-size:13px; font-weight:700; color:#a5b4fc; letter-spacing:1px; white-space:nowrap;">4.</td>
+                        <td>
+                          <p style="margin:0 0 4px 0; color:#f3f4f6; font-size:16px; font-weight:700;">Settle Up</p>
+                          <p style="margin:0; color:#9ca3af; font-size:13px; line-height:1.6;">See who owes what and settle balances with one tap.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Khata callout (card — content centered) -->
+              <table role="presentation" width="100%" bgcolor="#1a1a24" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a24; border:1px solid #4f46e5; border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:18px 20px; text-align:center;">
+                    <p style="margin:0 0 6px 0; font-size:15px; font-weight:600; color:#f3f4f6;">Also try Khata!</p>
+                    <p style="margin:0; color:#a5b4fc; font-size:13px; line-height:1.6;">Keep a digital ledger with anyone &mdash; track who owes you and who you owe, even outside groups.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:28px 0 8px 0;">
+                    <a href="<%= appOpenLink %>" style="display:inline-block; padding:16px 40px; background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%); color:#ffffff !important; text-decoration:none; border-radius:10px; font-weight:700; font-size:16px; letter-spacing:0.3px;">Open <%= appName %></a>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0 0;">
+                <tr><td bgcolor="#2d2d3d" height="1" style="background-color:#2d2d3d; height:1px; line-height:1px; font-size:0;">&nbsp;</td></tr>
+              </table>
+
+              <p style="font-size:13px; color:#9ca3af; line-height:1.7; margin:20px 0 0 0;">Happy splitting!</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="#6366f1" align="center" style="background-color:#6366f1; background-image:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%); padding:24px 40px 32px; border-bottom-left-radius:16px; border-bottom-right-radius:16px;">
+              <p style="font-size:13px; font-weight:600; color:#ffffff; margin:0 0 4px 0;"><a href="<%= orgUrl %>" target="_blank" style="color:#ffffff; text-decoration:none;"><%= appName %></a> &middot; <%= orgSlug %></p>
+              <p style="font-size:11px; color:#ffffff; opacity:0.75; margin:0;">Powered By <a href="https://nxtgenaidev.com/" target="_blank" style="color:#ffffff; text-decoration:underline;">NextGen AI Dev Private Limited</a>. &copy; <%= year %> All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

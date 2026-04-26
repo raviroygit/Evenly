@@ -3,10 +3,7 @@ import { ExpenseService } from '../services/expenseService';
 import {
   createExpenseSchema,
   updateExpenseSchema,
-  paginationSchema,
-  type CreateExpenseInput,
-  type UpdateExpenseInput,
-  type PaginationQuery
+  paginationSchema
 } from '../utils/validation';
 import { AuthenticatedRequest } from '../types';
 import { asyncHandler } from '../utils/errors';
@@ -66,10 +63,10 @@ export class ExpenseController {
                 // Parse JSON string for splits array
                 try {
                   data.splits = JSON.parse(value as string);
-                } catch (e) {
+                } catch (e) { /* ignore error */
                 }
               }
-            } catch (fieldError) {
+            } catch (fieldError) { /* ignore error */
             }
           }
         }
@@ -211,10 +208,10 @@ export class ExpenseController {
                 // Parse JSON string for splits array
                 try {
                   data.splits = JSON.parse(value as string);
-                } catch (e) {
+                } catch (e) { /* ignore error */
                 }
               }
-            } catch (fieldError) {
+            } catch (fieldError) { /* ignore error */
             }
           }
         }

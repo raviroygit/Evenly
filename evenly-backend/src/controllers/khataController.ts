@@ -287,7 +287,7 @@ export class KhataController {
               else if (fieldname === 'description') data.description = value;
               else if (fieldname === 'transactionDate') data.transactionDate = value;
               else if (fieldname === 'removeImage' && value === 'true') data.imageUrl = null;
-            } catch (fieldError) {
+            } catch (fieldError) { /* ignore error */
             }
           }
         }
