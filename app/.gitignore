@@ -25,3 +25,7 @@ web-build/
 
 # Android release signing (do not commit passwords)
 keystore.properties
+
+# Firebase config (contains project keys; provide out-of-band per environment)
+google-services.json
+GoogleService-Info.plist
