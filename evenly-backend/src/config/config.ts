@@ -69,7 +69,7 @@ export const config = {
         : process.env.NODE_ENV === 'production',
     },
     fcm: {
-      projectId: process.env.FCM_PROJECT_ID || 'nextgenai-f6743',
+      projectId: process.env.FCM_PROJECT_ID || 'nextgen-ai-dev',
       // Service-account credentials for sending FCM off-GCP (no metadata server
       // on Coolify/Hetzner). Path wins over inline JSON; both fall back to
       // applicationDefault() (GOOGLE_APPLICATION_CREDENTIALS / GCP-attached SA).

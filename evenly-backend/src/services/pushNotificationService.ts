@@ -17,17 +17,15 @@ let apnsJwtGeneratedAt = 0;
 const DEFAULT_APNS_KEY_PATH = './certs/apns-key.p8';
 
 /**
- * Normalize a credential blob supplied via `docker --env-file`, which passes
- * values verbatim: strip surrounding quotes and convert literal "\n" into real
- * newlines so ES256 / JSON parsers can ingest it. Dotenv-parsed values are
- * already clean, so this is a no-op for those.
+ * Strip surrounding quotes that `docker --env-file` keeps verbatim (dotenv
+ * already removes them, so this is a no-op for .env reads).
  */
-function normalizeEnvBlob(raw: string): string {
-  let v = raw.trim();
+function stripWrappingQuotes(raw: string): string {
+  const v = raw.trim();
   if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-    v = v.slice(1, -1);
+    return v.slice(1, -1);
   }
-  return v.replace(/\\n/g, '\n');
+  return v;
 }
 
 /**
@@ -40,7 +38,8 @@ function getApnsKey(): string {
   if (config.push.apns.keyPath) {
     apnsKey = fs.readFileSync(config.push.apns.keyPath, 'utf8');
   } else if (config.push.apns.key && config.push.apns.key.trim().length > 0) {
-    apnsKey = normalizeEnvBlob(config.push.apns.key);
+    // PEM needs real newlines; env files carry them as literal "\n".
+    apnsKey = stripWrappingQuotes(config.push.apns.key).replace(/\\n/g, '\n');
   } else {
     apnsKey = fs.readFileSync(DEFAULT_APNS_KEY_PATH, 'utf8');
   }
@@ -198,7 +197,9 @@ function getFcmApp(): admin.app.App {
     const body = fs.readFileSync(config.push.fcm.serviceAccountPath, 'utf8');
     credential = admin.credential.cert(JSON.parse(body) as admin.ServiceAccount);
   } else if (config.push.fcm.serviceAccountJson && config.push.fcm.serviceAccountJson.trim().length > 0) {
-    const raw = normalizeEnvBlob(config.push.fcm.serviceAccountJson);
+    // Strip wrapping quotes only — JSON.parse handles the \n escapes inside
+    // private_key natively; converting them to real newlines would be invalid JSON.
+    const raw = stripWrappingQuotes(config.push.fcm.serviceAccountJson);
     credential = admin.credential.cert(JSON.parse(raw) as admin.ServiceAccount);
   } else {
     credential = admin.credential.applicationDefault();
