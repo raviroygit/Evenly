@@ -1,26 +1,79 @@
 {
   "project_info": {
-    "project_number": "946555485799",
-    "project_id": "nextgenai-f6743",
-    "storage_bucket": "nextgenai-f6743.firebasestorage.app"
+    "project_number": "374738393915",
+    "project_id": "nextgen-ai-dev",
+    "storage_bucket": "nextgen-ai-dev.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:946555485799:android:842caae701aea97de7dec2",
+        "mobilesdk_app_id": "1:374738393915:android:1f87b01a6cdcd7949fb51e",
         "android_client_info": {
-          "package_name": "com.nxtgenaidev.evenly"
+          "package_name": "com.clipcam.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "374738393915-6pf5f7vbin610c7qru6ilc6hmp05c52u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyB5egRJnPfrfDB-ZvVXGHaRb60IsL71E1A"
+          "current_key": "AIzaSyCM7nT9ipDTDKYlCh91bJ2VvcEhwSkme3E"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "374738393915-6pf5f7vbin610c7qru6ilc6hmp05c52u.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "374738393915-eselesttf1i99gkh648cea49jidmr771.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.nxtgenai.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:374738393915:android:2394de0fcf46792b9fb51e",
+        "android_client_info": {
+          "package_name": "com.nxtgenaidev.evenly"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "374738393915-6pf5f7vbin610c7qru6ilc6hmp05c52u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCM7nT9ipDTDKYlCh91bJ2VvcEhwSkme3E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "374738393915-6pf5f7vbin610c7qru6ilc6hmp05c52u.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "374738393915-eselesttf1i99gkh648cea49jidmr771.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.nxtgenai.app"
+              }
+            }
+          ]
         }
       }
     }
