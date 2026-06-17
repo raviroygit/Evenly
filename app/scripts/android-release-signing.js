@@ -51,13 +51,17 @@ const RELEASE_SIGNING_CONFIGS = `    signingConfigs {
 
 // Release build: fail if not configured, use release key (no debug fallback)
 const RELEASE_BUILD_TYPE = `        release {
-            if (!useReleaseSigning) {
+            // Only fail when a release artifact is actually being built. Gradle configures
+            // every build type for any task, so an unguarded throw here also breaks debug
+            // builds (e.g. expo run:android -> assembleDebug) when the keystore is absent.
+            def releaseBuildRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+            if (releaseBuildRequested && !useReleaseSigning) {
                 throw new GradleException(
                     "Release signing is not configured. Place evenlysplit-release-key.keystore and keystore.properties in the app root (" + appRoot.absolutePath + "). " +
                     "Play Console expects SHA1: " + PLAY_EXPECTED_SHA1 + ". Do not use the debug keystore for release."
                 )
             }
-            signingConfig signingConfigs.release
+            signingConfig useReleaseSigning ? signingConfigs.release : signingConfigs.debug
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'`;
 
 const DEFAULT_SIGNING_CONFIGS = /    signingConfigs \{\s*\n        debug \{\s*\n            storeFile file\('debug\.keystore'\)\s*\n            storePassword 'android'\s*\n            keyAlias 'androiddebugkey'\s*\n            keyPassword 'android'\s*\n        \}\s*\n    \}/;
