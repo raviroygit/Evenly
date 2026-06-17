@@ -2,7 +2,7 @@
   "expo": {
     "name": "EvenlySplit",
     "slug": "evenly",
-    "version": "2.0.7",
+    "version": "2.0.9",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -44,7 +44,7 @@
         "applinks:evenly.app",
         "applinks:www.evenly.app",
         "applinks:evenlysplit.nxtgenaidev.com",
-        "applinks:evenly-backend-374738393915.us-central1.run.app"
+        "applinks:evenly-api.nxtgenaidev.com"
       ],
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
@@ -56,7 +56,7 @@
       "appleTeamId": "3ZGW2224V2"
     },
     "android": {
-      "versionCode": 22,
+      "versionCode": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -107,7 +107,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "evenly-backend-374738393915.us-central1.run.app",
+              "host": "evenly-api.nxtgenaidev.com",
               "pathPrefix": "/api/app"
             }
           ],

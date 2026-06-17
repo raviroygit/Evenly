@@ -14,7 +14,7 @@ export const config = {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   },
   auth: {
-    serviceUrl: process.env.AUTH_SERVICE_URL || 'https://nxgenaidev-auth-api-374738393915.us-central1.run.app/api/v1/auth',
+    serviceUrl: process.env.AUTH_SERVICE_URL || 'https://auth-api.nxtgenaidev.com/api/v1/auth',
     apiKey: process.env.AUTH_SERVICE_API_KEY || '',
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
@@ -45,9 +45,9 @@ export const config = {
     supportEmail: process.env.SUPPORT_EMAIL || 'ravi140398@gmail.com',
   },
   app: {
-    baseUrl: process.env.APP_BASE_URL || 'https://evenly-backend-374738393915.us-central1.run.app/api/v1',
+    baseUrl: process.env.APP_BASE_URL || 'https://evenly-api.nxtgenaidev.com/api/v1',
     /** Root domain without /api/v1 path — used for smart redirect links */
-    baseUrlRoot: process.env.BASE_URL || process.env.DOMAIN || (process.env.APP_BASE_URL ? process.env.APP_BASE_URL.replace(/\/api\/v1$/, '') : 'https://evenly-backend-374738393915.us-central1.run.app'),
+    baseUrlRoot: process.env.BASE_URL || process.env.DOMAIN || (process.env.APP_BASE_URL ? process.env.APP_BASE_URL.replace(/\/api\/v1$/, '') : 'https://evenly-api.nxtgenaidev.com'),
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',

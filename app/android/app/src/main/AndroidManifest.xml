@@ -49,7 +49,7 @@
       </intent-filter>
       <intent-filter android:autoVerify="true" data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
-        <data android:scheme="https" android:host="evenly-backend-374738393915.us-central1.run.app" android:pathPrefix="/api/app"/>
+        <data android:scheme="https" android:host="evenly-api.nxtgenaidev.com" android:pathPrefix="/api/app"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
