@@ -56,14 +56,25 @@ export const config = {
   },
   push: {
     apns: {
-      keyPath: process.env.APNS_KEY_PATH || './certs/apns-key.p8',
+      // Inline PEM (APNS_KEY) for container/Coolify deploys; explicit path
+      // (APNS_KEY_PATH) wins when set; otherwise fall back to the bundled cert.
+      key: process.env.APNS_KEY || '',
+      keyPath: process.env.APNS_KEY_PATH || '',
       keyId: process.env.APNS_KEY_ID || '9TB3SV933G',
       teamId: process.env.APNS_TEAM_ID || '3ZGW2224V2',
       bundleId: process.env.APNS_BUNDLE_ID || 'com.nxtgenaidev.evenly',
-      production: process.env.NODE_ENV === 'production',
+      // Explicit override (APNS_PRODUCTION=true|false), else derive from NODE_ENV.
+      production: process.env.APNS_PRODUCTION
+        ? process.env.APNS_PRODUCTION === 'true'
+        : process.env.NODE_ENV === 'production',
     },
     fcm: {
       projectId: process.env.FCM_PROJECT_ID || 'nextgenai-f6743',
+      // Service-account credentials for sending FCM off-GCP (no metadata server
+      // on Coolify/Hetzner). Path wins over inline JSON; both fall back to
+      // applicationDefault() (GOOGLE_APPLICATION_CREDENTIALS / GCP-attached SA).
+      serviceAccountPath: process.env.FCM_SERVICE_ACCOUNT_PATH || '',
+      serviceAccountJson: process.env.FCM_SERVICE_ACCOUNT_JSON || '',
     },
   },
 };

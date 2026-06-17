@@ -14,10 +14,35 @@ let apnsKey: string | null = null;
 let apnsJwt: string | null = null;
 let apnsJwtGeneratedAt = 0;
 
+const DEFAULT_APNS_KEY_PATH = './certs/apns-key.p8';
+
+/**
+ * Normalize a credential blob supplied via `docker --env-file`, which passes
+ * values verbatim: strip surrounding quotes and convert literal "\n" into real
+ * newlines so ES256 / JSON parsers can ingest it. Dotenv-parsed values are
+ * already clean, so this is a no-op for those.
+ */
+function normalizeEnvBlob(raw: string): string {
+  let v = raw.trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1);
+  }
+  return v.replace(/\\n/g, '\n');
+}
+
+/**
+ * Load the APNs signing key. Explicit path (APNS_KEY_PATH) wins so a dev can
+ * override the inline prod blob; then inline PEM (APNS_KEY); then the bundled
+ * cert at ./certs/apns-key.p8.
+ */
 function getApnsKey(): string {
-  if (!apnsKey) {
-    const keyPath = config.push.apns.keyPath;
-    apnsKey = fs.readFileSync(keyPath, 'utf8');
+  if (apnsKey) return apnsKey;
+  if (config.push.apns.keyPath) {
+    apnsKey = fs.readFileSync(config.push.apns.keyPath, 'utf8');
+  } else if (config.push.apns.key && config.push.apns.key.trim().length > 0) {
+    apnsKey = normalizeEnvBlob(config.push.apns.key);
+  } else {
+    apnsKey = fs.readFileSync(DEFAULT_APNS_KEY_PATH, 'utf8');
   }
   return apnsKey;
 }
@@ -156,15 +181,90 @@ function isApnsTokenInvalid(statusCode: number, responseBody: string): boolean {
 
 // ── FCM setup ──
 
-let fcmInitialized = false;
+let fcmApp: admin.app.App | null = null;
 
-function initFcm(): void {
-  if (fcmInitialized) return;
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    projectId: config.push.fcm.projectId,
-  });
-  fcmInitialized = true;
+/**
+ * Resolve FCM credentials and initialize a dedicated (named) admin app.
+ * Path (FCM_SERVICE_ACCOUNT_PATH) wins over inline JSON (FCM_SERVICE_ACCOUNT_JSON);
+ * both fall back to applicationDefault() — which only works on GCP (metadata
+ * server) or when GOOGLE_APPLICATION_CREDENTIALS points at a service account.
+ * On Coolify/Hetzner there is no metadata server, so one of the env vars must
+ * be set or sends will fail with "Could not load the default credentials".
+ */
+function getFcmApp(): admin.app.App {
+  if (fcmApp) return fcmApp;
+  let credential: admin.credential.Credential;
+  if (config.push.fcm.serviceAccountPath) {
+    const body = fs.readFileSync(config.push.fcm.serviceAccountPath, 'utf8');
+    credential = admin.credential.cert(JSON.parse(body) as admin.ServiceAccount);
+  } else if (config.push.fcm.serviceAccountJson && config.push.fcm.serviceAccountJson.trim().length > 0) {
+    const raw = normalizeEnvBlob(config.push.fcm.serviceAccountJson);
+    credential = admin.credential.cert(JSON.parse(raw) as admin.ServiceAccount);
+  } else {
+    credential = admin.credential.applicationDefault();
+  }
+  fcmApp = admin.initializeApp(
+    {
+      credential,
+      projectId: config.push.fcm.projectId,
+    },
+    'evenly-fcm'
+  );
+  return fcmApp;
+}
+
+// ── Config verification (startup log + /health/push) ──
+
+export type PushChannelStatus = { configured: boolean; source: string; error?: string };
+export type PushConfigStatus = { apns: PushChannelStatus; fcm: PushChannelStatus };
+
+/**
+ * Verify both push channels are actually usable, so misconfiguration fails
+ * loudly at startup / via /health/push instead of silently on the first send.
+ * - APNs: loads the signing key and confirms it's a PEM private key (local only).
+ * - FCM: resolves credentials and fetches an access token (real network check,
+ *   so a missing service account on Coolify is caught here, not at send time).
+ */
+export async function verifyPushConfig(): Promise<PushConfigStatus> {
+  const status: PushConfigStatus = {
+    apns: { configured: false, source: 'none' },
+    fcm: { configured: false, source: 'none' },
+  };
+
+  try {
+    if (!config.push.apns.keyId || !config.push.apns.teamId) {
+      throw new Error('APNS_KEY_ID / APNS_TEAM_ID missing');
+    }
+    const key = getApnsKey();
+    if (!key || !key.includes('PRIVATE KEY')) {
+      throw new Error('APNs key loaded but is not a valid PEM private key');
+    }
+    status.apns.configured = true;
+    status.apns.source = config.push.apns.keyPath
+      ? `path:${config.push.apns.keyPath}`
+      : config.push.apns.key
+        ? 'inline:APNS_KEY'
+        : `path:${DEFAULT_APNS_KEY_PATH}`;
+  } catch (err) {
+    status.apns.error = err instanceof Error ? err.message : String(err);
+  }
+
+  try {
+    const app = getFcmApp();
+    // Force a real credential resolution — applicationDefault() and bad
+    // service-account JSON only fail when a token is actually requested.
+    await app.options.credential!.getAccessToken();
+    status.fcm.configured = true;
+    status.fcm.source = config.push.fcm.serviceAccountPath
+      ? `path:${config.push.fcm.serviceAccountPath}`
+      : config.push.fcm.serviceAccountJson
+        ? 'inline:FCM_SERVICE_ACCOUNT_JSON'
+        : 'applicationDefault';
+  } catch (err) {
+    status.fcm.error = err instanceof Error ? err.message : String(err);
+  }
+
+  return status;
 }
 
 /**
@@ -176,8 +276,8 @@ async function sendFcm(
   payload: { title: string; body: string; data?: Record<string, string> }
 ): Promise<boolean> {
   try {
-    initFcm();
-    await admin.messaging().send({
+    const app = getFcmApp();
+    await admin.messaging(app).send({
       token: deviceToken,
       notification: { title: payload.title, body: payload.body },
       data: payload.data,

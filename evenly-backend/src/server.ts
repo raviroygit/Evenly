@@ -24,6 +24,7 @@ import { pushNotificationRoutes } from './routes/pushNotificationRoutes';
 import { adminRoutes } from './routes/adminRoutes';
 // Health check routes removed - using simple background service instead
 import { handleError } from './utils/errors';
+import { verifyPushConfig } from './services/pushNotificationService';
 // Simple health check service that runs in the main process
 let healthCheckInterval: NodeJS.Timeout | null = null;
 
@@ -235,6 +236,18 @@ const start = async () => {
       };
     });
 
+    // Push-notification credential health: verifies APNs key + FCM service
+    // account are actually loadable/usable. Returns 503 if either is broken.
+    fastify.get('/health/push', async (_request, reply) => {
+      const push = await verifyPushConfig();
+      const ok = push.apns.configured && push.fcm.configured;
+      return reply.status(ok ? 200 : 503).send({
+        status: ok ? 'ok' : 'degraded',
+        push,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
     // Register root route
     fastify.get('/', async (_request, _reply) => {
       return {
@@ -336,6 +349,24 @@ const start = async () => {
     
     // Auto-start health check service in background
     startHealthCheckService();
+
+    // Verify push-notification credentials on boot so misconfiguration is
+    // visible in logs immediately rather than silently failing on first send.
+    verifyPushConfig()
+      .then((push) => {
+        const apns = push.apns.configured ? `ok (${push.apns.source})` : `FAILED — ${push.apns.error}`;
+        const fcm = push.fcm.configured ? `ok (${push.fcm.source})` : `FAILED — ${push.fcm.error}`;
+        const allOk = push.apns.configured && push.fcm.configured;
+        const line = `[push] credential check — APNs: ${apns} | FCM: ${fcm}`;
+        if (allOk) {
+          console.log(line);
+        } else {
+          console.error(line);
+        }
+      })
+      .catch((err) => {
+        console.error('[push] credential check failed to run:', err instanceof Error ? err.message : err);
+      });
   } catch (error) {
     if (error instanceof Error) {
     }
